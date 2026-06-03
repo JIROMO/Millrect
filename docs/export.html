@@ -1,0 +1,129 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <!-- Google tag (gtag.js) -->
+    <script async src="https://www.googletagmanager.com/gtag/js?id=G-0JMRZXG11T"></script>
+    <script>
+      window.dataLayer = window.dataLayer || [];
+      function gtag(){dataLayer.push(arguments);}
+      gtag('js', new Date());
+
+      gtag('config', 'G-0JMRZXG11T');
+    </script>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>保存と出力 — Millrect ドキュメント</title>
+  <meta name="robots" content="index, follow" />
+  <script src="js/docs-seo.js"></script>
+  <link rel="stylesheet" href="css/docs.css">
+</head>
+<body data-page="export">
+  <header class="docs-header">
+    <div class="docs-header-inner">
+      <a class="docs-logo" href="./">
+        <img class="docs-logo-img" src="../site/images/logo.svg" alt="Millrect" width="774" height="109">
+      </a>
+      <div class="docs-header-actions">
+        <button class="docs-menu-toggle" id="docs-menu-toggle" type="button" aria-label="メニュー">☰</button>
+      </div>
+    </div>
+  </header>
+
+  <div class="docs-layout">
+    <aside class="docs-sidebar" id="docs-sidebar"></aside>
+
+    <article class="docs-content">
+      <nav class="docs-breadcrumb"><a href="./">ドキュメント</a> / 保存と出力</nav>
+      <h1>保存と出力</h1>
+      <p class="docs-lead">
+        プロジェクトの保存・読み込み、図面の PDF / SVG 出力、3D の STL 出力、自動保存について説明します。
+      </p>
+
+      <figure class="docs-figure docs-figure-bar">
+        <img src="images/toolbar.png" alt="ツールバーのファイル操作と出力ボタン">
+        <figcaption>ツールバーから保存・各種出力が行えます。メニューバー「ファイル」からも同じ操作ができます。</figcaption>
+      </figure>
+
+      <h2 id="autosave">自動保存</h2>
+      <p>
+        図形を追加・編集するたびに、作業内容は自動的に保存されます。
+        ステータスバー右端の「保存済」と時刻で、最後に保存されたタイミングを確認できます。
+      </p>
+      <p>
+        アプリを終了して再度起動すると、前回の作業を再開するかどうかを選べます。
+        別の場所にファイルとして残したい場合は、下記の「プロジェクトファイルへの保存」を使ってください。
+      </p>
+
+      <h2 id="project-file">プロジェクトファイル（JSON）</h2>
+      <p>Millrect のプロジェクト全体（全ページ・レイヤー・図形・寸法線・<strong>登録フォント</strong>・キャンバス画像・設定）を 1 つのファイルに保存します。</p>
+      <p>
+        プロジェクト JSON の <code>fonts[]</code> には、Google Fonts 登録情報（family / cssUrl / fileUrl / fileUrlBold 等）が含まれます。
+        ライブラリ（<code>fonts-library.json</code>）はプロジェクトファイルとは別に、アプリのユーザーデータとして保持されます。
+        フォントの登録方法は <a href="drawing.html#project-fonts">2D 描画 — プロジェクトフォント</a> を参照してください。
+      </p>
+      <table>
+        <thead><tr><th>操作</th><th>方法</th></tr></thead>
+        <tbody>
+          <tr><td>保存</td><td>ツールバーの保存アイコン / メニュー「ファイル → 保存」/ Ctrl+S（Cmd+S）</td></tr>
+          <tr><td>開く</td><td>ツールバーのフォルダアイコン / メニュー「ファイル → 開く」</td></tr>
+          <tr><td>新規</td><td>メニュー「ファイル → 新規」/ Ctrl+N</td></tr>
+        </tbody>
+      </table>
+      <p>保存先フォルダとファイル名は、保存ダイアログで指定します。</p>
+
+      <h2 id="svg">SVG 出力・インポート</h2>
+      <ul>
+        <li><strong>SVG 出力</strong> — 現在表示中のページを SVG ファイルとして書き出します（Illustrator 等への受け渡し向け）</li>
+        <li><strong>SVG インポート</strong> — 外部 SVG を現在のページのレイヤーに取り込みます</li>
+      </ul>
+      <p>SVG は 2D 図面用です。キャンバス画像は含まれますが、3D 情報は含まれません。</p>
+
+      <h2 id="pdf">PDF 出力</h2>
+      <p>プロジェクト内の<strong>全ページ</strong>を 1 つの PDF ファイルにまとめて出力します。キャンバス画像も含まれるため、印刷や共有に便利です。</p>
+      <p>メニュー「ファイル → PDF として書き出し」、またはツールバーの PDF アイコンから実行できます。</p>
+
+      <h2 id="stl">STL 出力（3D）</h2>
+      <figure class="docs-figure docs-figure-panel">
+        <img src="images/3d-panel.png" alt="3D プレビューパネルの STL ボタンと Module Joint 1 のメッシュ">
+        <figcaption>3D パネル右上の「STL」ボタンから、生成済みメッシュを書き出します。</figcaption>
+      </figure>
+      <p>
+        <a href="multiview-3d.html">3D 生成</a> の手順で立体が表示されている状態で、
+        3D パネルの「STL」ボタンを押すと、3D プリント用の STL ファイルを保存できます。
+      </p>
+      <div class="docs-callout docs-callout-note">
+        <strong>STL 出力の前提</strong>
+        <p>上面図 + 正面図など、2 軸以上のページが揃い、3D プレビューにメッシュが表示されている必要があります。</p>
+      </div>
+
+      <h2 id="menu">メニュー一覧（ファイル）</h2>
+      <table>
+        <thead><tr><th>メニュー項目</th><th>内容</th></tr></thead>
+        <tbody>
+          <tr><td>新規</td><td>新しいプロジェクトを開始</td></tr>
+          <tr><td>開く</td><td>保存済みプロジェクトを読み込み</td></tr>
+          <tr><td>保存</td><td>プロジェクトファイルを保存</td></tr>
+          <tr><td>SVG として書き出し</td><td>現在ページを SVG で出力</td></tr>
+          <tr><td>PDF として書き出し</td><td>全ページを PDF で出力</td></tr>
+          <tr><td>JSON としてエクスポート</td><td>プロジェクトを JSON 形式で出力</td></tr>
+        </tbody>
+      </table>
+    </article>
+  </div>
+
+  <footer class="docs-footer">
+    <div class="docs-footer-inner">
+      <span>Millrect ドキュメント</span>
+      <div class="docs-footer-links">
+        <a href="multiview-3d.html">← 3D 生成</a>
+        <a href="shortcuts.html">次: ショートカット →</a>
+      </div>
+    </div>
+  </footer>
+
+  <script src="../packages/help-index.js"></script>
+  <script src="js/docs-search.js"></script>
+  <script src="js/docs-nav.js"></script>
+    <script src="js/docs.js"></script>
+</body>
+</html>

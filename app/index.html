@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html lang="ja">
+  <head>
+    <meta charset="UTF-8" />
+    <meta
+      http-equiv="Content-Security-Policy"
+      content="default-src 'self'; script-src 'self' 'wasm-unsafe-eval'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; img-src 'self' data: blob:; font-src 'self' data: https://fonts.gstatic.com; connect-src 'self' https://api.fontsource.org https://fonts.googleapis.com https://fonts.gstatic.com https://cdn.jsdelivr.net; object-src 'none'; base-uri 'self'"
+    />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Millrect</title>
+    <meta
+      name="description"
+      content="Millrect Webアプリ。2D図面・寸法・多ページ正投影から3DプレビューとSTL出力。ログイン不要、データはブラウザ内に保存。"
+    />
+    <meta name="robots" content="index, follow" />
+    <link rel="canonical" href="https://millrect.com/app/" />
+    <link rel="icon" href="../favicon.ico" />
+    <meta property="og:type" content="website" />
+    <meta property="og:site_name" content="Millrect" />
+    <meta property="og:url" content="https://millrect.com/app/" />
+    <meta property="og:title" content="Millrect — 2D作図（ブラウザ）" />
+    <meta
+      property="og:description"
+      content="ブラウザで使える2D作図と多ビュー3D。ログイン不要。"
+    />
+    <meta property="og:image" content="https://millrect.com/site/images/ogp.jpg" />
+    <link rel="stylesheet" href="css/app.css" />
+    <script src="vendor/lucide.min.js"></script>
+    <script src="vendor/polygon-clipping.umd.js"></script>
+    <script src="vendor/jspdf.umd.min.js"></script>
+    <script src="vendor/svg2pdf.umd.min.js"></script>
+    <script src="vendor/three.min.js"></script>
+    <script src="vendor/three-orbit-controls.js"></script>
+    <script src="vendor/three-stl-exporter.js"></script>
+    <script src="vendor/csg.js"></script>
+    <script src="vendor/csg-three-adapter.js"></script>
+    <script src="../packages/schema/index.js"></script>
+    <script src="../packages/model-generator/index.js"></script>
+    <script src="../packages/geometry-core/index.js"></script>
+    <script src="js/text-engine-browser.js"></script>
+  </head>
+  <body>
+    <div id="app">
+      <millrect-toolbar id="toolbar"></millrect-toolbar>
+      <div id="workspace">
+        <millrect-left-sidebar
+          class="sidebar"
+          id="sidebar-left"
+        ></millrect-left-sidebar>
+        <millrect-canvas id="canvas-area"></millrect-canvas>
+        <millrect-right-sidebar
+          class="sidebar right"
+          id="sidebar-right"
+        ></millrect-right-sidebar>
+        <millrect-3d-panel id="panel-3d-wrap"></millrect-3d-panel>
+      </div>
+    </div>
+    <script src="vendor/svg.min.js"></script>
+    <script src="js/i18n.js"></script>
+    <script src="js/locales/ja.js"></script>
+    <script src="js/locales/en.js"></script>
+    <script src="js/components/millrect-toolbar.js"></script>
+    <script src="js/components/millrect-left-sidebar.js"></script>
+    <script src="js/components/millrect-canvas.js"></script>
+    <script src="js/components/millrect-right-sidebar.js"></script>
+    <script src="js/components/millrect-3d-panel.js"></script>
+    <script src="js/db.js"></script>
+    <script src="../packages/sample-catalog.js"></script>
+    <script src="../packages/multiview-starter-box.js"></script>
+    <script src="../packages/docs-box-scenario.js"></script>
+    <script src="../packages/module-joint-1-scenario.js"></script>
+    <script src="../packages/agent-intent.js"></script>
+    <script src="../packages/digitize-sketch.js"></script>
+    <script src="../packages/part-geometry.js"></script>
+    <script src="../packages/manufacturing-rules.js"></script>
+    <script src="../packages/part-dsl.js"></script>
+    <script src="../packages/part-solver.js"></script>
+    <script src="../packages/project-json.js"></script>
+    <script src="../packages/taste-memory.js"></script>
+    <script src="../packages/taste-memory-promotion.js"></script>
+    <script src="../packages/builtin-fonts.js"></script>
+    <script src="../packages/google-fonts.js"></script>
+    <script src="../packages/fontsource-api.js"></script>
+    <script src="../packages/docs-scenarios-registry.js"></script>
+    <script src="js/state.js"></script>
+    <script src="js/font-library.js"></script>
+    <script src="js/project-fonts.js"></script>
+    <script src="js/font-browser.js"></script>
+    <script src="js/transform.js"></script>
+    <script src="js/profiles.js"></script>
+    <script src="js/constraints.js"></script>
+    <script src="js/renderer.js"></script>
+    <script src="js/commands.js"></script>
+    <script src="js/export.js"></script>
+    <script src="js/interaction.js"></script>
+    <script src="../packages/text-contour-grouping.js"></script>
+    <script src="js/text-outline.js"></script>
+    <script src="js/multiview-template.js"></script>
+    <script src="js/part-builders.js"></script>
+    <script src="../packages/help-index.js"></script>
+    <script src="js/docs-viewer.js"></script>
+    <script src="js/help-search.js"></script>
+    <script src="js/panel-sections.js"></script>
+    <script src="js/ui.js"></script>
+    <script src="js/path-editor.js"></script>
+    <script src="js/3d-view.js"></script>
+    <script src="../packages/model-viewer/index.js"></script>
+    <script src="js/agent-api.js"></script>
+    <script src="js/taste-memory-api.js"></script>
+    <script src="js/part-compiler.js"></script>
+    <script src="js/sample-projects.js"></script>
+    <script src="js/reference-image.js"></script>
+    <script src="js/digitize-sketch.js"></script>
+    <script src="js/docs-api.js"></script>
+    <script src="js/autosave.js"></script>
+    <script src="js/app-mode.js"></script>
+  </body>
+</html>

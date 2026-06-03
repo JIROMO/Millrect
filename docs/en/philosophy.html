@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <!-- Google tag (gtag.js) -->
+    <script async src="https://www.googletagmanager.com/gtag/js?id=G-0JMRZXG11T"></script>
+    <script>
+      window.dataLayer = window.dataLayer || [];
+      function gtag(){dataLayer.push(arguments);}
+      gtag('js', new Date());
+
+      gtag('config', 'G-0JMRZXG11T');
+    </script>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Philosophy — Millrect Documentation</title>
+  <meta name="robots" content="index, follow" />
+  <script src="../js/docs-seo.js"></script>
+  <link rel="stylesheet" href="../css/docs.css">
+</head>
+<body data-page="philosophy">
+  <header class="docs-header">
+    <div class="docs-header-inner">
+      <a class="docs-logo" href="./">
+        <img class="docs-logo-img" src="../../site/images/logo.svg" alt="Millrect" width="774" height="109">
+      </a>
+      <div class="docs-header-actions">
+        <button class="docs-menu-toggle" id="docs-menu-toggle" type="button" aria-label="Menu">☰</button>
+      </div>
+    </div>
+  </header>
+
+  <div class="docs-layout">
+    <aside class="docs-sidebar" id="docs-sidebar"></aside>
+
+    <article class="docs-content">
+      <nav class="docs-breadcrumb" aria-label="Breadcrumb">
+        <a href="./">Documentation</a> / Philosophy
+      </nav>
+
+      <h1>Philosophy</h1>
+      <p class="docs-lead">
+        Millrect is a lightweight drawing-first CAD tool. 3D, AI, and export features are designed as supporting layers that grow from the drawing, not as replacements for it.
+      </p>
+
+      <nav class="docs-toc" aria-label="Table of contents">
+        <div class="docs-toc-title">On this page</div>
+        <ul>
+          <li><a href="#drawing-first">Drawings come first</a></li>
+          <li><a href="#derived-3d">3D is derived</a></li>
+          <li><a href="#small-tool">Small and inspectable</a></li>
+          <li><a href="#ai-assist">AI assists rather than takes over</a></li>
+          <li><a href="#portable">Portable by default</a></li>
+        </ul>
+      </nav>
+
+      <h2 id="drawing-first">Drawings come first</h2>
+      <p>
+        In Millrect, the first object you work with is not a 3D mesh. It is a 2D drawing: top views, front views, dimensions, shapes, and pages. Keeping intent in the drawing makes the work easier to explain and easier to return to later.
+      </p>
+      <p>
+        3D preview and STL export are useful, but the editable source remains the drawing. Update the drawing, then regenerate the solid from it.
+      </p>
+
+      <h2 id="derived-3d">3D is derived</h2>
+      <p>
+        Millrect builds 3D from multiple orthographic views, such as top and front projections. Instead of directly sculpting a mesh, it keeps the 2D profiles that justify the result.
+      </p>
+      <table>
+        <thead>
+          <tr><th>Idea</th><th>How Millrect treats it</th></tr>
+        </thead>
+        <tbody>
+          <tr><td>Editable source</td><td>2D drawings, pages, dimensions, and contours</td></tr>
+          <tr><td>Generated result</td><td>3D preview and STL derived from drawings</td></tr>
+          <tr><td>Iteration</td><td>Edit the drawing, then regenerate</td></tr>
+        </tbody>
+      </table>
+
+      <h2 id="small-tool">Small and inspectable</h2>
+      <p>
+        Millrect keeps drawing, previewing, and saving connected to the same project data. The browser and desktop app work with the same files, so the tool stays approachable while still being useful for real output.
+      </p>
+      <p>
+        When features are added, the priorities are predictable drawing behavior, readable project files, and Undo / Redo that matches what users expect.
+      </p>
+
+      <h2 id="ai-assist">AI assists rather than takes over</h2>
+      <p>
+        MCP integration and sketch import are meant to reduce setup friction. The default flow is proposal, inspection, adjustment, then confirmation on the canvas.
+      </p>
+      <div class="docs-callout docs-callout-note">
+        <strong>Automation you can inspect</strong>
+        <p>
+          AI integration is not a replacement for the drawing. It is scaffolding for creating one, with the final shape left visible and editable on the canvas.
+        </p>
+      </div>
+
+      <h2 id="portable">Portable by default</h2>
+      <p>
+        Projects can be saved as JSON, and outputs can be exported as PDF, SVG, or STL depending on the job. The goal is to keep work openable, shareable, and usable outside a single screen.
+      </p>
+
+      <h2 id="next">Next steps</h2>
+      <ul>
+        <li><a href="getting-started.html">Getting Started</a> — try the sample path to 3D</li>
+        <li><a href="drawing.html">2D Drawing</a> — learn the drawing tools</li>
+        <li><a href="ai-mcp.html">AI / MCP</a> — use AI as an assistant</li>
+      </ul>
+    </article>
+  </div>
+
+  <footer class="docs-footer">
+    <div class="docs-footer-inner">
+      <span>Millrect Documentation</span>
+      <div class="docs-footer-links">
+        <a href="./">TOP</a>
+        <a href="getting-started.html">Previous: Getting Started</a>
+        <a href="desktop-download.html">Next: Desktop app →</a>
+      </div>
+    </div>
+  </footer>
+
+  <script src="../../packages/help-index.js"></script>
+  <script src="../js/docs-search.js"></script>
+  <script src="../js/docs-nav.js"></script>
+  <script src="../js/docs.js"></script>
+</body>
+</html>

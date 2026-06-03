@@ -1,0 +1,557 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <!-- Google tag (gtag.js) -->
+    <script async src="https://www.googletagmanager.com/gtag/js?id=G-0JMRZXG11T"></script>
+    <script>
+      window.dataLayer = window.dataLayer || [];
+      function gtag(){dataLayer.push(arguments);}
+      gtag('js', new Date());
+
+      gtag('config', 'G-0JMRZXG11T');
+    </script>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>開発者ガイド — Millrect ドキュメント</title>
+  <meta name="robots" content="index, follow" />
+  <script src="js/docs-seo.js"></script>
+  <link rel="stylesheet" href="css/docs.css">
+</head>
+<body data-page="developer">
+  <header class="docs-header">
+    <div class="docs-header-inner">
+      <a class="docs-logo" href="./">
+        <img class="docs-logo-img" src="../site/images/logo.svg" alt="Millrect" width="774" height="109">
+      </a>
+      <div class="docs-header-actions">
+        <button class="docs-menu-toggle" id="docs-menu-toggle" type="button" aria-label="メニュー">☰</button>
+      </div>
+    </div>
+  </header>
+
+  <div class="docs-layout">
+    <aside class="docs-sidebar" id="docs-sidebar"></aside>
+
+    <article class="docs-content">
+      <nav class="docs-breadcrumb"><a href="./">ドキュメント</a> / 開発者ガイド</nav>
+      <h1>開発者ガイド</h1>
+      <p class="docs-lead">
+        Millrect のリポジトリ構成、アーキテクチャ、データスキーマ、グローバル API、MCP / WebSocket 連携、Electron 配布についての技術リファレンスです。
+        <strong>日常の作図ユーザー向けではありません。</strong> コントリビューター、MCP エージェント開発者、内部実装を調べる開発者向けに書かれています。
+      </p>
+
+      <nav class="docs-toc" aria-label="目次">
+        <div class="docs-toc-title">このページの内容</div>
+        <ul>
+          <li><a href="#dev-setup">開発環境</a></li>
+          <li><a href="#project-layout">プロジェクト構成</a></li>
+          <li><a href="#architecture">アーキテクチャ</a></li>
+          <li><a href="#coordinates">座標系</a></li>
+          <li><a href="#schemas">データスキーマ</a></li>
+          <li><a href="#taste-memory">Taste Memory（設計）</a></li>
+          <li><a href="#api">グローバル API</a></li>
+          <li><a href="#mcp">MCP / WebSocket</a></li>
+          <li><a href="#electron">Electron</a></li>
+          <li><a href="#patterns">既知のパターンと注意点</a></li>
+        </ul>
+      </nav>
+
+      <h2 id="dev-setup">開発環境</h2>
+      <p>リポジトリを clone したあと、Node.js で依存関係をインストールして起動します。</p>
+      <pre><code>npm install
+npm run fonts:fetch   # Gen Interface JP（初回・更新時）
+npm run dev           # Electron 開発起動
+npm run build         # 配布物ビルド（dist/）</code></pre>
+      <p>
+        同梱フォント（<a href="https://gen.typesetting.jp/" target="_blank" rel="noopener">Gen Interface JP</a>）は Git に含まれない場合があります。
+        テキスト表示・アウトライン化の前に <code>npm run fonts:fetch</code> を実行してください。
+        アプリ UI・ドキュメント・ランディングページも同じ書体を使います（<code>app/fonts/</code> · <code>docs/fonts/</code> · <code>site/fonts/</code>）。
+      </p>
+      <p>
+        ブラウザのみで UI を試す場合は <code>app/index.html</code> を静的サーバーで配信しても動きますが、
+        MCP WebSocket・テキストアウトライン・ファイルダイアログは Electron 版の機能です。
+      </p>
+      <p>
+        デスクトップ版のリリース手順（バージョン bump、ビルド、GitHub Release）は
+        <code>docs/RELEASE.ja.md</code>（英語: <code>docs/RELEASE.md</code>）を参照してください。
+      </p>
+      <p>
+        E2E テスト: <code>npm run test:e2e</code>（Playwright）。
+        MCP サーバー単体: Millrect 起動中に <code>node mcp/server.js</code>。
+      </p>
+
+      <h2 id="project-layout">プロジェクト構成</h2>
+      <pre><code>millrect/
+├── app/                 # 現在の 2D editor app（legacy location。移行先は apps/millrect-editor）
+│   ├── index.html       # スクリプト読み込み順序が重要
+│   ├── js/              # state, renderer, interaction, 3d-view, …
+│   ├── css/
+│   ├── vendor/          # Three.js, polygon-clipping, jsPDF 等
+│   └── fonts/           # 同梱フォント（Gen Interface JP TTF）
+├── packages/
+│   ├── schema/          # Project JSON / Model IR / geometry-data 検証
+│   ├── model-generator/ # Project JSON / Part DSL → 編集可能な Model IR
+│   ├── geometry-core/   # Model IR → 決定的な geometry data
+│   ├── model-viewer/    # Three.js 表示専用 helper
+│   └── *.js             # レンダラー / MCP / テスト共通の isomorphic モジュール（Part DSL, digitize, fonts 等）
+├── docs/fonts/          # ドキュメント用 webfont（woff2）
+├── site/                # ランディングページ + 資産（index.html→/、en/index.html→/en/、css/js/images/fonts）
+├── main.js              # Electron メインプロセス + WS サーバー (ws://127.0.0.1:23450)
+├── preload.js           # contextBridge → window.electronAPI
+├── mcp/server.js        # MCP stdio アダプター（WS action に変換）
+├── electron/            # ネイティブヘルパー（Core Text テキストアウトライン等）
+├── docs/                # ユーザーガイド + 本ページ
+├── tests/e2e/           # Playwright E2E
+├── samples/             # サンプルプロジェクト JSON
+├── scripts/             # リリースビルド、スクリーンショット生成
+├── AGENT.ja.md          # AI エージェント向け操作マニュアル（詳細 API）
+└── AGENT.md             # 英語版エージェントマニュアル</code></pre>
+      <p>
+        バンドラなし — <code>&lt;script src&gt;</code> タグでグローバルスコープに読み込みます。
+        新しいファイルを追加するときは <code>app/index.html</code> の順序を守ってください。
+      </p>
+      <p>
+        境界ルール: 実行アプリは <code>apps/</code>、再利用可能なライブラリは
+        <code>packages/</code> に置きます。既存の 2D editor は Electron、build packaging、
+        docs、tests との互換性のため、現時点では <code>app/</code> に残しています。
+        移動する場合の移行先は <code>packages/</code> ではなく
+        <code>apps/millrect-editor</code> です。<code>packages/</code> に切り出すのは、
+        drawing schema、profile 抽出、command reducer、rendering helper など再利用可能な
+        2D primitive に限定します。
+      </p>
+
+      <h2 id="architecture">アーキテクチャ</h2>
+
+      <h3>設計原則</h3>
+      <table>
+        <thead><tr><th>原則</th><th>内容</th></tr></thead>
+        <tbody>
+          <tr><td>編集するのは 2D 図面だけ</td><td>3D は派生データ。いつでも <code>update3DScene()</code> で再生成可能</td></tr>
+          <tr><td>Undo/Redo の保護</td><td><code>pushHistory()</code> はドキュメント部分のみ。zoom/pan/tool は Undo 対象外</td></tr>
+          <tr><td>図形 ID の安定性</td><td>shape ID は変更しない。重複時は <code>genId()</code> で再生成</td></tr>
+          <tr><td>dimension は shapes に混ぜない</td><td><code>addShape({type:"dimension",...})</code> → 自動で <code>page.dimensions[]</code> へ</td></tr>
+          <tr><td>3D は図面から導出</td><td>各ページの <code>viewDefinition</code> + 輪郭。per-shape <code>feature.depth</code> は廃止</td></tr>
+        </tbody>
+      </table>
+
+      <h3>データフロー（3D 生成）</h3>
+      <pre><code>pages[]（各ページに viewDefinition.type + 輪郭図形）
+  ↓ shapeToProfile() / extractProfilesFromPage()  ← profiles.js
+Profile（State に保存しない派生データ）
+  ↓ _profileToThreeShapesForView() + ExtrudeGeometry（内部スイープ）
+  ↓ CSG union（同一ビュー内）→ CSG intersect（軸ペア間）
+Mesh → STL</code></pre>
+      <p><strong>最低 2 軸</strong>のビューが必要（例: 上面図 + 正面図）。1 ページだけでは立体は生成されません。</p>
+
+      <h3>分離した 3D パイプライン</h3>
+      <p>
+        図面ドキュメントを正とし、3D 精度改善は 2D 編集 UI ではなく pipeline package 内に閉じる方針です。
+      </p>
+      <pre><code>Project JSON / 2D 図面
+  ↓ packages/schema
+schema validation
+  ↓ packages/model-generator
+Model IR（mesh だけではなく、編集可能な operation / feature）
+  ↓ packages/geometry-core
+geometry data / mesh / export-ready data
+  ↓ packages/model-viewer
+Three.js 表示</code></pre>
+      <p>
+        互換性のため、既存の多ビュー CSG preview / STL はまだ <code>app/js/3d-view.js</code> が担当します。
+        同時に新 wrapper state を更新しており、<code>update3DScene()</code> 後に
+        <code>get3DModelPipelineState()</code> で確認できます。
+      </p>
+      <h3>State の分離</h3>
+      <pre><code>_state = {
+  // ドキュメント（Undo 対象・エクスポート対象）
+  projectName, unit, fonts, pages, partIntent, projectBrief,
+
+  // UI（Undo 対象外）
+  zoom, panX, panY, activeTool,
+  currentPageId, currentLayerId,
+  selectedShapeIds, showGrid, gridSize, snapEnabled,
+}</code></pre>
+      <p><code>pushHistory()</code> / <code>undo()</code> / <code>redo()</code> は <code>DOC_KEYS</code> のみ操作します。</p>
+
+      <h3>スクリプト読み込み順（<code>app/index.html</code>）</h3>
+      <pre><code>vendor/* → js/components/* → js/db.js
+→ packages/schema/index.js, model-generator/index.js, geometry-core/index.js
+→ packages/multiview-starter-box.js, docs-box-scenario.js, agent-intent.js, digitize-sketch.js
+→ packages/part-geometry.js, manufacturing-rules.js, part-dsl.js, part-solver.js, …
+→ js/state.js → js/transform.js → js/profiles.js → js/constraints.js → js/renderer.js
+→ js/commands.js → js/export.js → js/interaction.js → js/text-outline.js
+→ js/multiview-template.js → js/part-builders.js → js/ui.js → js/path-editor.js
+→ js/3d-view.js → packages/model-viewer/index.js → js/agent-api.js → js/part-compiler.js
+→ js/reference-image.js → js/digitize-sketch.js → js/docs-api.js → js/autosave.js</code></pre>
+      <p>後のファイルは前のファイルに依存します。順序を変更しないでください。</p>
+
+      <h3>主要ファイルの役割</h3>
+      <table>
+        <thead><tr><th>ファイル</th><th>役割</th></tr></thead>
+        <tbody>
+          <tr><td><code>js/state.js</code></td><td>単一ソース <code>_state</code>。<code>pushHistory()</code> はドキュメント部分のみスナップショット</td></tr>
+          <tr><td><code>js/profiles.js</code></td><td>DrawingObject → Profile 変換。3D 輪郭抽出の入口</td></tr>
+          <tr><td><code>js/constraints.js</code></td><td>幾何拘束の追加・ソルバー</td></tr>
+          <tr><td><code>js/db.js</code></td><td>IndexedDB 永続化（autosave）</td></tr>
+          <tr><td><code>js/renderer.js</code></td><td><code>render()</code> — SVG を state から再描画</td></tr>
+          <tr><td><code>js/interaction.js</code></td><td>マウスイベント、テキスト編集ダイアログ</td></tr>
+          <tr><td><code>js/text-outline.js</code></td><td>テキストのネイティブプレビューと <code>outlineTextShape()</code></td></tr>
+          <tr><td><code>js/path-editor.js</code></td><td>ベジェ描画・編集オーバーレイ</td></tr>
+          <tr><td><code>js/ui.js</code></td><td>DOM 配線、タブ、リサイズ、パネル開閉</td></tr>
+          <tr><td><code>js/commands.js</code></td><td>Undo/Redo、shape CRUD、Boolean 演算</td></tr>
+          <tr><td><code>js/export.js</code></td><td>PDF / SVG / JSON エクスポート</td></tr>
+          <tr><td><code>js/3d-view.js</code></td><td>Three.js シーン。多ビュー CSG 交差で Mesh 生成</td></tr>
+          <tr><td><code>js/agent-api.js</code></td><td>Intent API — <code>createMultiviewBox</code>, <code>createPart</code>, <code>validate3DReadiness</code></td></tr>
+          <tr><td><code>js/part-compiler.js</code></td><td>Part DSL Emitter — <code>applyPartDsl</code>, <code>updatePartParam</code></td></tr>
+          <tr><td><code>js/reference-image.js</code></td><td>参照画像の配置、編集モード（移動/リサイズ・ボタントグルで終了）、対話式スケールアンカー</td></tr>
+          <tr><td><code>js/digitize-sketch.js</code></td><td>ゴースト digitize — <code>applyDigitizeProposals</code></td></tr>
+          <tr><td><code>js/autosave.js</code></td><td>localStorage debounce 保存。<code>onStateChanged()</code> ← <code>pushHistory()</code></td></tr>
+          <tr><td><code>packages/schema</code></td><td>Project JSON / Model IR / geometry-data 検証と stable hash</td></tr>
+          <tr><td><code>packages/model-generator</code></td><td>Project JSON / Profile / Part DSL feature → 編集可能な Model IR operations</td></tr>
+          <tr><td><code>packages/geometry-core</code></td><td>Model IR → 決定的な geometry data と feature annotations</td></tr>
+          <tr><td><code>packages/model-viewer</code></td><td>Three.js 表示 helper のみ。geometry 生成はしない</td></tr>
+          <tr><td><code>main.js</code></td><td>Electron ウィンドウ、IPC、WebSocket MCP ブリッジ</td></tr>
+          <tr><td><code>mcp/server.js</code></td><td>MCP ツール（snake_case）→ WS action（camelCase）</td></tr>
+        </tbody>
+      </table>
+
+      <h2 id="coordinates">座標系</h2>
+      <table>
+        <thead><tr><th>概念</th><th>値</th></tr></thead>
+        <tbody>
+          <tr><td>単位</td><td>real units（1 mm = 10 units）</td></tr>
+          <tr><td>A4 横</td><td>2970 × 2100</td></tr>
+          <tr><td>A4 縦</td><td>2100 × 2970</td></tr>
+          <tr><td>A3 横</td><td>4200 × 2970</td></tr>
+        </tbody>
+      </table>
+      <p>縮尺 1:10（<code>scale: { numerator:1, denominator:10 }</code>）の換算:</p>
+      <pre><code>paperUnit = realUnit × numerator / denominator
+realUnit  = paperUnit × denominator / numerator</code></pre>
+
+      <h2 id="schemas">データスキーマ</h2>
+
+      <h3 id="schema-state">State</h3>
+      <p>上記 <a href="#architecture">アーキテクチャ</a> の <code>_state</code> を参照。<code>pages[]</code> がドキュメントの中心です。</p>
+
+      <h3 id="schema-project-font">ProjectFont（<code>state.fonts[]</code>）</h3>
+      <pre><code>{
+  id: string,
+  family: string,           // 例: "Roboto"
+  cssUrl: string,           // Google Fonts CSS（表示用）
+  fileUrl: string,          // TTF URL（400 / Regular）
+  fileUrlBold?: string,     // TTF URL（700 / Bold）
+  source: "google",
+  libraryId?: string        // ユーザーライブラリとの対応（任意）
+}</code></pre>
+
+      <h3 id="schema-page">Page</h3>
+      <pre><code>{
+  id, name,
+  paper: 'A4'|'A3'|'A2'|'A1',
+  orientation: 'landscape'|'portrait',
+  scale: { numerator, denominator },
+  viewDefinition: {
+    type: 'top'|'bottom'|'front'|'back'|'right'|'left'|'section'|'detail'|null,
+    normal: [x,y,z]|null,
+    up: [x,y,z]|null,
+  },
+  dimensions: [Dimension],   // shapes[] とは独立
+  referenceImage?: { dataUrl, x, y, width, height, opacity },
+  layers: [Layer],
+  constraints?: [Constraint],
+}</code></pre>
+
+      <h3 id="schema-layer">Layer</h3>
+      <pre><code>{ id, name, visible, locked, shapes: [Shape] }</code></pre>
+
+      <h3 id="schema-shape">Shape</h3>
+      <pre><code>// 共通
+{ id, type, stroke, fill, strokeWidth: 'thin'|'medium'|'thick',
+  rotation?, flipH?, flipV?,   // SVG 表示・BBox・Profile・3D に反映
+  ghost?: boolean }             // 確定前 digitize 提案（3D 非対象）
+
+// 種類
+rect:    { x, y, width, height, rx? }
+circle:  { cx, cy, r }
+line:    { x1, y1, x2, y2 }
+text:    { x, y, text, fontSize?, fontFamily?, fontWeight?, textAlign?, lineHeight?, width? }
+         // 文字色は stroke を使用（fill は使わない）
+bezier:  { nodes: [{x, y, h1:{x,y}|null, h2:{x,y}|null}], closed: bool }
+path:    { contours: ring[][][] }   // polygon-clipping 形式
+group:   { children: Shape[] }</code></pre>
+
+      <h3 id="schema-dimension">Dimension（<code>page.dimensions[]</code>）</h3>
+      <pre><code>{
+  id, type: 'dimension',
+  dimensionType: 'horizontal'|'vertical',
+  from: {x, y}, to: {x, y},
+  offset: number,
+  color?, lineWidth?, textSize?, arrowStyle?, fontFamily?,
+  value?, decimals?, prefix?, suffix?,
+  textOffsetX?, textOffsetY?, textRotation?,
+}</code></pre>
+      <p><code>addShape({ type:'dimension', ... })</code> は自動的に <code>page.dimensions[]</code> にルーティングされます。</p>
+
+      <h3 id="schema-profile">Profile（派生データ・State 保存なし）</h3>
+      <pre><code>{
+  id: 'profile-{shapeId}',
+  sourceId: string,
+  pageId: string,
+  rings: [[[x,y]...]],   // [0]=外周, [1..]=ホール
+  bbox: { x, y, w, h },
+  area: number,
+}</code></pre>
+      <p>対応: <code>rect / circle / bezier(closed) / path</code>。<code>group</code> は子図形を再帰的に展開して Profile 化します。非対応: <code>line / text / dimension / bezier(open)</code>。</p>
+      <p><code>findShapeById(id)</code> → <code>{ shape, layer, page, isDimension }</code>（<code>isDimension === true</code> のとき <code>layer</code> は null）。</p>
+
+      <h2 id="taste-memory">Taste Memory（設計）</h2>
+      <p>
+        ユーザーの美意識・判断を 3 層（Global / Project / Artifact）で記録する拡張仕様です。
+        Project 層（<code>state.projectBrief</code>）、Global 層（IndexedDB <code>tasteGlobal</code>）、
+        Artifact 層（<code>projectBrief.artifactLog</code>）は実装済みです。幾何の <code>partIntent</code> とは分離します。
+        人間向けの確認 UI は右パネルの <strong>Pages タブ → 制作メモ</strong> にあります。
+      </p>
+      <ul>
+        <li><code>docs/TASTE-MEMORY.md</code> — スキーマ、ワークフロー、MCP/API、昇格ルール</li>
+        <li><code>docs/adr/0001-taste-memory-three-layer-model.md</code> — アーキテクチャ判断の要約</li>
+        <li><code>get_taste_context</code> / <code>update_project_brief</code> / <code>record_decision</code> / <code>append_artifact_log</code> — MCP から利用可能</li>
+        <li><code>captures/</code> を含む ZIP export は未実装（プロジェクト JSON には相対パスのみを保存）</li>
+      </ul>
+
+      <h2 id="api">グローバル API</h2>
+      <p>すべてグローバルスコープに公開されています（<code>window.xxx()</code> または DevTools コンソールから直接呼び出し可能）。</p>
+
+      <h3 id="api-state">state.js</h3>
+      <pre><code>getState()                   // → _state
+getCurrentPage()             // → 現在の Page
+getCurrentLayer()            // → 現在の Layer
+getAllShapesOnPage(page)     // → Shape[]（dimensions 除く）
+getAllDimensionsOnPage(page) // → Dimension[]
+findShapeById(id)            // → { shape, layer, page, isDimension } | null
+pushHistory()                // ドキュメント部分のみ → autosave トリガー
+undo() / redo()              // → boolean
+replaceState(newState)       // 全 state 置換（履歴リセット）
+genId(prefix)                // 一意 ID 生成
+snapToShapes(pt, shapes, scale, threshold)  // スナップ</code></pre>
+
+      <h3 id="api-profiles">profiles.js</h3>
+      <pre><code>canBeProfile(shape)              // → boolean
+extractProfilesFromPage(page)      // → Profile[]
+shapeToProfile(shape, pageId)      // → Profile | null</code></pre>
+
+      <h3 id="api-3d">3d-view.js</h3>
+      <pre><code>update3DScene()       // 全ページから Mesh 再生成（CSG 交差）
+get3DSceneStatus()    // → { meshCount, message }
+exportSTL()           // STL ダウンロード（meshCount=0 なら警告）</code></pre>
+
+      <h3 id="api-commands">commands.js</h3>
+      <pre><code>addShape(shape) / updateShape(id, values) / deleteShape(id)
+deleteSelectedShapes()
+moveShapeToPosition(id, x, y)    // pushHistory 付き
+alignShapes(dir)                 // 'left'|'centerH'|'right'|'top'|'centerV'|'bottom'
+distributeShapes(axis)           // 'h' | 'v'
+groupSelectedShapes() / ungroupSelectedShapes()
+mergeSelectedShapes()            // union
+subtractSelectedShapes()         // difference
+applyDrawingCommands([...])      // バッチ操作（末尾で pushHistory 1 回）
+getShapeBBox(shape, scale)       // → { x, y, w, h } | null</code></pre>
+      <p>図形変更後は必ず <code>render(); uiUpdate();</code> を呼びます。3D 変更時は <code>update3DScene(); get3DSceneStatus();</code>。</p>
+
+      <h3 id="api-export">export.js</h3>
+      <pre><code>exportProjectJsonString()
+exportCurrentPageSvg()
+exportAllPagesPdf()     // async
+exportSTL()</code></pre>
+
+      <h3 id="api-intent">Intent API（agent-api.js）</h3>
+      <p>エージェント向け高レベル API。mm 指定でレイアウト・多ビュー生成を内部処理します。生の <code>apply_commands</code> より先に使ってください。</p>
+      <table>
+        <thead><tr><th>関数</th><th>用途</th></tr></thead>
+        <tbody>
+          <tr><td><code>createMultiviewBox(options)</code></td><td>width/depth/height mm → 上面+正面（+ 任意で右）ページ生成</td></tr>
+          <tr><td><code>createPart(options)</code></td><td>セマンティック Part（<code>kind:"box"</code> + <code>features[]</code>）</td></tr>
+          <tr><td><code>layoutRectOnPageMm(w, h)</code></td><td>現在ページ中央に mm 矩形</td></tr>
+          <tr><td><code>validate3DReadiness()</code></td><td>3D 生成前チェック（軸数、閉輪郭、issues[]）</td></tr>
+          <tr><td><code>applyDigitizeProposals(proposals)</code></td><td>ゴースト図形配置</td></tr>
+          <tr><td><code>confirmDigitizeProposals()</code></td><td>ゴースト確定</td></tr>
+        </tbody>
+      </table>
+
+      <h2 id="mcp">MCP / WebSocket</h2>
+      <p>
+        Millrect 起動中、<code>main.js</code> が <code>ws://127.0.0.1:23450</code>（ポート使用中なら +1）で WebSocket サーバーを立てます。
+        認証トークンは <code>~/.millrect/millrect-ws-token</code> に書き出されます。
+        <code>mcp/server.js</code> が stdio MCP ↔ WS を橋渡しします。
+      </p>
+
+      <div class="docs-callout docs-callout-note">
+        <strong>ユーザー向けセットアップ</strong>
+        <p>
+          Claude Desktop 等への MCP 設定手順は <a href="ai-mcp.html">AI 連携</a> を参照してください。
+          エージェント操作の正本: <code>AGENT.ja.md</code> / <code>AGENT.md</code>（MCP Resource <code>millrect://docs/agent-manual</code>）。
+          MCP ツール全一覧: <code>docs/MCP-REFERENCE.md</code>（Resource <code>millrect://docs/mcp-reference</code>）。
+        </p>
+      </div>
+
+      <h3 id="mcp-layers">2 レイヤーの命名</h3>
+      <table>
+        <thead><tr><th>レイヤー</th><th>命名</th><th>利用者</th></tr></thead>
+        <tbody>
+          <tr><td>MCP ツール</td><td><code>snake_case</code></td><td>Claude Desktop 等（<code>mcp/server.js</code>）</td></tr>
+          <tr><td>WS <code>action</code></td><td><code>camelCase</code></td><td>WebSocket 直叩き（<code>main.js</code>）</td></tr>
+          <tr><td><code>apply_commands</code> 内</td><td><code>camelCase</code></td><td><code>addShape</code> 等のドキュメント操作</td></tr>
+        </tbody>
+      </table>
+
+      <h3 id="mcp-workflow">基本ワークフロー</h3>
+      <ol class="docs-steps">
+        <li><strong>Millrect を起動</strong> — WS サーバーとトークンファイルが生成される</li>
+        <li><strong>MCP クライアントを接続</strong> — <code>node mcp/server.js</code> を登録</li>
+        <li><strong><code>get_project_context</code></strong> — 新規/作業中、Profile 数、viewDefinition を確認</li>
+        <li><strong>Intent API を優先</strong> — <code>create_multiview_box</code> / <code>validate_3d_readiness</code> 等</li>
+        <li><strong>微調整</strong> — <code>apply_commands</code> で個別図形編集</li>
+        <li><strong>3D 確認</strong> — <code>update_3d_scene</code> → <code>get_3d_scene_status</code></li>
+      </ol>
+
+      <h3 id="mcp-tools">MCP ツール一覧</h3>
+      <table>
+        <thead><tr><th>MCP ツール</th><th>WS action</th><th>説明</th></tr></thead>
+        <tbody>
+          <tr><td><code>get_project_context</code></td><td><code>getProjectContext</code></td><td>プロジェクト概要（shapes / profiles / viewDefinition / briefSummary）</td></tr>
+          <tr><td><code>get_taste_context</code></td><td><code>getTasteContext</code></td><td><code>projectBrief</code> + Global taste</td></tr>
+          <tr><td><code>update_project_brief</code></td><td><code>updateProjectBrief</code></td><td><code>projectBrief</code> 部分更新</td></tr>
+          <tr><td><code>record_decision</code></td><td><code>recordDecision</code></td><td>採用・却下・修正理由を追加</td></tr>
+          <tr><td><code>set_project_phase</code></td><td><code>setProjectPhase</code></td><td>discover / taste / brief / make / review / learn / done</td></tr>
+          <tr><td><code>append_session_learnings</code></td><td><code>appendSessionLearnings</code></td><td>セッションの学びを batch 追記</td></tr>
+          <tr><td><code>list_global_principles</code></td><td><code>listGlobalPrinciples</code></td><td>Global principles 一覧</td></tr>
+          <tr><td><code>promote_principle</code></td><td><code>promotePrinciple</code></td><td>Project principle を Global へ昇格</td></tr>
+          <tr><td><code>append_artifact_log</code></td><td><code>appendArtifactLog</code></td><td>レビュー・キャプチャ等の artifactLog 追記</td></tr>
+          <tr><td><code>get_state</code></td><td><code>getState</code></td><td>現在ページの shapes / dimensions / profiles</td></tr>
+          <tr><td><code>apply_commands</code></td><td><code>applyCommands</code></td><td>バッチ図面操作（下表参照）</td></tr>
+          <tr><td><code>clear_canvas</code></td><td><code>clearCanvas</code></td><td>現レイヤーの shapes を空に</td></tr>
+          <tr><td><code>get_svg</code></td><td><code>getSvg</code></td><td>現在ページの SVG</td></tr>
+          <tr><td><code>align_shapes</code></td><td><code>alignShapes</code></td><td>整列</td></tr>
+          <tr><td><code>distribute_shapes</code></td><td><code>distributeShapes</code></td><td>均等配置</td></tr>
+          <tr><td><code>undo</code> / <code>redo</code></td><td><code>undo</code> / <code>redo</code></td><td>履歴操作</td></tr>
+          <tr><td><code>set_selected_shapes</code></td><td><code>setSelectedShapes</code></td><td>選択変更</td></tr>
+          <tr><td><code>group_shapes</code> / <code>ungroup_shapes</code></td><td><code>groupShapes</code> / <code>ungroupShapes</code></td><td>グループ化</td></tr>
+          <tr><td><code>boolean_union</code></td><td><code>booleanUnion</code></td><td>Boolean 結合</td></tr>
+          <tr><td><code>boolean_subtract</code></td><td><code>booleanSubtract</code></td><td>Boolean 差分</td></tr>
+          <tr><td><code>boolean_intersect</code></td><td><code>booleanIntersect</code></td><td>Boolean 交差</td></tr>
+          <tr><td><code>boolean_exclude</code></td><td><code>booleanExclude</code></td><td>Boolean 除外</td></tr>
+          <tr><td><code>boolean_flatten</code></td><td><code>booleanFlatten</code></td><td>path 統合</td></tr>
+          <tr><td><code>add_constraint</code></td><td><code>addConstraint</code></td><td>拘束追加</td></tr>
+          <tr><td><code>remove_constraint</code></td><td><code>removeConstraint</code></td><td>拘束削除</td></tr>
+          <tr><td><code>get_constraints</code></td><td><code>getConstraints</code></td><td>拘束一覧</td></tr>
+          <tr><td><code>update_3d_scene</code></td><td><code>update3DScene</code></td><td>3D メッシュ再生成</td></tr>
+          <tr><td><code>get_3d_scene_status</code></td><td><code>get3DSceneStatus</code></td><td>3D 状態（再生成なし）</td></tr>
+          <tr><td><code>validate_3d_readiness</code></td><td><code>validate3DReadiness</code></td><td>3D 準備チェック</td></tr>
+          <tr><td><code>create_multiview_box</code></td><td><code>createMultiviewBox</code></td><td>mm 指定多ビュー直方体</td></tr>
+          <tr><td><code>create_part</code></td><td><code>createPart</code></td><td>セマンティック Part 生成</td></tr>
+          <tr><td><code>layout_rect_mm</code></td><td><code>layoutRectOnPageMm</code></td><td>mm 矩形を中央配置</td></tr>
+          <tr><td><code>load_reference_image</code></td><td><code>loadReferenceImageFromFile</code></td><td>参照画像配置</td></tr>
+          <tr><td><code>set_reference_scale_anchor</code></td><td><code>setReferenceImageScaleAnchor</code></td><td>2 点 + mm でスケール校正</td></tr>
+          <tr><td><code>digitize_sketch</code></td><td><code>applyDigitizeProposals</code></td><td>ゴースト図形提案</td></tr>
+          <tr><td><code>confirm_digitize_proposals</code></td><td><code>confirmDigitizeProposals</code></td><td>ゴースト確定</td></tr>
+          <tr><td><code>compile_part_dsl</code></td><td><code>compilePartDsl</code></td><td>Part DSL dry-run</td></tr>
+          <tr><td><code>apply_part_dsl</code></td><td><code>applyPartDsl</code></td><td>Part DSL → 図面</td></tr>
+          <tr><td><code>validate_manufacturability</code></td><td><code>validatePartManufacturability</code></td><td>製造ルール検証</td></tr>
+          <tr><td><code>update_part_param</code></td><td><code>updatePartParam</code></td><td>Part パラメータ更新</td></tr>
+          <tr><td><code>import_part_dsl_file</code></td><td><code>importPartDslFile</code></td><td><code>.mlr-part.json</code> 読み込み</td></tr>
+          <tr><td><code>list_docs_scenarios</code></td><td><code>listDocsScenarios</code></td><td>ドキュメントシナリオ一覧</td></tr>
+          <tr><td><code>run_docs_scenario</code></td><td><code>runDocsScenario</code></td><td>シナリオ適用</td></tr>
+          <tr><td><code>capture_screenshot</code></td><td>（main process）</td><td>PNG キャプチャ</td></tr>
+        </tbody>
+      </table>
+
+      <h3 id="apply-commands">apply_commands 内アクション</h3>
+      <table>
+        <thead><tr><th>action</th><th>説明</th></tr></thead>
+        <tbody>
+          <tr><td><code>addShape</code></td><td>図形追加（<code>type:"dimension"</code> は <code>page.dimensions[]</code> へ）</td></tr>
+          <tr><td><code>updateShape</code></td><td>図形更新</td></tr>
+          <tr><td><code>deleteShape</code></td><td>図形削除</td></tr>
+          <tr><td><code>addDimension</code></td><td>寸法線追加（明示指定）</td></tr>
+          <tr><td><code>updateDimension</code></td><td>寸法線更新</td></tr>
+          <tr><td><code>selectShapes</code></td><td>選択変更</td></tr>
+          <tr><td><code>setPagePaper</code></td><td>用紙・向き変更</td></tr>
+          <tr><td><code>setPageScale</code></td><td>スケール変更</td></tr>
+          <tr><td><code>setProjectName</code></td><td>プロジェクト名変更</td></tr>
+          <tr><td><code>addPage</code></td><td>ページ追加</td></tr>
+          <tr><td><code>addConstraint</code></td><td>拘束追加</td></tr>
+          <tr><td><code>removeConstraint</code></td><td>拘束削除</td></tr>
+          <tr><td><code>applyConstraints</code></td><td>全拘束を即時適用</td></tr>
+        </tbody>
+      </table>
+
+      <h2 id="electron">Electron</h2>
+      <p>デスクトップ版は Electron で <code>app/index.html</code> を読み込みます。</p>
+
+      <h3>セキュリティ</h3>
+      <ul>
+        <li><code>contextIsolation: true</code> — レンダラーと Node を分離</li>
+        <li><code>nodeIntegration: false</code></li>
+        <li><code>sandbox: true</code></li>
+        <li>レンダラーは <code>preload.js</code> 経由の <code>window.electronAPI</code> のみ使用</li>
+        <li>WebSocket MCP は <code>127.0.0.1</code> のみ。トークン認証必須</li>
+        <li>アプリ CSP: <code>app/index.html</code> の Content-Security-Policy メタタグ</li>
+      </ul>
+
+      <h3 id="electron-api">electronAPI（preload.js）</h3>
+      <table>
+        <thead><tr><th>API</th><th>用途</th></tr></thead>
+        <tbody>
+          <tr><td><code>saveProjectJson</code> / <code>openProjectJson</code></td><td>JSON ファイルダイアログ</td></tr>
+          <tr><td><code>saveSvg</code> / <code>savePdf</code></td><td>SVG / PDF 保存</td></tr>
+          <tr><td><code>openImageFile</code></td><td>参照画像・キャンバス画像</td></tr>
+          <tr><td><code>readFont</code> / <code>outlineTextShape</code> / <code>measureTextLayout</code></td><td>テキストレンダリング・アウトライン化</td></tr>
+          <tr><td><code>readFontLibrary</code> / <code>writeFontLibrary</code></td><td>ユーザーフォントライブラリ永続化</td></tr>
+          <tr><td><code>openHelpTopic(page, anchor)</code></td><td>アプリ内ヘルプモーダル</td></tr>
+          <tr><td><code>setAppLocale(locale)</code></td><td>UI 言語切替</td></tr>
+          <tr><td><code>onMenu(channel, callback)</code></td><td>メニューバーイベント（undo, export, help 等）</td></tr>
+          <tr><td><code>isDesktopApp</code></td><td><code>true</code>（ブラウザ版では undefined）</td></tr>
+        </tbody>
+      </table>
+      <p>Electron 専用: テキストアウトライン化（macOS Core Text → fontkit フォールバック）、MCP WebSocket、ファイル I/O。</p>
+
+      <h2 id="patterns">既知のパターンと注意点</h2>
+      <ul>
+        <li><strong>ベジェオーバーレイ:</strong> 必ず <code>render()</code> → <code>renderBezierOverlay()</code> の順</li>
+        <li><strong>ベジェマウスハンドラ:</strong> <code>if (!_ds) return</code> ガードより前にチェック</li>
+        <li><strong>Edit モード:</strong> <code>_bezierEditId</code> チェックはツール非依存</li>
+        <li><strong>rotation / flipH / flipV:</strong> SVG 表示、<code>getShapeBBox</code>、整列、Profile、3D 生成に反映。変換順は回転 → 反転</li>
+        <li><strong>ゴースト図形:</strong> <code>shape.ghost</code> は Profile / 3D 対象外。確定後に 3D 化</li>
+        <li><strong>Web Components:</strong> <code>js/components/</code> 内で <code>display: contents</code> 禁止（absolute 子の containing block が狂う）</li>
+        <li><strong>Autosave:</strong> <code>pushHistory()</code> → <code>onStateChanged()</code> → debounce 2 秒 → <code>doAutosave()</code></li>
+        <li><strong>shiftShape():</strong> <code>pushHistory()</code> を呼ばない。直接変更後は手動で履歴記録</li>
+        <li><strong>render():</strong> RAF debounce — 連続呼び出しは 1 フレームにまとまる</li>
+        <li><strong>3D 生成:</strong> <code>feature.depth</code> 等の per-shape 3D 指示は使わない。多ビュー CSG のみ</li>
+      </ul>
+
+      <div class="docs-callout docs-callout-tip">
+        <strong>ユーザーガイドに戻る</strong>
+        <p>
+          作図の使い方は <a href="getting-started.html">はじめに</a> から。
+          AI 連携のセットアップは <a href="ai-mcp.html">AI 連携</a> を参照してください。
+        </p>
+      </div>
+    </article>
+  </div>
+
+  <footer class="docs-footer">
+    <div class="docs-footer-inner">
+      <span>Millrect ドキュメント</span>
+      <div class="docs-footer-links">
+        <a href="ai-mcp.html">← AI 連携</a>
+        <a href="./">ドキュメント TOP</a>
+      </div>
+    </div>
+  </footer>
+
+  <script src="../packages/help-index.js"></script>
+  <script src="js/docs-search.js"></script>
+  <script src="js/docs-nav.js"></script>
+  <script src="js/docs.js"></script>
+</body>
+</html>

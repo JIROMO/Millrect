@@ -1,0 +1,246 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <!-- Google tag (gtag.js) -->
+    <script async src="https://www.googletagmanager.com/gtag/js?id=G-0JMRZXG11T"></script>
+    <script>
+      window.dataLayer = window.dataLayer || [];
+      function gtag(){dataLayer.push(arguments);}
+      gtag('js', new Date());
+
+      gtag('config', 'G-0JMRZXG11T');
+    </script>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>AI 連携 — Millrect ドキュメント</title>
+  <meta name="robots" content="index, follow" />
+  <script src="js/docs-seo.js"></script>
+  <link rel="stylesheet" href="css/docs.css">
+</head>
+<body data-page="ai-mcp">
+  <header class="docs-header">
+    <div class="docs-header-inner">
+      <a class="docs-logo" href="./">
+        <img class="docs-logo-img" src="../site/images/logo.svg" alt="Millrect" width="774" height="109">
+      </a>
+      <div class="docs-header-actions">
+        <button class="docs-menu-toggle" id="docs-menu-toggle" type="button" aria-label="メニュー">☰</button>
+      </div>
+    </div>
+  </header>
+
+  <div class="docs-layout">
+    <aside class="docs-sidebar" id="docs-sidebar"></aside>
+
+    <article class="docs-content">
+      <nav class="docs-breadcrumb"><a href="./">ドキュメント</a> / AI 連携</nav>
+      <h1>AI 連携（オプション）</h1>
+      <p class="docs-lead">
+        Claude Desktop などの AI アシスタントから Millrect を操作できる連携機能です。
+        通常の作図には不要で、AI に図面作成を手伝ってもらいたい場合に使います。
+      </p>
+
+      <div class="docs-callout docs-callout-note">
+        <strong>通常利用では不要です</strong>
+        <p>
+          Millrect は手動で問題なく使えます。このページは、AI 連携を設定したい方向けの参考情報です。
+        </p>
+      </div>
+
+      <h2 id="what-is">AI 連携とは</h2>
+      <p>
+        Millrect を起動している間、AI（Claude など）が図形の追加・移動・3D 生成などを
+        代わりに実行できます。AI は「指示を出す」役割で、実際の幾何計算や描画は Millrect が行います。
+      </p>
+      <p>
+        例: 「幅 100 mm の矩形を描いて」「上面図ページを追加して」といった自然言語の指示を、
+        AI 経由で Millrect に伝えられます。
+      </p>
+
+      <h2 id="requirements">必要なもの</h2>
+      <ul>
+        <li>Millrect アプリが起動していること（AI 連携はアプリ起動中のみ有効）</li>
+        <li>Claude Desktop など、MCP（Model Context Protocol）に対応した AI クライアント</li>
+        <li><a href="#mcp-setup">MCP サーバーの設定</a>（配布物に同梱。<strong>Node.js</strong> が PATH に必要）</li>
+      </ul>
+
+      <h2 id="mcp-setup">MCP サーバーの設定</h2>
+      <p>
+        デスクトップ版のインストール先に MCP サーバーが同梱されています。
+        Millrect を起動した状態で、AI クライアントから次のスクリプトを指定します。
+      </p>
+      <table>
+        <thead><tr><th>環境</th><th><code>server.js</code> のパス（例）</th></tr></thead>
+        <tbody>
+          <tr>
+            <td>macOS（.app）</td>
+            <td><code>/Applications/Millrect.app/Contents/Resources/mcp/server.js</code></td>
+          </tr>
+          <tr>
+            <td>Windows</td>
+            <td><code>C:\Program Files\Millrect\resources\mcp\server.js</code>（インストール先による）</td>
+          </tr>
+          <tr>
+            <td>開発（リポジトリ）</td>
+            <td><code>mcp/server.js</code></td>
+          </tr>
+        </tbody>
+      </table>
+      <p>Claude Desktop（<code>claude_desktop_config.json</code>）の例:</p>
+      <pre><code>{
+  "mcpServers": {
+    "millrect": {
+      "command": "node",
+      "args": ["/Applications/Millrect.app/Contents/Resources/mcp/server.js"]
+    }
+  }
+}</code></pre>
+      <p>
+        Windows ではパスを上表の <code>server.js</code> に合わせ、バックスラッシュを JSON 用にエスケープしてください。
+        設定後、<strong>Millrect を起動してから</strong> Claude Desktop を再起動します。
+      </p>
+      <p>
+        Cursor など他の MCP クライアントも同様に <code>node</code> + <code>server.js</code> を指定できます。
+        操作の詳細は <a href="developer.html#mcp">開発者ガイド（MCP）</a> およびリポジトリの <code>AGENT.ja.md</code> を参照してください。
+      </p>
+
+      <h2 id="workflow">AI との基本的な流れ</h2>
+      <ol class="docs-steps">
+        <li>
+          <strong>Millrect を起動</strong><br>
+          通常どおりアプリを開き、プロジェクトを作成または開きます。
+        </li>
+        <li>
+          <strong>AI クライアントで Millrect に接続</strong><br>
+          MCP 設定が済んでいれば、AI から Millrect の状態を読み取れます。
+        </li>
+        <li>
+          <strong>AI に指示する</strong><br>
+          「現在の図面を教えて」「24×100 のジョイント外形を描いて」など、自然言語で依頼します。
+        </li>
+        <li>
+          <strong>結果をアプリで確認</strong><br>
+          AI が操作した内容は、Millrect の画面上に反映されます。必要なら手動で修正してください。
+        </li>
+      </ol>
+
+      <h2 id="part-dsl-workflow">AI に頼みやすい作業単位</h2>
+      <p>
+        Millrect の AI 連携は、画面クリックを自動化するよりも、図面・部品・判断を構造化して渡すための API を中心にしています。
+        まず状況を読み、必要なら Taste Memory の brief を確認し、mm 指定で図面を生成してから 3D と製造ルールを検証する流れが基本です。
+      </p>
+      <table>
+        <thead><tr><th>レイヤー</th><th>主なツール</th><th>向いている依頼</th></tr></thead>
+        <tbody>
+          <tr><td>状況確認</td><td><code>get_project_context</code>, <code>validate_3d_readiness</code></td><td>現在のページ、面の向き、3D 化できるかを確認</td></tr>
+          <tr><td>Intent API</td><td><code>create_multiview_box</code>, <code>layout_rect_mm</code></td><td>幅・奥行き・高さなど mm 指定で素早く図面化</td></tr>
+          <tr><td>Part DSL</td><td><code>compile_part_dsl</code>, <code>apply_part_dsl</code>, <code>update_part_param</code></td><td>箱、パネル、L 字ブラケット、筐体、穴・スロット・フィレットなどを宣言的に作る</td></tr>
+          <tr><td>製造チェック</td><td><code>validate_manufacturability</code></td><td>穴径、壁厚、フィレットなど製造ルール上の注意点を確認</td></tr>
+          <tr><td>レビュー</td><td><code>capture_screenshot</code>, <code>append_artifact_log</code></td><td>見た目・意図との差分を記録し、次の修正へつなげる</td></tr>
+        </tbody>
+      </table>
+
+      <h2 id="ai-can-do">AI にできること（例）</h2>
+      <table>
+        <thead><tr><th>操作</th><th>内容</th></tr></thead>
+        <tbody>
+          <tr><td>図形の追加・編集</td><td>矩形、円、線、寸法線など</td></tr>
+          <tr><td>ページ・レイヤー操作</td><td>上面図ページの追加、viewDefinition の設定</td></tr>
+          <tr><td>スケッチ取り込み</td><td>参照画像の配置、スケール校正、<code>digitize_sketch</code> によるゴースト提案</td></tr>
+          <tr><td>Part / 多ビュー生成</td><td><code>create_multiview_box</code>、Part DSL（<code>apply_part_dsl</code>）など mm 指定 API</td></tr>
+          <tr><td>Taste Memory</td><td>意図、制約、好み、採否理由、レビュー履歴を <code>projectBrief</code> に記録</td></tr>
+          <tr><td>整列・合成</td><td>図形の整列、Boolean 合成・くり抜き</td></tr>
+          <tr><td>3D 確認</td><td>3D 再生成、生成状態の確認</td></tr>
+          <tr><td>Undo / Redo</td><td>操作の巻き戻し</td></tr>
+        </tbody>
+      </table>
+
+      <h2 id="taste-memory">Taste Memory（判断の記録）</h2>
+      <p>
+        Taste Memory は、AI が「なぜその形にするのか」を参照できるようにするための記録レイヤーです。
+        会話全文ではなく、案件の意図、制約、参考、設計方針、採用・却下の理由、レビュー結果を構造化して保存します。
+        アプリ上では右パネルの <strong>Pages タブ → 制作メモ</strong> で状態を確認できます。
+      </p>
+      <table>
+        <thead><tr><th>保存先</th><th>内容</th><th>用途</th></tr></thead>
+        <tbody>
+          <tr><td><code>projectBrief</code></td><td>案件ごとの intent / constraints / designPrinciples / decisions / artifactLog</td><td>このプロジェクトで AI が守る判断基準</td></tr>
+          <tr><td>Global Memory</td><td>複数プロジェクトで繰り返し確認された好み</td><td>新規プロジェクト開始時の初期 brief</td></tr>
+          <tr><td>Artifact Log</td><td>キャプチャ、3D 状態、評価、採否</td><td>レビュー後の修正理由を残す</td></tr>
+        </tbody>
+      </table>
+      <p>
+        関連ツール: <code>get_taste_context</code>, <code>update_project_brief</code>, <code>record_decision</code>,
+        <code>set_project_phase</code>, <code>append_session_learnings</code>, <code>list_global_principles</code>,
+        <code>promote_principle</code>, <code>append_artifact_log</code>。
+        詳細は <a href="developer.html#taste-memory">開発者ガイド — Taste Memory</a> と <code>docs/TASTE-MEMORY.md</code> を参照してください。
+      </p>
+
+      <h2 id="sketch-digitize">スケッチ digitize（参照画像 + ゴースト）</h2>
+      <p>
+        Millrect 内に Vision（画像認識）はありません。Claude など<strong>外部 AI が画像を解析</strong>し、
+        MCP 経由で mm 指定の図形提案を渡す設計です。人間はアプリ上で提案を確認してから確定します。
+      </p>
+      <ol class="docs-steps">
+        <li>
+          <strong>参照画像を配置</strong><br>
+          MCP <code>load_reference_image</code>、または UI の Pages → 参照画像 → <strong>画像を読み込む</strong>。
+        </li>
+        <li>
+          <strong>位置・サイズ（任意）</strong><br>
+          UI の <strong>位置・サイズを編集</strong> → キャンバスで調整 → 同ボタンを再クリックで終了。MCP では <code>load_reference_image</code> の <code>x</code> / <code>y</code> / <code>widthMm</code> 等でも指定可。
+        </li>
+        <li>
+          <strong>スケール校正</strong><br>
+          <code>set_reference_scale_anchor</code>（実寸がわかる線の 2 端 + mm）、または UI の <strong>スケール校正</strong>。
+        </li>
+        <li>
+          <strong>図形提案を配置</strong><br>
+          AI が <code>digitize_sketch</code> で矩形・円・線の proposals（mm）を送る → ゴースト表示。
+        </li>
+        <li>
+          <strong>確定して編集</strong><br>
+          UI または <code>confirm_digitize_proposals</code> で通常図形に。必要なら手動で寸法を直す。
+        </li>
+      </ol>
+      <div class="docs-callout docs-callout-warn">
+        <strong>ゴーストは 3D に含まれません</strong>
+        <p>
+          確定前のゴースト図形は 3D 生成・Profile 抽出の対象外です。立体化する前に必ず確定してください。
+        </p>
+      </div>
+      <p>エージェント向けの詳細 API は <a href="developer.html#api">開発者ガイド（API）</a> と <code>AGENT.ja.md</code>（スケッチ取り込み章）を参照してください。</p>
+
+      <h2 id="notes">注意点</h2>
+      <ul>
+        <li>3D を作るには、手動操作と同様に<strong>複数の投影図ページ</strong>が必要です</li>
+        <li>AI が描いた図形も、いつでも手動で編集・削除できます</li>
+        <li>AI 連携は補助機能です。最終的な設計内容の確認はご自身で行ってください</li>
+      </ul>
+
+      <div class="docs-callout docs-callout-tip">
+        <strong>手動操作のガイド</strong>
+        <p>
+          AI を使わずに Millrect を使う場合は、
+          <a href="getting-started.html">はじめに</a> から順に読み進めてください。
+        </p>
+      </div>
+    </article>
+  </div>
+
+  <footer class="docs-footer">
+    <div class="docs-footer-inner">
+      <span>Millrect ドキュメント</span>
+      <div class="docs-footer-links">
+        <a href="shortcuts.html">← ショートカット</a>
+        <a href="./">ドキュメント TOP</a>
+      </div>
+    </div>
+  </footer>
+
+  <script src="../packages/help-index.js"></script>
+  <script src="js/docs-search.js"></script>
+  <script src="js/docs-nav.js"></script>
+    <script src="js/docs.js"></script>
+</body>
+</html>

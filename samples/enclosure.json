@@ -1,0 +1,257 @@
+{
+  "projectName": "3面筐体",
+  "unit": "mm",
+  "fonts": [],
+  "pages": [
+    {
+      "id": "page-1780225163019-14",
+      "name": "上面図",
+      "paper": "A4",
+      "orientation": "landscape",
+      "scale": {
+        "numerator": 1,
+        "denominator": 10
+      },
+      "viewDefinition": {
+        "type": "top",
+        "normal": null,
+        "up": null
+      },
+      "dimensions": [],
+      "constraints": [],
+      "referenceImage": null,
+      "layers": [
+        {
+          "id": "layer-1780225163019-13",
+          "name": "本体",
+          "visible": true,
+          "locked": false,
+          "shapes": [
+            {
+              "id": "starter-top-rect",
+              "type": "rect",
+              "x": 14250,
+              "y": 10100,
+              "width": 1200,
+              "height": 800,
+              "stroke": "#14213d",
+              "fill": "#8fb7ff",
+              "strokeWidth": "medium"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "page-1780225163019-16",
+      "name": "正面図",
+      "paper": "A4",
+      "orientation": "landscape",
+      "scale": {
+        "numerator": 1,
+        "denominator": 10
+      },
+      "viewDefinition": {
+        "type": "front",
+        "normal": null,
+        "up": null
+      },
+      "dimensions": [],
+      "constraints": [],
+      "referenceImage": null,
+      "layers": [
+        {
+          "id": "layer-1780225163019-15",
+          "name": "本体",
+          "visible": true,
+          "locked": false,
+          "shapes": [
+            {
+              "id": "starter-front-rect",
+              "type": "rect",
+              "x": 14250,
+              "y": 10250,
+              "width": 1200,
+              "height": 500,
+              "stroke": "#14213d",
+              "fill": "#ffb347",
+              "strokeWidth": "medium"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "page-1780225163019-18",
+      "name": "右側面図",
+      "paper": "A4",
+      "orientation": "landscape",
+      "scale": {
+        "numerator": 1,
+        "denominator": 10
+      },
+      "viewDefinition": {
+        "type": "right",
+        "normal": null,
+        "up": null
+      },
+      "dimensions": [],
+      "constraints": [],
+      "referenceImage": null,
+      "layers": [
+        {
+          "id": "layer-1780225163019-17",
+          "name": "本体",
+          "visible": true,
+          "locked": false,
+          "shapes": [
+            {
+              "id": "starter-side-rect",
+              "type": "rect",
+              "x": 14450,
+              "y": 10250,
+              "width": 800,
+              "height": 500,
+              "stroke": "#14213d",
+              "fill": "#7bc896",
+              "strokeWidth": "medium"
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "partIntent": {
+    "version": 1,
+    "dsl": {
+      "version": 1,
+      "part": "enclosure",
+      "params": {
+        "W": 120,
+        "D": 80,
+        "H": 50,
+        "T": 3
+      },
+      "views": [
+        "top",
+        "front",
+        "right"
+      ],
+      "features": [],
+      "constraints": [],
+      "manufacturing": {
+        "process": "laser_cut",
+        "thickness_mm": 3,
+        "kerf_mm": 0.2,
+        "min_hole_diameter_mm": 2,
+        "min_edge_distance_mm": 3
+      },
+      "meta": {
+        "sampleId": "enclosure"
+      }
+    },
+    "features": [],
+    "buildOptions": {
+      "paper": "A4",
+      "orientation": "landscape",
+      "scale": {
+        "numerator": 1,
+        "denominator": 10
+      },
+      "views": [
+        "top",
+        "front",
+        "right"
+      ],
+      "includeSideView": true
+    },
+    "bindings": {
+      "top": {
+        "view": "top",
+        "shapeId": "starter-top-rect",
+        "pageId": "page-1780225163019-14",
+        "widthParam": "W",
+        "heightParam": "D"
+      },
+      "front": {
+        "view": "front",
+        "shapeId": "starter-front-rect",
+        "pageId": "page-1780225163019-16",
+        "widthParam": "W",
+        "heightParam": "H"
+      },
+      "right": {
+        "view": "right",
+        "shapeId": "starter-side-rect",
+        "pageId": "page-1780225163019-18",
+        "widthParam": "D",
+        "heightParam": "H"
+      }
+    },
+    "paramConstraints": [
+      {
+        "id": "dsl-param-W",
+        "kind": "param_bind",
+        "param": "W",
+        "value": 120,
+        "binds": [
+          {
+            "view": "top",
+            "axis": "width",
+            "mm": 120
+          },
+          {
+            "view": "front",
+            "axis": "width",
+            "mm": 120
+          }
+        ]
+      },
+      {
+        "id": "dsl-param-D",
+        "kind": "param_bind",
+        "param": "D",
+        "value": 80,
+        "binds": [
+          {
+            "view": "top",
+            "axis": "depth",
+            "mm": 80
+          },
+          {
+            "view": "right",
+            "axis": "width",
+            "mm": 80
+          }
+        ]
+      },
+      {
+        "id": "dsl-param-H",
+        "kind": "param_bind",
+        "param": "H",
+        "value": 50,
+        "binds": [
+          {
+            "view": "front",
+            "axis": "height",
+            "mm": 50
+          },
+          {
+            "view": "right",
+            "axis": "height",
+            "mm": 50
+          }
+        ]
+      },
+      {
+        "id": "dsl-param-T",
+        "kind": "param_bind",
+        "param": "T",
+        "value": 3,
+        "binds": [],
+        "note": "wall thickness — manufacturing metadata"
+      }
+    ],
+    "geometricConstraints": []
+  }
+}

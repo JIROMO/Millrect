@@ -1,0 +1,330 @@
+<!DOCTYPE html>
+<html lang="ja">
+  <head>
+    <!-- Google tag (gtag.js) -->
+    <script async src="https://www.googletagmanager.com/gtag/js?id=G-0JMRZXG11T"></script>
+    <script>
+      window.dataLayer = window.dataLayer || [];
+      function gtag(){dataLayer.push(arguments);}
+      gtag('js', new Date());
+
+      gtag('config', 'G-0JMRZXG11T');
+    </script>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Millrect ドキュメント</title>
+    <meta
+      name="description"
+      content="Millrect — 2D図面から3Dモデルを生成する軽量CADの使い方ガイド。作図、複数投影図3D、STL出力、スケッチ取り込み、AI/MCP、Taste Memory。"
+    />
+    <meta name="robots" content="index, follow" />
+    <link rel="canonical" href="https://millrect.com/docs/" />
+    <link rel="icon" href="../favicon.ico" />
+    <meta property="og:type" content="website" />
+    <meta property="og:site_name" content="Millrect" />
+    <meta property="og:url" content="https://millrect.com/docs/" />
+    <meta property="og:title" content="Millrect ドキュメント" />
+    <meta property="og:description" content="2D作図から3D生成までの使い方ガイド" />
+    <meta property="og:image" content="https://millrect.com/site/images/ogp.jpg" />
+    <link rel="stylesheet" href="css/docs.css" />
+  </head>
+  <body data-page="home">
+    <header class="docs-header">
+      <div class="docs-header-inner">
+        <a class="docs-logo" href="./">
+          <img
+            class="docs-logo-img"
+            src="../site/images/logo.svg"
+            alt="Millrect"
+            width="774"
+            height="109"
+          />
+        </a>
+        <div class="docs-header-actions">
+          <button
+            class="docs-menu-toggle"
+            id="docs-menu-toggle"
+            type="button"
+            aria-label="メニュー"
+          >
+            ☰
+          </button>
+        </div>
+      </div>
+    </header>
+
+    <div class="docs-layout docs-layout--home">
+      <aside class="docs-sidebar" id="docs-sidebar"></aside>
+
+      <div class="docs-main">
+    <main>
+      <section class="docs-hero">
+        <span class="docs-hero-badge">Millrect 使い方ガイド</span>
+        <h1>図面から、立体へ。</h1>
+        <p class="docs-hero-lead">
+          Millrect は、上面図・正面図などの正投影図を描くと、そこから 3D
+          モデルを自動生成できる作図アプリです（ブラウザ版とデスクトップ版）。
+          ドキュメントでは実プロダクト <strong>Module Joint 1（24×100 mm、板厚 2 mm）</strong>を例に、
+          図面、寸法、レイヤー、3D プレビューまでを同じ題材で説明します。
+        </p>
+        <div class="docs-hero-actions">
+          <a class="docs-btn docs-btn-primary" href="getting-started.html"
+            >はじめに →</a
+          >
+          <a class="docs-btn docs-btn-ghost" href="atlas.html"
+            >設計標本帳</a
+          >
+          <a class="docs-btn docs-btn-ghost" href="desktop-download.html"
+            >デスクトップ版</a
+          >
+          <a class="docs-btn docs-btn-ghost" href="multiview-3d.html"
+            >3D の作り方</a
+          >
+        </div>
+      </section>
+
+      <section class="docs-section" style="padding-top: 0">
+        <figure class="docs-figure docs-figure-wide">
+          <img
+            src="images/multiview-top-drawing.png"
+            alt="Module Joint 1 の上面図"
+          />
+          <figcaption>
+            Module Joint 1 の上面図 — 24×100 mm、Ø6 穴、10 mm ピッチ、切り込み線を含む実プロダクト図面。
+          </figcaption>
+        </figure>
+        <figure class="docs-figure docs-figure-wide" style="margin-top: 24px">
+          <img
+            src="images/3d-panel.png"
+            alt="Module Joint 1 の 3D プレビュー"
+          />
+          <figcaption>
+            3D プレビュー — 図面の輪郭、穴、端部切り欠きを反映した板厚 2 mm のモデル。
+          </figcaption>
+        </figure>
+      </section>
+
+      <section class="docs-features">
+        <div class="docs-features-inner">
+          <div class="docs-feature-item">
+            <h4>図面が本体</h4>
+            <p>
+              3D
+              は図面からいつでも作り直せます。図面を編集すれば立体も更新されます。
+            </p>
+          </div>
+          <div class="docs-feature-item">
+            <h4>複数の投影図で立体化</h4>
+            <p>
+              上面図と正面図など、2 枚以上の図面を組み合わせて 3D を生成します。
+            </p>
+          </div>
+          <div class="docs-feature-item">
+            <h4>自動保存</h4>
+            <p>
+              作業内容は自動的に保存されます。次回起動時に続きから再開できます。
+            </p>
+          </div>
+          <div class="docs-feature-item">
+            <h4>STL 出力</h4>
+            <p>
+              3D プレビューで確認したモデルを STL ファイルとして書き出せます。
+            </p>
+          </div>
+        </div>
+      </section>
+
+      <section class="docs-section" id="capabilities">
+        <h2 class="docs-section-title">できること</h2>
+        <div class="docs-grid">
+          <a class="docs-card" href="drawing.html">
+            <span class="docs-card-icon">2D</span>
+            <h3>2D 図面を作る</h3>
+            <p>
+              矩形・円・線・ベジェ・テキスト・寸法線を描き、ページとレイヤーで整理できます。
+              Google Fonts 登録や参照画像の下絵配置にも対応します。
+            </p>
+            <span class="docs-card-link">2D 描画を見る →</span>
+          </a>
+          <a class="docs-card" href="multiview-3d.html">
+            <span class="docs-card-icon">3D</span>
+            <h3>投影図から 3D を生成する</h3>
+            <p>
+              上面図・正面図・側面図など複数の正投影図を CSG 交差で立体化し、
+              3D プレビューと STL 出力につなげます。
+            </p>
+            <span class="docs-card-link">3D 生成を見る →</span>
+          </a>
+          <a class="docs-card" href="editing.html">
+            <span class="docs-card-icon">OPS</span>
+            <h3>編集と製図を詰める</h3>
+            <p>
+              塗り・線色、整列、グループ化、Boolean 合成・くり抜き、テキストアウトライン化、
+              Undo/Redo で図面を整えます。
+            </p>
+            <span class="docs-card-link">編集操作を見る →</span>
+          </a>
+          <a class="docs-card" href="ai-mcp.html#sketch-digitize">
+            <span class="docs-card-icon">IMG</span>
+            <h3>スケッチを下絵にする</h3>
+            <p>
+              参照画像を配置し、実寸がわかる線でスケール校正できます。
+              AI 連携時は提案図形をゴーストとして確認してから確定します。
+            </p>
+            <span class="docs-card-link">スケッチ digitize を見る →</span>
+          </a>
+          <a class="docs-card" href="ai-mcp.html#part-dsl-workflow">
+            <span class="docs-card-icon">API</span>
+            <h3>AI と部品を作る</h3>
+            <p>
+              MCP から Intent API や Part DSL を使い、mm 指定で箱・パネル・L 字ブラケット・筐体などを生成できます。
+            </p>
+            <span class="docs-card-link">AI 連携を見る →</span>
+          </a>
+          <a class="docs-card" href="ai-mcp.html#taste-memory">
+            <span class="docs-card-icon">TM</span>
+            <h3>判断を記録する</h3>
+            <p>
+              Taste Memory で意図、制約、好み、採否理由、レビュー結果を projectBrief として残し、
+              Pages タブの制作メモから状態を確認できます。
+            </p>
+            <span class="docs-card-link">Taste Memory を見る →</span>
+          </a>
+        </div>
+      </section>
+
+      <section class="docs-section">
+        <h2 class="docs-section-title">ガイド一覧</h2>
+        <div class="docs-grid">
+          <a class="docs-card" href="getting-started.html">
+            <span class="docs-card-icon">🚀</span>
+            <h3>はじめに</h3>
+            <p>アプリの起動、新規プロジェクトの作成、JSON インポート、最初の図形を描くまで。</p>
+            <span class="docs-card-link">読む →</span>
+          </a>
+          <a class="docs-card" href="philosophy.html">
+            <span class="docs-card-icon">◎</span>
+            <h3>設計思想</h3>
+            <p>
+              図面を本体にして、3D・AI・出力を補助として扱う Millrect の考え方。
+            </p>
+            <span class="docs-card-link">読む →</span>
+          </a>
+          <a class="docs-card" href="atlas.html">
+            <span class="docs-card-icon">図</span>
+            <h3>設計標本帳</h3>
+            <p>
+              作例から、図面・3D・AI/MCP・Part DSL の入口をたどるカタログ。
+              画像をシナリオ単位で管理する新しい見せ方です。
+            </p>
+            <span class="docs-card-link">見る →</span>
+          </a>
+          <a class="docs-card" href="desktop-download.html">
+            <span class="docs-card-icon">⬇️</span>
+            <h3>デスクトップ版</h3>
+            <p>
+              GitHub Releases からの macOS 向けダウンロードと、未署名配布時の起動方法。
+            </p>
+            <span class="docs-card-link">読む →</span>
+          </a>
+          <a class="docs-card" href="interface.html">
+            <span class="docs-card-icon">🖥</span>
+            <h3>画面構成</h3>
+            <p>
+              ツールバー、ツールパレット、キャンバス、右パネル、3D
+              プレビューの見方。
+            </p>
+            <span class="docs-card-link">読む →</span>
+          </a>
+          <a class="docs-card" href="drawing.html">
+            <span class="docs-card-icon">✏️</span>
+            <h3>2D 描画</h3>
+            <p>
+              矩形・円・線・ベジェ・テキスト・<strong>Google Fonts 登録</strong>・寸法線・<strong>キャンバス画像</strong>。<strong>スケッチ取り込み</strong>（参照画像・スケール校正）も。
+            </p>
+            <span class="docs-card-link">読む →</span>
+          </a>
+          <a class="docs-card" href="editing.html">
+            <span class="docs-card-icon">🔧</span>
+            <h3>編集操作</h3>
+            <p>
+              選択、プロパティ編集、<strong>塗り・線色</strong>、整列、グループ化、<strong>テキストのアウトライン化</strong>、合成・くり抜き、Undo/Redo。
+            </p>
+            <span class="docs-card-link">読む →</span>
+          </a>
+          <a class="docs-card" href="multiview-3d.html">
+            <span class="docs-card-icon">📦</span>
+            <h3>3D 生成</h3>
+            <p>
+              ページ追加で上面図・正面図を作り、立体の確認、<strong>塗り色の 3D 反映</strong
+              >、STL の書き出し。
+            </p>
+            <span class="docs-card-link">読む →</span>
+          </a>
+          <a class="docs-card" href="export.html">
+            <span class="docs-card-icon">💾</span>
+            <h3>保存と出力</h3>
+            <p>プロジェクトの保存・読み込み、PDF / SVG への書き出し。</p>
+            <span class="docs-card-link">読む →</span>
+          </a>
+          <a class="docs-card" href="shortcuts.html">
+            <span class="docs-card-icon">⌨️</span>
+            <h3>ショートカット</h3>
+            <p>ツール切替、編集、表示操作のキーボードショートカット一覧。</p>
+            <span class="docs-card-link">読む →</span>
+          </a>
+          <a class="docs-card" href="ai-mcp.html">
+            <span class="docs-card-icon">🤖</span>
+            <h3>AI 連携（オプション）</h3>
+            <p>
+              Claude Desktop などから Millrect を操作する MCP 連携。<strong>スケッチ digitize</strong> も。
+            </p>
+            <span class="docs-card-link">読む →</span>
+          </a>
+          <a class="docs-card" href="developer.html">
+            <span class="docs-card-icon">⚙️</span>
+            <h3>開発者ガイド</h3>
+            <p>
+              リポジトリ構成・API・MCP リファレンス。日常の作図には不要です。
+            </p>
+            <span class="docs-card-link">読む →</span>
+          </a>
+        </div>
+      </section>
+
+      <section class="docs-section">
+        <h2 class="docs-section-title">5 分で立体を作る</h2>
+        <div class="docs-callout docs-callout-tip">
+          <strong>最短手順</strong>
+          <p>
+            <strong>いちばん早い:</strong> 起動ダイアログで JSON インポート → <code>samples/module-joint-1.json</code> を開く → 3D プレビューを開く（24×100×2 mm の薄板ジョイント）<br>
+            <strong>自分で描く:</strong> ① 新規プロジェクトを作成 → ② 上面図ページで輪郭を描く（矩形・L 字 path など） → ③
+            Pages タブのページ追加で正面図を追加して同じ部品の輪郭を描く → ④ 3D
+            プレビューを開く → ⑤ STL を書き出す
+          </p>
+        </div>
+        <p style="color: var(--docs-text-2); font-size: 14px">
+          詳しい手順は
+          <a href="multiview-3d.html">3D 生成</a> のページを参照してください。
+        </p>
+      </section>
+    </main>
+      </div>
+    </div>
+
+    <footer class="docs-footer">
+      <div class="docs-footer-inner">
+        <span>Millrect — 2D 図面から 3D を導出</span>
+        <div class="docs-footer-links">
+          <a href="getting-started.html">はじめに</a>
+          <a href="multiview-3d.html">3D 生成</a>
+        </div>
+      </div>
+    </footer>
+
+    <script src="../packages/help-index.js"></script>
+    <script src="js/docs-search.js"></script>
+    <script src="js/docs-nav.js"></script>
+    <script src="js/docs.js"></script>
+  </body>
+</html>

@@ -1,0 +1,213 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <!-- Google tag (gtag.js) -->
+    <script async src="https://www.googletagmanager.com/gtag/js?id=G-0JMRZXG11T"></script>
+    <script>
+      window.dataLayer = window.dataLayer || [];
+      function gtag(){dataLayer.push(arguments);}
+      gtag('js', new Date());
+
+      gtag('config', 'G-0JMRZXG11T');
+    </script>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>画面構成 — Millrect ドキュメント</title>
+  <meta name="robots" content="index, follow" />
+  <script src="js/docs-seo.js"></script>
+  <link rel="stylesheet" href="css/docs.css">
+</head>
+<body data-page="interface">
+  <header class="docs-header">
+    <div class="docs-header-inner">
+      <a class="docs-logo" href="./">
+        <img class="docs-logo-img" src="../site/images/logo.svg" alt="Millrect" width="774" height="109">
+      </a>
+      <div class="docs-header-actions">
+        <button class="docs-menu-toggle" id="docs-menu-toggle" type="button" aria-label="メニュー">☰</button>
+      </div>
+    </div>
+  </header>
+
+  <div class="docs-layout">
+    <aside class="docs-sidebar" id="docs-sidebar"></aside>
+
+    <article class="docs-content">
+      <nav class="docs-breadcrumb"><a href="./">ドキュメント</a> / 画面構成</nav>
+      <h1>画面構成</h1>
+      <p class="docs-lead">
+        Millrect の画面は、上部のツールバー、左のツールパレット、中央のキャンバス、右の管理パネル、
+        下部のステータスバーで構成されています。
+      </p>
+
+      <figure class="docs-figure docs-figure-wide">
+        <img src="images/main-window.png" alt="Millrect メイン画面全体">
+        <figcaption>メイン画面の全体像。作図は中央の白いキャンバス上で行います。</figcaption>
+      </figure>
+
+      <h2 id="toolbar">ツールバー（上部）</h2>
+      <figure class="docs-figure docs-figure-bar">
+        <img src="images/toolbar.png" alt="上部ツールバー。2D/3D切替、ファイル操作、出力、Undo/Redo、プロジェクト名">
+        <figcaption>ツールバー左側: 2D / 3D 切替、ファイル操作、出力、Undo/Redo。右端: プロジェクト名。</figcaption>
+      </figure>
+      <table>
+        <thead><tr><th>ボタン</th><th>機能</th><th>ショートカット</th></tr></thead>
+        <tbody>
+          <tr><td>新規 / 開く / 保存</td><td>プロジェクトの作成・読み込み・保存</td><td>Ctrl+N / Ctrl+S</td></tr>
+          <tr><td>SVG インポート</td><td>外部 SVG を現在のページに取り込む</td><td>—</td></tr>
+          <tr><td>画像配置</td><td>PNG / JPEG / WebP / SVG を選択可能な画像オブジェクトとしてキャンバスに配置</td><td>—</td></tr>
+          <tr><td>SVG / PDF / JSON 出力</td><td>図面やプロジェクトをファイルに書き出す</td><td>—</td></tr>
+          <tr><td>2D / 3D</td><td>2D 作図画面と、現在の図面から生成する 3D プレビューを切り替える</td><td>—</td></tr>
+          <tr><td>Undo / Redo</td><td>図形操作の元に戻す / やり直す</td><td>Ctrl+Z / Ctrl+Y</td></tr>
+          <tr><td>左 / 右パネル</td><td>サイドパネルの表示切替</td><td>—</td></tr>
+        </tbody>
+      </table>
+      <p>macOS では Ctrl の代わりに Cmd キーを使います。</p>
+
+      <h2 id="tools">ツールパレット（左）</h2>
+      <figure class="docs-figure docs-figure-tools">
+        <img src="images/tools-panel.png" alt="左側のフローティングツールパレット">
+        <figcaption>ドラッグで移動できるツールパレット。上から選択、パン、矩形、円、線、ペン、テキストなど。</figcaption>
+      </figure>
+      <p>パレットは画面上の好きな位置にドラッグして移動できます。選択ツール以外にも、以下のツールが含まれます。</p>
+      <ul>
+        <li><strong>パン</strong> — キャンバスを移動（スペースキーを押しながらドラッグでも可能）</li>
+        <li><strong>矩形 / 円 / 線</strong> — 基本図形の描画（<kbd>R</kbd> / <kbd>C</kbd> / <kbd>L</kbd>）</li>
+        <li><strong>ペン（ベジェ）</strong> — 自由な曲線・閉じた輪郭</li>
+        <li><strong>テキスト / 寸法線</strong> — 注記と寸法（<kbd>T</kbd> / <kbd>D</kbd>）</li>
+      </ul>
+
+      <h2 id="canvas">キャンバス（中央）</h2>
+      <p>白い用紙とグリッドが表示される作図エリアです。</p>
+      <ul>
+        <li><strong>ズーム</strong> — マウスホイール、右下の +/- ボタン、または Ctrl+± / Ctrl+0</li>
+        <li><strong>パン</strong> — スペース + ドラッグ、または中ボタンドラッグ</li>
+        <li><strong>スナップ</strong> — 端点・交点などへの自動吸着（右パネル Pages タブで ON/OFF）</li>
+        <li><strong>ショートカット一覧</strong> — 右下の <strong>?</strong> ボタン（<a href="shortcuts.html">詳細</a>）</li>
+      </ul>
+      <figure class="docs-figure docs-figure-help">
+        <img src="images/help-shortcuts.png" alt="ショートカットヘルプポップオーバー">
+        <figcaption>キャンバス右下の ? ボタンで、よく使うショートカットを確認できます。</figcaption>
+      </figure>
+      <p>ステータスバー右端に現在のズーム倍率（例: 339%）が表示されます。</p>
+
+      <h2 id="right-panel">右パネル</h2>
+      <p>4 つのタブで、プロジェクトの構造と設定を管理します。</p>
+
+      <div class="docs-figure-grid">
+        <figure class="docs-figure docs-figure-panel">
+          <img src="images/layers-panel.png" alt="Layers タブ">
+          <figcaption>Layers タブ — レイヤーの追加・表示/非表示・ロック</figcaption>
+        </figure>
+        <figure class="docs-figure docs-figure-panel">
+          <img src="images/pages-add-view.png" alt="右パネル Pages タブ。表示ページとページ追加">
+          <figcaption>Pages タブ — 表示ページの切替と、面の向きを選んだページ追加</figcaption>
+        </figure>
+        <figure class="docs-figure docs-figure-panel">
+          <img src="images/design-panel.png" alt="Design タブでプロパティ編集">
+          <figcaption>Design タブ — 選択図形の数値編集と整列</figcaption>
+        </figure>
+        <figure class="docs-figure docs-figure-panel">
+          <img src="images/history-panel.png" alt="History タブ">
+          <figcaption>History タブ — Undo 履歴の一覧とジャンプ</figcaption>
+        </figure>
+      </div>
+
+      <table>
+        <thead><tr><th>タブ</th><th>内容</th></tr></thead>
+        <tbody>
+          <tr><td>Layers</td><td>レイヤーの追加・表示/非表示・ロック。図形はレイヤーごとに整理されます。</td></tr>
+          <tr><td>Pages</td><td>ページの切替・追加。<strong>ページ追加</strong>で上面/正面/側面などの面の向きを選びます。既にある面は重複追加できません。用紙・縮尺、<strong>参照画像</strong>、<strong>プロジェクトフォント</strong>、<strong>制作メモ</strong>もこのタブ内。</td></tr>
+          <tr><td>Design</td><td>選択中の図形の座標・<strong>塗り・線色</strong>・線幅などのプロパティ編集。画像選択時は不透明度・画像容量も表示。複数選択時は外観の一括変更も可能。</td></tr>
+          <tr><td>History</td><td>Undo / Redo 履歴の確認。</td></tr>
+        </tbody>
+      </table>
+      <p>パネル右端をドラッグすると幅を変更できます。</p>
+
+      <h3 id="reference-image-panel">参照画像（Pages タブ内）</h3>
+      <p>
+        セクション <strong>参照画像</strong> を開くと、スケッチや写真の下絵を読み込めます。
+        手順の詳細は <a href="drawing.html#sketch-import">2D 描画 — スケッチ取り込み</a> を参照してください。
+      </p>
+      <ul>
+        <li><strong>画像を読み込む</strong> — PNG / JPEG / WebP をページ背景に配置</li>
+        <li><strong>位置・サイズを編集</strong> — クリックで編集開始（青ハイライト）、キャンバスで移動・リサイズ、もう一度クリックで終了（<kbd>Esc</kbd> や描画ツール切替でも終了）</li>
+        <li><strong>不透明度</strong> — 下絵の濃さ</li>
+        <li><strong>スケール校正</strong> — 実寸がわかる線の両端をクリック + 実長 (mm) + パネル内の <strong>適用</strong></li>
+        <li><strong>ゴーストを確定 / 削除</strong> — AI 提案図形の確定または破棄（MCP 利用時）</li>
+      </ul>
+
+      <h3 id="project-fonts-panel">プロジェクトフォント（Pages タブ内）</h3>
+      <p>
+        セクション <strong>プロジェクトフォント（任意）</strong> を開くと、Google Fonts の追加 UI が表示されます。
+        詳細は <a href="drawing.html#project-fonts">2D 描画 — プロジェクトフォント</a> を参照してください。
+      </p>
+      <ul>
+        <li><strong>フォントを探す…</strong> — Fontsource カタログから検索（PC インストールフォントではない）</li>
+        <li><strong>このプロジェクト</strong> — 現在のプロジェクト JSON に含まれるフォント一覧</li>
+        <li><strong>ライブラリ</strong> — アプリ全体で再利用する登録済みフォント（<strong>＋</strong> でプロジェクトへ追加）</li>
+      </ul>
+
+      <h3 id="taste-brief-panel">制作メモ（Pages タブ内）</h3>
+      <figure class="docs-figure docs-figure-panel">
+        <img src="images/taste-brief-panel.png" alt="Pages タブ内の制作メモセクション">
+        <figcaption>制作メモ — 意図・フェーズ・設計原則・判断履歴をこのプロジェクトに残します。</figcaption>
+      </figure>
+      <p>
+        <strong>制作メモ</strong> は、AI/MCP が参照する <code>projectBrief</code> の状態を表示するセクションです。
+        ページ設定・参照画像・フォントと同じ Pages タブに置くことで、図面全体に関わる文脈をページ管理と一緒に確認できます。
+      </p>
+      <ul>
+        <li><strong>意図</strong> — 何を作るか、何を優先するか</li>
+        <li><strong>設計原則</strong> — そのプロジェクト内で守る判断基準</li>
+        <li><strong>制作前に方針を必須にする</strong> — Part DSL 生成前に brief を要求するガード</li>
+      </ul>
+
+      <h2 id="3d-panel">3D プレビューパネル</h2>
+      <figure class="docs-figure docs-figure-panel">
+        <img src="images/3d-panel.png" alt="3D プレビューの Module Joint 1">
+        <figcaption>上面図 + 正面図から生成した Module Joint 1（24×100×2 mm、Ø6 穴、端部切り欠き）。STL 書き出し可。</figcaption>
+      </figure>
+      <p>
+        上面図と正面図など、2 軸以上のページが揃っていると立体が表示されます。
+        図形の<strong>塗り色</strong>は 3D メッシュの表示色に反映されます（<a href="multiview-3d.html#color">色の反映</a>）。
+        ビューが足りない場合は、必要なページを追加するための案内メッセージが表示されます。
+        3D ボタンを押した直後は先にプレビュー画面へ切り替わり、生成が終わるとメッシュが表示されます。
+      </p>
+
+      <h2 id="status-bar">ステータスバー（下部）</h2>
+      <p>キャンバス下部の細いバーに、次の情報が表示されます。</p>
+      <ul>
+        <li><strong>XY</strong> — カーソル位置（mm）</li>
+        <li><strong>TOOL</strong> — 現在のツール名</li>
+        <li><strong>SCALE</strong> — ページの縮尺</li>
+        <li><strong>ZOOM</strong> — 表示倍率</li>
+        <li><strong>保存済</strong> — 自動保存の状態</li>
+      </ul>
+
+      <div class="docs-callout docs-callout-tip">
+        <strong>レイアウトのコツ</strong>
+        <p>
+          作図に集中するときは左右パネルを非表示にしてキャンバスを広げ、
+          3D 確認時だけ 3D プレビューを開くと効率的です。
+        </p>
+      </div>
+    </article>
+  </div>
+
+  <footer class="docs-footer">
+    <div class="docs-footer-inner">
+      <span>Millrect ドキュメント</span>
+      <div class="docs-footer-links">
+        <a href="getting-started.html">← はじめに</a>
+        <a href="drawing.html">次: 2D 描画 →</a>
+      </div>
+    </div>
+  </footer>
+
+  <script src="../packages/help-index.js"></script>
+  <script src="js/docs-search.js"></script>
+  <script src="js/docs-nav.js"></script>
+    <script src="js/docs.js"></script>
+</body>
+</html>

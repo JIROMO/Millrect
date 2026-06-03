@@ -1,0 +1,139 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <!-- Google tag (gtag.js) -->
+    <script async src="https://www.googletagmanager.com/gtag/js?id=G-0JMRZXG11T"></script>
+    <script>
+      window.dataLayer = window.dataLayer || [];
+      function gtag(){dataLayer.push(arguments);}
+      gtag('js', new Date());
+
+      gtag('config', 'G-0JMRZXG11T');
+    </script>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Desktop App — Millrect Documentation</title>
+  <meta name="description" content="Download Millrect for macOS from GitHub Releases. Install unsigned builds and compare with the browser app." />
+  <meta name="robots" content="index, follow" />
+  <link rel="canonical" href="https://millrect.com/docs/en/desktop-download.html" />
+  <meta property="og:title" content="Download Millrect for macOS" />
+  <meta property="og:description" content="macOS DMG download and install guide" />
+  <meta property="og:url" content="https://millrect.com/docs/en/desktop-download.html" />
+  <script src="../js/docs-seo.js"></script>
+  <link rel="stylesheet" href="../css/docs.css">
+</head>
+<body data-page="desktop-download">
+  <header class="docs-header">
+    <div class="docs-header-inner">
+      <a class="docs-logo" href="./">
+        <img class="docs-logo-img" src="../../site/images/logo.svg" alt="Millrect" width="774" height="109">
+      </a>
+      <div class="docs-header-actions">
+        <button class="docs-menu-toggle" id="docs-menu-toggle" type="button" aria-label="Menu">☰</button>
+      </div>
+    </div>
+  </header>
+
+  <div class="docs-layout">
+    <aside class="docs-sidebar" id="docs-sidebar"></aside>
+
+    <article class="docs-content">
+      <nav class="docs-breadcrumb"><a href="./">Documentation</a> / Desktop app</nav>
+      <h1>Download the desktop app</h1>
+      <p class="docs-lead">
+        Millrect also runs in the browser (<a href="../../app/">millrect.com/app</a>), but
+        <strong>AI integration (MCP)</strong> and text-to-3D outline conversion
+        are <strong>macOS desktop</strong> features.
+        JSON project export/import is available in the browser app too.
+      </p>
+
+      <div class="docs-callout docs-callout-note">
+        <strong>macOS only for now</strong>
+        <p>No Windows build yet. On Windows, use the <a href="../../app/">browser app</a>.</p>
+      </div>
+
+      <nav class="docs-toc" aria-label="Table of contents">
+        <div class="docs-toc-title">On this page</div>
+        <ul>
+          <li><a href="#compare">Web vs desktop</a></li>
+          <li><a href="#download">Download</a></li>
+          <li><a href="#install-macos">Install on macOS</a></li>
+          <li><a href="#security">Security warnings</a></li>
+          <li><a href="#next">Next steps</a></li>
+        </ul>
+      </nav>
+
+      <h2 id="compare">Web vs desktop</h2>
+      <table>
+        <thead><tr><th>Feature</th><th>Browser</th><th>Desktop</th></tr></thead>
+        <tbody>
+          <tr><td>2D drawing &amp; 3D preview</td><td>Yes</td><td>Yes</td></tr>
+          <tr><td>Project storage</td><td>IndexedDB + JSON import/export</td><td>IndexedDB + JSON import/export</td></tr>
+          <tr><td>Text → 3D outline</td><td>No</td><td>Yes</td></tr>
+          <tr><td>AI integration (MCP)</td><td>No</td><td>Yes</td></tr>
+          <tr><td>Install required</td><td>No</td><td>Yes</td></tr>
+        </tbody>
+      </table>
+
+      <h2 id="download">Download</h2>
+      <p>
+        Get the latest build from GitHub Releases (MIT license, free, <strong>macOS only</strong>).
+      </p>
+      <div class="docs-download-actions" data-millrect-download></div>
+      <p class="docs-download-note">
+        To build from source, see the
+        <a href="https://github.com/JIROMO/Millrect" rel="noopener noreferrer">GitHub repository</a>.
+      </p>
+
+      <h2 id="install-macos">Install on macOS</h2>
+      <ol class="docs-steps">
+        <li><strong>Open the DMG</strong> — pick Apple Silicon or Intel for your Mac.</li>
+        <li><strong>Drag Millrect to Applications</strong></li>
+        <li><strong>First launch</strong> — you may see an unsigned-app warning (see below).</li>
+      </ol>
+
+      <h2 id="security">Security warnings</h2>
+      <div class="docs-callout docs-callout-note">
+        <strong>Unsigned pre-release distribution</strong>
+        <p>
+          We do not code-sign or notarize with Apple yet. Download only from
+          <a href="https://github.com/JIROMO/Millrect/releases" rel="noopener noreferrer">GitHub Releases</a>.
+        </p>
+      </div>
+
+      <p>If macOS says the app cannot be opened because the developer cannot be verified:</p>
+      <ol>
+        <li><strong>Right-click</strong> (or Control-click) <strong>Millrect.app</strong> in Finder</li>
+        <li>Choose <strong>Open</strong>, then confirm <strong>Open</strong> again</li>
+      </ol>
+      <p>
+        Or use <strong>System Settings → Privacy &amp; Security → Open Anyway</strong> when offered.
+        Later launches work normally.
+      </p>
+
+      <h2 id="next">Next steps</h2>
+      <ul>
+        <li><a href="getting-started.html">Getting Started</a> — launch and first project</li>
+        <li><a href="ai-mcp.html">AI / MCP</a> — control Millrect from Claude Desktop (desktop only)</li>
+      </ul>
+    </article>
+  </div>
+
+  <footer class="docs-footer">
+    <div class="docs-footer-inner">
+      <span>Millrect Documentation</span>
+      <div class="docs-footer-links">
+        <a href="getting-started.html">Getting Started →</a>
+        <a href="./">Documentation TOP</a>
+      </div>
+    </div>
+  </footer>
+
+  <script src="../../packages/download-config.js"></script>
+  <script src="../../site/js/download-buttons.js"></script>
+  <script src="../../packages/help-index.js"></script>
+  <script src="../js/docs-search.js"></script>
+  <script src="../js/docs-nav.js"></script>
+    <script src="../js/docs.js"></script>
+</body>
+</html>

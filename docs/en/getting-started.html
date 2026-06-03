@@ -1,0 +1,268 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <!-- Google tag (gtag.js) -->
+    <script async src="https://www.googletagmanager.com/gtag/js?id=G-0JMRZXG11T"></script>
+    <script>
+      window.dataLayer = window.dataLayer || [];
+      function gtag(){dataLayer.push(arguments);}
+      gtag('js', new Date());
+
+      gtag('config', 'G-0JMRZXG11T');
+    </script>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Getting Started — Millrect Documentation</title>
+  <meta name="description" content="Launch Millrect, create your first project, and draw your first shape.">
+  <meta name="robots" content="index, follow" />
+  <script src="../js/docs-seo.js"></script>
+  <link rel="stylesheet" href="../css/docs.css">
+</head>
+<body data-page="getting-started">
+  <header class="docs-header">
+    <div class="docs-header-inner">
+      <a class="docs-logo" href="./">
+        <img class="docs-logo-img" src="../../site/images/logo.svg" alt="Millrect" width="774" height="109">
+      </a>
+      <div class="docs-header-actions">
+        <button class="docs-menu-toggle" id="docs-menu-toggle" type="button" aria-label="Menu">☰</button>
+      </div>
+    </div>
+  </header>
+
+  <div class="docs-layout">
+    <aside class="docs-sidebar" id="docs-sidebar"></aside>
+
+    <article class="docs-content">
+      <nav class="docs-breadcrumb" aria-label="Breadcrumb">
+        <a href="./">Documentation</a> / Getting Started
+      </nav>
+
+      <h1>Getting Started</h1>
+      <p class="docs-lead">
+        How to launch Millrect, create your first project, and draw your first shape.
+      </p>
+
+      <nav class="docs-toc" aria-label="Table of contents">
+        <div class="docs-toc-title">On this page</div>
+        <ul>
+          <li><a href="#first-stl">First STL</a></li>
+          <li><a href="#launch">Launch the app</a></li>
+          <li><a href="#new-project">New project</a></li>
+          <li><a href="#sample-3d">Try 3D</a></li>
+          <li><a href="#first-shape">Draw your first shape</a></li>
+          <li><a href="#concepts">Key concepts</a></li>
+          <li><a href="#next">Next steps</a></li>
+        </ul>
+      </nav>
+
+      <h2 id="first-stl">First STL</h2>
+      <p>
+        Skip the architecture for now — just follow these four steps.
+      </p>
+      <ol class="docs-steps">
+        <li>
+          <strong>Open the app</strong><br>
+          <a href="../../app/">millrect.com/app</a> (browser) or the
+          <a href="desktop-download.html">macOS desktop app</a>
+        </li>
+        <li>
+          <strong>Create a new project</strong><br>
+          In the startup dialog, choose <strong>+ New Project</strong> → confirm paper/scale → <strong>Create</strong>
+        </li>
+        <li>
+          <strong>3D preview</strong><br>
+          Toolbar <strong>3D</strong> button to view the solid
+        </li>
+        <li>
+          <strong>Export STL</strong><br>
+          In the 3D panel, click <strong>Export STL</strong>
+        </li>
+      </ol>
+      <p>
+        Bundled sample JSON:
+        <a href="../../samples/module-joint-1.json">Module Joint 1</a> ·
+        <a href="../../samples/starter-box.json">First box</a> ·
+        <a href="../../samples/mounting-plate.json">Mounting plate</a> ·
+        <a href="../../samples/l-bracket.json">L-bracket</a> ·
+        <a href="../../samples/enclosure.json">3-view enclosure</a> ·
+        <a href="../../samples/laser-panel.json">Laser-cut panel</a>
+        — open them from startup <strong>Import JSON</strong>.
+      </p>
+
+      <h2 id="launch">Launch the app</h2>
+      <p>
+        Millrect runs in the <strong>browser</strong> (<a href="../../app/">millrect.com/app</a>) or as a
+        <strong>desktop app</strong>. Use the browser without installation; install the desktop build for
+        MCP / AI integration and text-to-3D outlines —
+        see <a href="desktop-download.html">Download the macOS desktop app</a> (macOS only for now).
+        Save and open projects as JSON in the browser app too.
+      </p>
+      <p>
+        Launch <strong>Millrect</strong> from Applications.
+        Unsigned pre-release builds may show a security warning on first launch —
+        see <a href="desktop-download.html#security">how to open the app</a>.
+      </p>
+      <p>
+        On startup you can resume your last session or create a new project.
+        Open this guide anytime from the in-app menu: Help → Documentation, or Help → Search Help (<kbd>⌘⇧/</kbd>).
+      </p>
+
+      <h2 id="new-project">New project</h2>
+      <p>
+        Choose <strong>+ New Project</strong> for a blank canvas.
+        The startup dialog lets you search the project list, reopen saved projects, import JSON, or create a new project.
+      </p>
+
+      <figure class="docs-figure docs-figure-medium">
+        <img src="../images/en/startup-dialog.png" alt="Startup dialog with New Project, Import JSON, project list, and search">
+        <figcaption>Startup dialog — + New Project, Import JSON, and project list.</figcaption>
+      </figure>
+
+      <p>Clicking + New Project opens the creation form.</p>
+
+      <figure class="docs-figure docs-figure-medium">
+        <img src="../images/en/startup-new-form.png" alt="New project form: name, paper size, orientation, scale">
+        <figcaption>New project — set name, paper, and scale, then click Create.</figcaption>
+      </figure>
+
+      <table>
+        <thead>
+          <tr><th>Field</th><th>Description</th></tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>Project name</td>
+            <td>You can change it later in the toolbar (top left).</td>
+          </tr>
+          <tr>
+            <td>Paper size</td>
+            <td>A4 / A3 etc. Sets the canvas size.</td>
+          </tr>
+          <tr>
+            <td>Orientation</td>
+            <td>Landscape or portrait.</td>
+          </tr>
+          <tr>
+            <td>Scale</td>
+            <td>e.g. 1/10 means 1 mm on paper = 10 mm in real size. Common choices: 1/1 or 1/10.</td>
+          </tr>
+        </tbody>
+      </table>
+
+      <p>After Create, the main window opens with a white gridded canvas.</p>
+
+      <h2 id="sample-3d">Try 3D</h2>
+      <p>
+        To try 3D, create a new project, draw a closed outline on the top view, then use
+        <strong>Add page</strong> in the Pages tab to add a <strong>front view (front)</strong>
+        or <strong>right view (right)</strong>. If that face already exists, it is disabled in the add menu.
+      </p>
+      <p>To inspect bundled samples, use startup <strong>Import JSON</strong> and open files such as <code>samples/module-joint-1.json</code>.</p>
+      <ul>
+        <li><strong>Top view</strong> — Module Joint 1 uses a 24 mm × 100 mm outline with Ø6 holes and 10 mm pitch</li>
+        <li><strong>Front view</strong> — a 24 mm × 2 mm thickness section for thin-plate 3D preview</li>
+        <li>The documentation images use Module Joint 1 as their baseline</li>
+      </ul>
+
+      <figure class="docs-figure docs-figure-medium">
+        <img src="../images/en/startup-project-list.png" alt="Project list with search field">
+        <figcaption>Project list — search saved projects, or use Import JSON to open a sample.</figcaption>
+      </figure>
+
+      <div class="docs-callout docs-callout-tip">
+        <strong>See 3D</strong>
+        <p>
+          The 2D / 3D switch is on the left side of the toolbar. When you click 3D, the preview panel appears immediately and the mesh appears after generation.
+          See also <a href="multiview-3d.html#workflow">3D Generation — workflow</a>.
+        </p>
+      </div>
+
+      <p>For a blank canvas and your own pages, use New Project above.</p>
+
+      <figure class="docs-figure docs-figure-wide">
+        <img src="../images/en/main-window.png" alt="Main window after creating a new project">
+        <figcaption>Main window after project creation — tools on the left, layers on the right, status bar below.</figcaption>
+      </figure>
+
+      <h2 id="first-shape">Draw your first shape</h2>
+      <ol class="docs-steps">
+        <li>
+          <strong>Select the rectangle tool</strong><br>
+          Click the rectangle icon in the left tool palette.
+        </li>
+        <li>
+          <strong>Drag on the canvas</strong><br>
+          The drag area becomes a rectangle. With snap enabled, it attaches to grid or endpoints.
+        </li>
+        <li>
+          <strong>Select and edit</strong><br>
+          Switch back to the selection tool (arrow), click the shape to move or resize.
+          In the Design tab you can change <strong>fill and stroke</strong>; fill color also appears in the 3D preview.
+        </li>
+      </ol>
+
+      <figure class="docs-figure docs-figure-wide">
+        <img src="../images/en/drawing-rect.png" alt="Module Joint 1 top outline">
+        <figcaption>Module Joint 1 top drawing — 24×100 mm on A4 portrait at 1:1.</figcaption>
+      </figure>
+
+      <div class="docs-callout docs-callout-tip">
+        <strong>Saving</strong>
+        <p>
+          Your work is autosaved. To keep a file on disk, use the Save button in the toolbar
+          (or File → Save) to write a project file.
+        </p>
+      </div>
+
+      <h2 id="concepts">Key concepts</h2>
+      <table>
+        <thead>
+          <tr><th>Point</th><th>Description</th></tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>2D drawing is primary</td>
+            <td>Drawings are the source of truth. 3D is generated automatically from them.</td>
+          </tr>
+          <tr>
+            <td>3D needs multiple pages</td>
+            <td>A top view alone is not enough — add a front view (or side view). The <a href="#sample-3d">3D sample</a> starts with two pages.</td>
+          </tr>
+          <tr>
+            <td>Undo / Redo</td>
+            <td>Shape edits can be undone (Ctrl+Z / Ctrl+Y). Zoom and pan are not undone.</td>
+          </tr>
+          <tr>
+            <td>Fill & stroke</td>
+            <td>Set in Design → Appearance. Fill color is used for 3D mesh color.</td>
+          </tr>
+        </tbody>
+      </table>
+
+      <h2 id="next">Next steps</h2>
+      <ul>
+        <li><a href="interface.html">Interface</a> — panels and toolbar</li>
+        <li><a href="drawing.html">2D Drawing</a> — tools and layers</li>
+        <li><a href="multiview-3d.html">3D Generation</a> — top + front views → solid</li>
+        <li><a href="../">Full documentation in Japanese</a></li>
+      </ul>
+    </article>
+  </div>
+
+  <footer class="docs-footer">
+    <div class="docs-footer-inner">
+      <span>Millrect Documentation</span>
+      <div class="docs-footer-links">
+        <a href="./">TOP</a>
+        <a href="interface.html">Next: Interface →</a>
+      </div>
+    </div>
+  </footer>
+
+  <script src="../../packages/help-index.js"></script>
+  <script src="../js/docs-search.js"></script>
+  <script src="../js/docs-nav.js"></script>
+    <script src="../js/docs.js"></script>
+</body>
+</html>

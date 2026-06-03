@@ -1,0 +1,286 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <!-- Google tag (gtag.js) -->
+    <script async src="https://www.googletagmanager.com/gtag/js?id=G-0JMRZXG11T"></script>
+    <script>
+      window.dataLayer = window.dataLayer || [];
+      function gtag(){dataLayer.push(arguments);}
+      gtag('js', new Date());
+
+      gtag('config', 'G-0JMRZXG11T');
+    </script>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>3D Generation — Millrect Documentation</title>
+  <meta name="description" content="Generate 3D models from multiple orthographic views (top, front, side) using CSG intersection in Millrect.">
+  <meta name="robots" content="index, follow" />
+  <script src="../js/docs-seo.js"></script>
+  <link rel="stylesheet" href="../css/docs.css">
+</head>
+<body data-page="multiview-3d">
+  <header class="docs-header">
+    <div class="docs-header-inner">
+      <a class="docs-logo" href="./">
+        <img class="docs-logo-img" src="../../site/images/logo.svg" alt="Millrect" width="774" height="109">
+      </a>
+      <div class="docs-header-actions">
+        <button class="docs-menu-toggle" id="docs-menu-toggle" type="button" aria-label="Menu">☰</button>
+      </div>
+    </div>
+  </header>
+
+  <div class="docs-layout">
+    <aside class="docs-sidebar" id="docs-sidebar"></aside>
+
+    <article class="docs-content">
+      <nav class="docs-breadcrumb" aria-label="Breadcrumb">
+        <a href="./">Documentation</a> / 3D Generation
+      </nav>
+      <h1>3D Generation</h1>
+      <p class="docs-lead">
+        How to generate a 3D model by combining multiple orthographic views — top, front, and right side.
+      </p>
+
+      <div class="docs-figure-grid">
+        <figure class="docs-figure">
+          <img src="../images/en/multiview-top-drawing.png" alt="Top view of Module Joint 1">
+          <figcaption>Top view — 24×100 mm, Ø6 holes, cut lines</figcaption>
+        </figure>
+        <figure class="docs-figure">
+          <img src="../images/en/multiview-front-drawing.png" alt="Thickness section of Module Joint 1">
+          <figcaption>Front view — 2 mm thickness</figcaption>
+        </figure>
+        <figure class="docs-figure docs-figure-panel">
+          <img src="../images/en/3d-panel.png" alt="Module Joint 1 in the 3D preview">
+          <figcaption>3D preview — holes and notched ends from the drawing</figcaption>
+        </figure>
+      </div>
+
+      <h2 id="how-it-works">How it works</h2>
+      <p>
+        In Millrect, the final 3D shape is found by <strong>intersecting</strong> solids
+        extruded from each page’s closed outline along that page’s projection direction.
+      </p>
+      <p>
+        Think of it this way: “slabs” from the top, front, and side views overlap —
+        the overlapping region is the actual solid. With three views, the shape is much easier to visualize.
+      </p>
+
+      <div class="docs-callout docs-callout-warn">
+        <strong>Two or more projection views required</strong>
+        <p>
+          A top view alone, or a front view alone, cannot produce a solid.
+          You need pages in at least <strong>two different directions</strong>
+          (e.g. top + front, or top + right side).
+        </p>
+      </div>
+
+      <h2 id="view-type">Add pages by face direction</h2>
+      <p>
+        Decide which direction a page represents when you create it. In the right-panel Pages tab,
+        use <strong>Add page</strong> and choose the face direction: top, front, right, and so on.
+        If a face already exists, it is disabled in the menu so you cannot add another <code>front</code> page by mistake.
+      </p>
+
+      <figure class="docs-figure docs-figure-panel">
+        <img src="../images/en/pages-add-view.png" alt="Adding a page by face direction in the Pages tab">
+        <figcaption>Pages tab — switch the displayed page, then add pages by face direction.</figcaption>
+      </figure>
+
+      <table>
+        <thead><tr><th>Setting</th><th>Meaning</th></tr></thead>
+        <tbody>
+          <tr><td>Top (top)</td><td>View from above (width × depth)</td></tr>
+          <tr><td>Front (front)</td><td>View from the front (width × height)</td></tr>
+          <tr><td>Right side (right)</td><td>View from the right (depth × height)</td></tr>
+          <tr><td>Bottom / Back / Left</td><td>Projection from the opposite direction</td></tr>
+        </tbody>
+      </table>
+
+      <h2 id="sample">Start from a blank project</h2>
+      <p>
+        The startup dialog now focuses on the project list, JSON import, and blank project creation.
+        To build your own 3D model, choose <strong>+ New Project</strong>, draw the top view, then add the needed face pages in the Pages tab.
+      </p>
+      <ul>
+        <li>Top view: draw the width × depth outline</li>
+        <li>Front view: draw the width × height outline</li>
+        <li>Right view: draw the depth × height outline when needed</li>
+      </ul>
+      <div class="docs-callout docs-callout-tip">
+        <strong>To inspect bundled samples</strong>
+        <p>
+          Open <code>samples/module-joint-1.json</code> or another sample from startup <strong>Import JSON</strong>.
+        </p>
+      </div>
+
+      <h2 id="workflow">Walkthrough: Module Joint 1 (24×100×2 mm)</h2>
+      <p>
+        The documentation uses the real <strong>Module Joint 1</strong> product as a common specimen.
+        It shows a 24×100 mm outline, Ø6 holes, R2 notches, cut lines, and 2 mm thickness on A4 portrait at <strong>1:1 scale</strong>.
+      </p>
+
+      <div class="docs-callout docs-callout-tip">
+        <strong>Start with a rectangle, then make it a drawing</strong>
+        <p>
+          A simple rectangle is enough to understand the 3D mechanism. The real product specimen shows how
+          drawing, dimensions, holes, sections, and STL export stay connected in one flow.
+        </p>
+      </div>
+
+      <ol class="docs-steps">
+        <li><strong>Top</strong> — Draw the 24×100 mm outline, Ø6 holes, and cut lines → <code>drawing-rect.png</code></li>
+        <li><strong>Detail the drawing</strong> — Add 24 mm, 100 mm, Ø6, and 10 mm pitch dimensions → <code>drawing-features.png</code></li>
+        <li><strong>Front</strong> — Add <strong>front view (front)</strong> and draw the 24×2 mm thickness section → <code>multiview-front-drawing.png</code></li>
+        <li><strong>3D preview</strong> — Verify and export STL → <code>3d-panel.png</code></li>
+      </ol>
+
+      <figure class="docs-figure docs-figure-medium">
+        <img src="../images/en/drawing-rect.png" alt="Top rectangle">
+        <figcaption>① Top view — 24×100 mm</figcaption>
+      </figure>
+
+      <figure class="docs-figure docs-figure-medium">
+        <img src="../images/en/editing-multiselect.png" alt="Rectangle selected">
+        <figcaption>② Rectangle selected — edit in Design tab</figcaption>
+      </figure>
+
+      <figure class="docs-figure docs-figure-wide">
+        <img src="../images/en/drawing-features.png" alt="Top with dimensions">
+        <figcaption>③ Overall dimensions, 10 mm pitch, Ø6 holes, cut lines</figcaption>
+      </figure>
+
+      <figure class="docs-figure docs-figure-wide">
+        <img src="../images/en/multiview-top-drawing.png" alt="Multiview top">
+        <figcaption>④ Top view — 24×100 mm, Ø6 holes</figcaption>
+      </figure>
+
+      <figure class="docs-figure docs-figure-wide">
+        <img src="../images/en/multiview-front-drawing.png" alt="Front view">
+        <figcaption>⑤ Front view — 24×2 mm</figcaption>
+      </figure>
+
+      <figure class="docs-figure docs-figure-panel">
+        <img src="../images/en/pages-multiview.png" alt="Top and front pages">
+        <figcaption>Pages tab — top + front</figcaption>
+      </figure>
+
+      <figure class="docs-figure docs-figure-panel">
+        <img src="../images/en/3d-panel.png" alt="3D preview of Module Joint 1">
+        <figcaption>⑥ 3D preview — thin plate, holes, and notched ends</figcaption>
+      </figure>
+
+      <ul>
+        <li>Top view: 24×100 mm joint plate (width × length)</li>
+        <li>Front view: 24×2 mm thickness section (width × thickness)</li>
+        <li>Paper: A4 portrait, 1:1 scale</li>
+        <li>Top + section pages are enough to verify the thin-plate solid</li>
+      </ul>
+
+      <h2 id="example">Step-by-step details</h2>
+      <p>The same Module Joint 1 specimen from an empty project.</p>
+
+      <ol class="docs-steps">
+        <li>
+          <strong>Page 1 — Top view</strong><br>
+          Use the initial page as the top view. Create the 24 mm × 100 mm outline,
+          then add Ø6 holes, R2 notches, and cut lines.
+        </li>
+        <li>
+          <strong>Page 2 — Front view</strong><br>
+          In the Pages tab, use <strong>Add page</strong> and choose <strong>front view (front)</strong>.
+          Draw the 24 mm × 2 mm thickness section.
+        </li>
+        <li>
+          <strong>Page 3 — Right side</strong> (optional)<br>
+          Use <strong>Add page</strong> and choose <strong>right view (right)</strong> when side-specific details are needed.
+          Two pages (top + front) are enough for this thin plate.
+        </li>
+      </ol>
+
+      <figure class="docs-figure docs-figure-wide">
+        <img src="../images/en/startup-project-list.png" alt="Startup project list">
+        <figcaption>Project list — search saved projects and import JSON.</figcaption>
+      </figure>
+
+      <ol class="docs-steps" start="3">
+        <li>
+          <strong>Open the 3D preview</strong><br>
+          Click <strong>3D</strong> on the left side of the toolbar. The preview panel appears immediately; the mesh appears after generation finishes.
+        </li>
+        <li>
+          <strong>Export STL</strong><br>
+          Use the <strong>STL</strong> button at the top right of the 3D panel to save a file for 3D printing.
+        </li>
+      </ol>
+
+      <figure class="docs-figure docs-figure-panel">
+        <img src="../images/en/3d-panel.png" alt="3D preview of Module Joint 1">
+        <figcaption>Documentation 3D preview — Module Joint 1 as a thin plate</figcaption>
+      </figure>
+
+      <h2 id="color">Color mapping</h2>
+      <p>
+        The <strong>fill color</strong> set on 2D shapes is used as the mesh color in the 3D preview.
+        Change color under <strong>Appearance</strong> in the Design tab to update both the drawing and 3D
+        (<a href="editing.html#appearance">Editing — Appearance</a>).
+      </p>
+      <ul>
+        <li>If all shapes have <strong>no fill</strong>, 3D uses the default blue-violet (#5965f9)</li>
+        <li>When shapes use different fills, Millrect creates meshes grouped by color. Shapes with the same fill are merged into one mesh</li>
+        <li><code>get3DSceneStatus().materialColors</code> returns the color list currently present in the 3D preview</li>
+        <li>Stroke color, text color, and dimension color are not reflected in the 3D mesh</li>
+      </ul>
+      <div class="docs-callout docs-callout-tip">
+        <strong>Color tip</strong>
+        <p>
+          To color-code parts, create separate closed contours in the primary view and assign different fills.
+          Parts with the same fill are grouped together in 3D.
+        </p>
+      </div>
+
+      <h2 id="tips">When things go wrong</h2>
+      <ul>
+        <li><strong>No 3D shown</strong> — Check that you have a front or side page in addition to the top view</li>
+        <li><strong>Wrong shape</strong> — Verify rectangle sizes on each page represent the same object (top width = front width, etc.). Page-to-page placement still matters, so keep views aligned</li>
+        <li><strong>Open outline</strong> — Lines alone do not become 3D. Use rectangles, closed beziers, or composite paths</li>
+        <li><strong>After editing the drawing</strong> — Close and reopen the 3D preview, or refresh it, to update the mesh</li>
+      </ul>
+
+      <h2 id="holes">Holes and cutouts</h2>
+      <p>
+        Draw an outer path and inner circles (holes) on the top view, or use Boolean subtract,
+        to generate 3D models with through-holes. Match hole position and size across projection views.
+      </p>
+      <p>
+        The <a href="drawing.html">2D Drawing</a> example uses a top path with an inner hole.
+        Holes on the top view only, plus a solid front outline, yield a tray with a bottom in 3D.
+      </p>
+
+      <div class="docs-callout docs-callout-tip">
+        <strong>Before 3D printing</strong>
+        <p>
+          Confirm the shape in the 3D preview before exporting STL.
+          Check orientation and scale in your slicer before printing.
+        </p>
+      </div>
+    </article>
+  </div>
+
+  <footer class="docs-footer">
+    <div class="docs-footer-inner">
+      <span>Millrect Documentation</span>
+      <div class="docs-footer-links">
+        <a href="editing.html">← Editing</a>
+        <a href="export.html">Next: Save &amp; Export →</a>
+      </div>
+    </div>
+  </footer>
+
+  <script src="../../packages/help-index.js"></script>
+  <script src="../js/docs-search.js"></script>
+  <script src="../js/docs-nav.js"></script>
+    <script src="../js/docs.js"></script>
+</body>
+</html>

@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <!-- Google tag (gtag.js) -->
+    <script async src="https://www.googletagmanager.com/gtag/js?id=G-0JMRZXG11T"></script>
+    <script>
+      window.dataLayer = window.dataLayer || [];
+      function gtag(){dataLayer.push(arguments);}
+      gtag('js', new Date());
+
+      gtag('config', 'G-0JMRZXG11T');
+    </script>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ショートカット — Millrect ドキュメント</title>
+  <meta name="robots" content="index, follow" />
+  <script src="js/docs-seo.js"></script>
+  <link rel="stylesheet" href="css/docs.css">
+</head>
+<body data-page="shortcuts">
+  <header class="docs-header">
+    <div class="docs-header-inner">
+      <a class="docs-logo" href="./">
+        <img class="docs-logo-img" src="../site/images/logo.svg" alt="Millrect" width="774" height="109">
+      </a>
+      <div class="docs-header-actions">
+        <button class="docs-menu-toggle" id="docs-menu-toggle" type="button" aria-label="メニュー">☰</button>
+      </div>
+    </div>
+  </header>
+
+  <div class="docs-layout">
+    <aside class="docs-sidebar" id="docs-sidebar"></aside>
+
+    <article class="docs-content">
+      <nav class="docs-breadcrumb"><a href="./">ドキュメント</a> / ショートカット</nav>
+      <h1>キーボードショートカット</h1>
+      <p class="docs-lead">
+        キャンバス右下の <strong>?</strong> ボタンからも同じ一覧を表示できます。
+        macOS では Ctrl の代わりに Cmd キーを使います。
+      </p>
+
+      <figure class="docs-figure docs-figure-help">
+        <img src="images/help-shortcuts.png" alt="ショートカット一覧ポップオーバー">
+        <figcaption>キャンバス右下の ? ボタンで表示されるヘルプ。</figcaption>
+      </figure>
+
+      <h2 id="tools">ツール切替</h2>
+      <table>
+        <thead><tr><th>キー</th><th>ツール</th></tr></thead>
+        <tbody>
+          <tr><td><kbd>V</kbd></td><td>選択</td></tr>
+          <tr><td><kbd>H</kbd></td><td>パン（移動）</td></tr>
+          <tr><td><kbd>R</kbd></td><td>矩形</td></tr>
+          <tr><td><kbd>C</kbd></td><td>円</td></tr>
+          <tr><td><kbd>L</kbd></td><td>線</td></tr>
+          <tr><td><kbd>T</kbd></td><td>テキスト</td></tr>
+          <tr><td><kbd>D</kbd></td><td>寸法線</td></tr>
+        </tbody>
+      </table>
+      <p>ペン（ベジェ）ツールはパレットから選択します。入力中（テキストフィールドにフォーカスがあるとき）はツール切替は無効です。</p>
+
+      <h2 id="edit">編集</h2>
+      <table>
+        <thead><tr><th>キー</th><th>操作</th></tr></thead>
+        <tbody>
+          <tr><td><kbd>Ctrl+Z</kbd></td><td>元に戻す (Undo)</td></tr>
+          <tr><td><kbd>Ctrl+Y</kbd> / <kbd>Ctrl+Shift+Z</kbd></td><td>やり直し (Redo)</td></tr>
+          <tr><td><kbd>Ctrl+C</kbd></td><td>コピー</td></tr>
+          <tr><td><kbd>Ctrl+V</kbd></td><td>貼り付け</td></tr>
+          <tr><td><kbd>Ctrl+D</kbd></td><td>複製</td></tr>
+          <tr><td><kbd>Ctrl+A</kbd></td><td>すべて選択</td></tr>
+          <tr><td><kbd>Delete</kbd> / <kbd>Backspace</kbd></td><td>削除</td></tr>
+          <tr><td><kbd>Ctrl+G</kbd></td><td>グループ化</td></tr>
+          <tr><td><kbd>Ctrl+Shift+G</kbd></td><td>グループ解除</td></tr>
+          <tr><td><kbd>Alt+Shift+U</kbd></td><td>パス結合 (Union)</td></tr>
+          <tr><td><kbd>Alt+Shift+S</kbd></td><td>パス減算 (Subtract)</td></tr>
+          <tr><td><kbd>Alt+Shift+I</kbd></td><td>パス交差 (Intersect)</td></tr>
+          <tr><td><kbd>Alt+Shift+E</kbd></td><td>パス除外 (Exclude)</td></tr>
+          <tr><td><kbd>Alt+Shift+F</kbd></td><td>パス統合 (Flatten)</td></tr>
+          <tr><td>矢印キー</td><td>選択図形を 1 mm 移動</td></tr>
+          <tr><td><kbd>Shift</kbd> + 矢印</td><td>10 mm 移動</td></tr>
+        </tbody>
+      </table>
+
+      <h2 id="view">表示・ナビゲーション</h2>
+      <table>
+        <thead><tr><th>キー / 操作</th><th>内容</th></tr></thead>
+        <tbody>
+          <tr><td><kbd>Ctrl+S</kbd></td><td>保存（自動保存の即時実行）</td></tr>
+          <tr><td><kbd>Space</kbd> + ドラッグ</td><td>キャンバスをパン</td></tr>
+          <tr><td>マウスホイール</td><td>ズーム</td></tr>
+          <tr><td><kbd>Esc</kbd></td><td>選択解除 / 作図キャンセル</td></tr>
+          <tr><td>ベジェ作図中 <kbd>Enter</kbd></td><td>パスを確定</td></tr>
+          <tr><td>ベジェ作図中 <kbd>Backspace</kbd></td><td>直前の点を削除</td></tr>
+        </tbody>
+      </table>
+
+      <h2 id="file">ファイル（ツールバー）</h2>
+      <table>
+        <thead><tr><th>キー</th><th>操作</th></tr></thead>
+        <tbody>
+          <tr><td><kbd>Ctrl+N</kbd></td><td>新規プロジェクト</td></tr>
+          <tr><td><kbd>Ctrl+O</kbd></td><td>プロジェクトを開く</td></tr>
+          <tr><td><kbd>Ctrl+S</kbd></td><td>保存</td></tr>
+        </tbody>
+      </table>
+    </article>
+  </div>
+
+  <footer class="docs-footer">
+    <div class="docs-footer-inner">
+      <span>Millrect ドキュメント</span>
+      <div class="docs-footer-links">
+        <a href="export.html">← 保存と出力</a>
+        <a href="ai-mcp.html">次: AI 連携 →</a>
+      </div>
+    </div>
+  </footer>
+
+  <script src="../packages/help-index.js"></script>
+  <script src="js/docs-search.js"></script>
+  <script src="js/docs-nav.js"></script>
+    <script src="js/docs.js"></script>
+</body>
+</html>

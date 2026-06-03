@@ -1,0 +1,232 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <!-- Google tag (gtag.js) -->
+    <script async src="https://www.googletagmanager.com/gtag/js?id=G-0JMRZXG11T"></script>
+    <script>
+      window.dataLayer = window.dataLayer || [];
+      function gtag(){dataLayer.push(arguments);}
+      gtag('js', new Date());
+
+      gtag('config', 'G-0JMRZXG11T');
+    </script>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Design Atlas — Millrect Documentation</title>
+    <meta
+      name="description"
+      content="A design atlas of Millrect specimens: drawings, 3D output, AI/MCP workflows, and Part DSL entry points."
+    />
+    <meta name="robots" content="index, follow" />
+    <link rel="canonical" href="https://millrect.com/docs/en/atlas.html" />
+    <link rel="icon" href="../../favicon.ico" />
+    <meta property="og:type" content="article" />
+    <meta property="og:site_name" content="Millrect" />
+    <meta property="og:url" content="https://millrect.com/docs/en/atlas.html" />
+    <meta property="og:title" content="Design Atlas — Millrect Documentation" />
+    <meta property="og:description" content="Explore what Millrect can make through reusable design specimens." />
+    <meta property="og:image" content="https://millrect.com/site/images/ogp.jpg" />
+    <link rel="stylesheet" href="../css/docs.css" />
+  </head>
+  <body data-page="atlas" data-locale="en">
+    <header class="docs-header">
+      <div class="docs-header-inner">
+        <a class="docs-logo" href="/docs/en/">
+          <img
+            class="docs-logo-img"
+            src="../../site/images/logo.svg"
+            alt="Millrect"
+            width="774"
+            height="109"
+          />
+        </a>
+        <div class="docs-header-actions">
+          <button
+            class="docs-menu-toggle"
+            id="docs-menu-toggle"
+            type="button"
+            aria-label="Menu"
+          >
+            ☰
+          </button>
+        </div>
+      </div>
+    </header>
+
+    <div class="docs-layout">
+      <aside class="docs-sidebar" id="docs-sidebar"></aside>
+
+      <article class="docs-content docs-content-wide">
+        <nav class="docs-breadcrumb" aria-label="Breadcrumb">
+          <a href="./">Documentation</a> / Design Atlas
+        </nav>
+        <h1>Design Atlas</h1>
+        <p class="docs-lead">
+          Instead of explaining every feature with one-off screenshots, Millrect groups
+          what it can make into reusable <strong>specimens</strong>. Each specimen connects
+          images, capabilities, UI steps, AI/MCP routes, and DSL entry points in one place.
+        </p>
+
+        <nav class="docs-toc" aria-label="Table of contents">
+          <div class="docs-toc-title">On this page</div>
+          <ul>
+            <li><a href="#model">Atlas model</a></li>
+            <li><a href="#blueprint-direction">Generated blueprint visuals</a></li>
+            <li><a href="#specimens">Specimen cards</a></li>
+            <li><a href="#live-specimen">Live Specimen</a></li>
+            <li><a href="#image-system">Image system</a></li>
+          </ul>
+        </nav>
+
+        <h2 id="model">Atlas model</h2>
+        <p>
+          The goal is to show fewer screenshots with more meaning. A specimen ties the
+          finished drawing, 3D output, AI prompt path, and DSL representation together,
+          so documentation can grow by adding scenarios rather than hand-maintained image piles.
+        </p>
+        <div class="atlas-flow" aria-label="Documentation structure">
+          <div class="atlas-flow-step">
+            <strong>Showcase</strong>
+            <span>Hero images that show the finished drawing and 3D result</span>
+          </div>
+          <div class="atlas-flow-step">
+            <strong>Scenario</strong>
+            <span>A specimen ID and repeatable capture path</span>
+          </div>
+          <div class="atlas-flow-step">
+            <strong>Reference</strong>
+            <span>Links into tools, MCP, DSL, and constraints</span>
+          </div>
+        </div>
+
+        <h2 id="blueprint-direction">Generated Blueprint Visuals</h2>
+        <p>
+          Complex specimens should not depend on app screenshots alone. Millrect uses
+          generated blueprint visuals as the lead image, then keeps UI screenshots as
+          small workflow proof. The first thing a reader sees should be the outcome.
+        </p>
+        <figure class="atlas-direction-board">
+          <img
+            src="../images/en/blueprint-direction-board.png"
+            alt="Direction board for an advanced fixture plate: blueprint sheet, machined render, and technical publication spread"
+          />
+          <figcaption>
+            From left to right: blueprint sheet, machined part hero, and technical
+            publication spread. Complex specimens should follow this visual language.
+          </figcaption>
+        </figure>
+        <div class="atlas-direction-grid">
+          <section>
+            <h3>Blueprint Sheet</h3>
+            <p>A lead image with dimensions, holes, slots, sections, and callouts.</p>
+          </section>
+          <section>
+            <h3>Machined Part Hero</h3>
+            <p>A finished-object visual for the home page and atlas.</p>
+          </section>
+          <section>
+            <h3>Technical Spread</h3>
+            <p>A richer format for drawings, material cues, and DSL/MCP explanation.</p>
+          </section>
+        </div>
+
+        <h3 id="module-joint-1">Real Product Example: Module Joint 1</h3>
+        <p>
+          Real product drawings can also become generated documentation visuals.
+          This example turns a 24 x 100 mm joint plate with 2 mm thickness into a
+          publication-ready blueprint image. The source drawing or DSL remains the
+          dimensional truth; the generated image is used to communicate the outcome.
+        </p>
+        <figure class="atlas-product-sheet">
+          <img
+            src="../images/en/module-joint-1-blueprint.png"
+            alt="Documentation blueprint visual for Module Joint 1, a 2 mm thick 24 by 100 mm joint plate"
+          />
+          <figcaption>
+            Module Joint 1: t=2 mm, units=mm, Ø6 holes, R2 radius, and edge
+            cut-in guide lines. It can become a complex specimen based on a real
+            product.
+          </figcaption>
+        </figure>
+        <figure class="atlas-direction-board">
+          <img
+            src="../images/en/module-joint-1-millrect.png"
+            alt="Module Joint 1 top-view drawing created in Millrect"
+          />
+          <figcaption>
+            The same part drawn in Millrect. The contour/holes, cut-in lines, and
+            notes are separated into layers, with 24×100 mm, Ø6, and 10 mm pitch
+            carried as dimensions.
+          </figcaption>
+        </figure>
+
+        <h2 id="specimens">Specimen cards</h2>
+        <p>
+          Specimen cards are not just screenshots. They are a catalogue of learning
+          objects that start from the thing a user wants to make.
+        </p>
+        <div id="atlas-specimens" class="atlas-grid" aria-live="polite"></div>
+
+        <h2 id="live-specimen">Live Specimen</h2>
+        <p>
+          Parameterized behavior is easier to understand when it moves. Drag the
+          handles on the drawings and the 2D drawing, dimensioned isometric, and
+          Part DSL update together. The hole layout stays fixed at 2×2, so this
+          specimen focuses on dimensions rather than adding holes.
+        </p>
+        <div id="specimen-lab" class="specimen-lab" data-locale="en"></div>
+
+        <h2 id="image-system">Image system</h2>
+        <table>
+          <thead>
+            <tr><th>Image tier</th><th>Purpose</th><th>When to update</th></tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>Showcase</td>
+              <td>Finished result images for the home page and atlas</td>
+              <td>Only when a specimen's visual story changes</td>
+            </tr>
+            <tr>
+              <td>Scenario capture</td>
+              <td>Drawings and 3D generated from a repeatable specimen ID</td>
+              <td>Regenerate only the affected scenario</td>
+            </tr>
+            <tr>
+              <td>UI proof</td>
+              <td>Small images that point to buttons, panels, or dialogs</td>
+              <td>Only when UI names or placement change</td>
+            </tr>
+          </tbody>
+        </table>
+        <div class="docs-callout docs-callout-note">
+          <strong>Maintenance rule</strong>
+          <p>
+            Before adding a new screenshot, check whether it belongs to an existing
+            specimen card. If a new specimen is needed, choose the scenario ID before
+            the image filename. Details live in
+            <a href="../design/documentation-system.md">Documentation System</a> and
+            <a href="../design/blueprint-specimens.md">Blueprint Specimens</a>.
+          </p>
+        </div>
+      </article>
+    </div>
+
+    <footer class="docs-footer">
+      <div class="docs-footer-inner">
+        <span>Millrect — 2D drawings derive 3D</span>
+        <div class="docs-footer-links">
+          <a href="getting-started.html">Getting Started</a>
+          <a href="multiview-3d.html">3D Generation</a>
+          <a href="../atlas.html">日本語</a>
+        </div>
+      </div>
+    </footer>
+
+    <script src="../../packages/help-index.js"></script>
+    <script src="../js/docs-search.js"></script>
+    <script src="../js/docs-nav.js"></script>
+    <script src="../js/docs-atlas.js"></script>
+    <script src="../js/docs.js"></script>
+  </body>
+</html>

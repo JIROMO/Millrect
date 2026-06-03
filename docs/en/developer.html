@@ -1,0 +1,561 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <!-- Google tag (gtag.js) -->
+    <script async src="https://www.googletagmanager.com/gtag/js?id=G-0JMRZXG11T"></script>
+    <script>
+      window.dataLayer = window.dataLayer || [];
+      function gtag(){dataLayer.push(arguments);}
+      gtag('js', new Date());
+
+      gtag('config', 'G-0JMRZXG11T');
+    </script>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Developer Guide — Millrect Documentation</title>
+  <meta name="robots" content="index, follow" />
+  <script src="../js/docs-seo.js"></script>
+  <link rel="stylesheet" href="../css/docs.css">
+</head>
+<body data-page="developer">
+  <header class="docs-header">
+    <div class="docs-header-inner">
+      <a class="docs-logo" href="./">
+        <img class="docs-logo-img" src="../../site/images/logo.svg" alt="Millrect" width="774" height="109">
+      </a>
+      <div class="docs-header-actions">
+        <button class="docs-menu-toggle" id="docs-menu-toggle" type="button" aria-label="Menu">☰</button>
+      </div>
+    </div>
+  </header>
+
+  <div class="docs-layout">
+    <aside class="docs-sidebar" id="docs-sidebar"></aside>
+
+    <article class="docs-content">
+      <nav class="docs-breadcrumb"><a href="./">Documentation</a> / Developer Guide</nav>
+      <h1>Developer Guide</h1>
+      <p class="docs-lead">
+        Technical reference for the Millrect repository: layout, architecture, data schemas, global APIs,
+        MCP / WebSocket integration, and Electron distribution.
+        <strong>This is not for everyday drawing users.</strong> It is written for contributors, MCP agent developers,
+        and anyone inspecting the internal implementation.
+      </p>
+
+      <nav class="docs-toc" aria-label="Table of contents">
+        <div class="docs-toc-title">On this page</div>
+        <ul>
+          <li><a href="#dev-setup">Development setup</a></li>
+          <li><a href="#project-layout">Project layout</a></li>
+          <li><a href="#architecture">Architecture</a></li>
+          <li><a href="#coordinates">Coordinates</a></li>
+          <li><a href="#schemas">Data schemas</a></li>
+          <li><a href="#taste-memory">Taste Memory (design)</a></li>
+          <li><a href="#api">Global API</a></li>
+          <li><a href="#mcp">MCP / WebSocket</a></li>
+          <li><a href="#electron">Electron</a></li>
+          <li><a href="#patterns">Known patterns &amp; gotchas</a></li>
+        </ul>
+      </nav>
+
+      <h2 id="dev-setup">Development setup</h2>
+      <p>After cloning the repository, install dependencies with Node.js and launch the app.</p>
+      <pre><code>npm install
+npm run fonts:fetch   # Gen Interface JP (first run / updates)
+npm run dev           # Electron development
+npm run build         # Package build (dist/)</code></pre>
+      <p>
+        Bundled fonts (<a href="https://gen.typesetting.jp/" target="_blank" rel="noopener">Gen Interface JP</a>) may not be in the Git tree.
+        Run <code>npm run fonts:fetch</code> before text rendering or outline conversion works.
+        The app UI, docs, and landing page use the same typeface (<code>app/fonts/</code>, <code>docs/fonts/</code>, <code>site/fonts/</code>).
+      </p>
+      <p>
+        You can serve <code>app/index.html</code> with a static server to try the UI in a browser, but
+        the MCP WebSocket, text outline, and file dialogs require the Electron build.
+      </p>
+      <p>
+        Desktop release procedure (version bump, build, GitHub Release):
+        <code>docs/RELEASE.md</code> (Japanese: <code>docs/RELEASE.ja.md</code>).
+      </p>
+      <p>
+        E2E tests: <code>npm run test:e2e</code> (Playwright).
+        MCP server alone: <code>node mcp/server.js</code> while Millrect is running.
+      </p>
+
+      <h2 id="project-layout">Project layout</h2>
+      <pre><code>millrect/
+├── app/                 # Current 2D editor app (legacy location; target: apps/millrect-editor)
+│   ├── index.html       # Script load order matters
+│   ├── js/              # state, renderer, interaction, 3d-view, …
+│   ├── css/
+│   ├── vendor/          # Three.js, polygon-clipping, jsPDF, etc.
+│   └── fonts/           # Bundled fonts (Gen Interface JP TTF)
+├── packages/
+│   ├── schema/          # Project JSON / Model IR / geometry-data validation
+│   ├── model-generator/ # Project JSON / Part DSL → editable Model IR
+│   ├── geometry-core/   # Model IR → deterministic geometry data
+│   ├── model-viewer/    # Three.js viewer-only helpers
+│   └── *.js             # Isomorphic modules shared by renderer / MCP / tests (Part DSL, digitize, fonts, etc.)
+├── docs/fonts/          # Docs webfonts (woff2)
+├── site/                # Landing pages + assets (index.html→/, en/index.html→/en/, css/js/images/fonts)
+├── main.js              # Electron main process + WS server (ws://127.0.0.1:23450)
+├── preload.js           # contextBridge → window.electronAPI
+├── mcp/server.js        # MCP stdio adapter (maps to WS actions)
+├── electron/            # Native helpers (Core Text text outline, etc.)
+├── docs/                # User guide + this page
+├── tests/e2e/           # Playwright E2E
+├── samples/             # Sample project JSON files
+├── scripts/             # Release build, screenshot generation
+├── AGENT.md             # AI agent operation manual (detailed API)
+└── AGENT.ja.md          # Japanese agent manual</code></pre>
+      <p>
+        No bundler — files load via <code>&lt;script src&gt;</code> into the global scope.
+        When adding files, respect the order in <code>app/index.html</code>.
+      </p>
+      <p>
+        Boundary rule: runnable products belong under <code>apps/</code>; reusable libraries belong
+        under <code>packages/</code>. The existing 2D editor is still in <code>app/</code> for
+        compatibility with Electron, build packaging, docs, and tests. When it is moved, the target
+        should be <code>apps/millrect-editor</code>, not <code>packages/</code>. Only reusable 2D
+        primitives such as drawing schema, profile extraction, command reducers, or rendering helpers
+        should be split into packages.
+      </p>
+
+      <h2 id="architecture">Architecture</h2>
+
+      <h3>Design principles</h3>
+      <table>
+        <thead><tr><th>Principle</th><th>Meaning</th></tr></thead>
+        <tbody>
+          <tr><td>Edit 2D drawings only</td><td>3D is derived; always regeneratable via <code>update3DScene()</code></td></tr>
+          <tr><td>Undo/Redo protection</td><td><code>pushHistory()</code> records document parts only; zoom/pan/tool are excluded</td></tr>
+          <tr><td>Stable shape IDs</td><td>Do not change shape IDs; use <code>genId()</code> on collision</td></tr>
+          <tr><td>Dimensions separate from shapes</td><td><code>addShape({type:"dimension",...})</code> routes to <code>page.dimensions[]</code></td></tr>
+          <tr><td>3D from drawings</td><td>Each page’s <code>viewDefinition</code> + contours; per-shape <code>feature.depth</code> is removed</td></tr>
+        </tbody>
+      </table>
+
+      <h3>Data flow (3D generation)</h3>
+      <pre><code>pages[] (viewDefinition.type + contour shapes per page)
+  ↓ shapeToProfile() / extractProfilesFromPage()  ← profiles.js
+Profile (derived; not stored in State)
+  ↓ _profileToThreeShapesForView() + ExtrudeGeometry (internal sweep)
+  ↓ CSG union (within view) → CSG intersect (between axis pairs)
+Mesh → STL</code></pre>
+      <p>At least <strong>two orthogonal views</strong> are required (e.g. top + front). One page alone produces no solid.</p>
+
+      <h3>Separated 3D pipeline</h3>
+      <p>
+        The drawing document remains the source of truth. New 3D accuracy work should be isolated
+        in the pipeline packages instead of changing the 2D editor UI directly.
+      </p>
+      <pre><code>Project JSON / 2D drawings
+  ↓ packages/schema
+schema validation
+  ↓ packages/model-generator
+Model IR (editable operations / features, not only mesh)
+  ↓ packages/geometry-core
+geometry data / mesh / export-ready data
+  ↓ packages/model-viewer
+Three.js display</code></pre>
+      <p>
+        <code>app/js/3d-view.js</code> still owns the legacy multiview CSG preview and STL path for
+        compatibility. It also refreshes the new wrapper state, available after
+        <code>update3DScene()</code> via <code>get3DModelPipelineState()</code>.
+      </p>
+      <h3>State separation</h3>
+      <pre><code>_state = {
+  // Document (Undo / export)
+  projectName, unit, fonts, pages, partIntent, projectBrief,
+
+  // UI (not Undo)
+  zoom, panX, panY, activeTool,
+  currentPageId, currentLayerId,
+  selectedShapeIds, showGrid, gridSize, snapEnabled,
+}</code></pre>
+      <p><code>pushHistory()</code> / <code>undo()</code> / <code>redo()</code> operate on <code>DOC_KEYS</code> only.</p>
+
+      <h3>Script load order (<code>app/index.html</code>)</h3>
+      <pre><code>vendor/* → js/components/* → js/db.js
+→ packages/schema/index.js, model-generator/index.js, geometry-core/index.js
+→ packages/multiview-starter-box.js, docs-box-scenario.js, agent-intent.js, digitize-sketch.js
+→ packages/part-geometry.js, manufacturing-rules.js, part-dsl.js, part-solver.js, …
+→ js/state.js → js/transform.js → js/profiles.js → js/constraints.js → js/renderer.js
+→ js/commands.js → js/export.js → js/interaction.js → js/text-outline.js
+→ js/multiview-template.js → js/part-builders.js → js/ui.js → js/path-editor.js
+→ js/3d-view.js → packages/model-viewer/index.js → js/agent-api.js → js/part-compiler.js
+→ js/reference-image.js → js/digitize-sketch.js → js/docs-api.js → js/autosave.js</code></pre>
+      <p>Later files depend on earlier ones. Do not reorder.</p>
+
+      <h3>File responsibilities</h3>
+      <table>
+        <thead><tr><th>File</th><th>Role</th></tr></thead>
+        <tbody>
+          <tr><td><code>js/state.js</code></td><td>Single source <code>_state</code>; <code>pushHistory()</code> snapshots document parts only</td></tr>
+          <tr><td><code>js/profiles.js</code></td><td>DrawingObject → Profile; 3D contour extraction entry point</td></tr>
+          <tr><td><code>js/constraints.js</code></td><td>Geometric constraints and solver</td></tr>
+          <tr><td><code>js/db.js</code></td><td>IndexedDB persistence (autosave)</td></tr>
+          <tr><td><code>js/renderer.js</code></td><td><code>render()</code> — redraw SVG from state</td></tr>
+          <tr><td><code>js/interaction.js</code></td><td>Mouse events, text edit dialog</td></tr>
+          <tr><td><code>js/text-outline.js</code></td><td>Native text preview and <code>outlineTextShape()</code></td></tr>
+          <tr><td><code>js/path-editor.js</code></td><td>Bezier draw/edit overlay</td></tr>
+          <tr><td><code>js/ui.js</code></td><td>DOM wiring, tabs, resize, panel toggles</td></tr>
+          <tr><td><code>js/commands.js</code></td><td>Undo/Redo, shape CRUD, Boolean ops</td></tr>
+          <tr><td><code>js/export.js</code></td><td>PDF / SVG / JSON export</td></tr>
+          <tr><td><code>js/3d-view.js</code></td><td>Three.js scene; multiview CSG intersection → mesh</td></tr>
+          <tr><td><code>js/agent-api.js</code></td><td>Intent API — <code>createMultiviewBox</code>, <code>createPart</code>, <code>validate3DReadiness</code></td></tr>
+          <tr><td><code>js/part-compiler.js</code></td><td>Part DSL emitter — <code>applyPartDsl</code>, <code>updatePartParam</code></td></tr>
+          <tr><td><code>js/reference-image.js</code></td><td>Reference image placement, transform edit mode (move/resize, button toggle), interactive scale anchor</td></tr>
+          <tr><td><code>js/digitize-sketch.js</code></td><td>Ghost digitize — <code>applyDigitizeProposals</code></td></tr>
+          <tr><td><code>js/autosave.js</code></td><td>localStorage debounced save; <code>onStateChanged()</code> ← <code>pushHistory()</code></td></tr>
+          <tr><td><code>packages/schema</code></td><td>Project JSON / Model IR / geometry-data validation and stable hashes</td></tr>
+          <tr><td><code>packages/model-generator</code></td><td>Project JSON / profiles / Part DSL features → editable Model IR operations</td></tr>
+          <tr><td><code>packages/geometry-core</code></td><td>Model IR → deterministic geometry data and feature annotations</td></tr>
+          <tr><td><code>packages/model-viewer</code></td><td>Three.js viewer helpers only; no geometry generation</td></tr>
+          <tr><td><code>main.js</code></td><td>Electron window, IPC, WebSocket MCP bridge</td></tr>
+          <tr><td><code>mcp/server.js</code></td><td>MCP tools (snake_case) → WS actions (camelCase)</td></tr>
+        </tbody>
+      </table>
+
+      <h2 id="coordinates">Coordinates</h2>
+      <table>
+        <thead><tr><th>Concept</th><th>Value</th></tr></thead>
+        <tbody>
+          <tr><td>Unit</td><td>real units (1 mm = 10 units)</td></tr>
+          <tr><td>A4 landscape</td><td>2970 × 2100</td></tr>
+          <tr><td>A4 portrait</td><td>2100 × 2970</td></tr>
+          <tr><td>A3 landscape</td><td>4200 × 2970</td></tr>
+        </tbody>
+      </table>
+      <p>With scale 1:10 (<code>scale: { numerator:1, denominator:10 }</code>):</p>
+      <pre><code>paperUnit = realUnit × numerator / denominator
+realUnit  = paperUnit × denominator / numerator</code></pre>
+
+      <h2 id="schemas">Data schemas</h2>
+
+      <h3 id="schema-state">State</h3>
+      <p>See <code>_state</code> under <a href="#architecture">Architecture</a>. <code>pages[]</code> is the core of the document.</p>
+
+      <h3 id="schema-project-font">ProjectFont (<code>state.fonts[]</code>)</h3>
+      <pre><code>{
+  id: string,
+  family: string,           // e.g. "Roboto"
+  cssUrl: string,           // Google Fonts CSS (display)
+  fileUrl: string,          // TTF URL (400 / Regular)
+  fileUrlBold?: string,     // TTF URL (700 / Bold)
+  source: "google",
+  libraryId?: string        // optional link to user library entry
+}</code></pre>
+
+      <h3 id="schema-page">Page</h3>
+      <pre><code>{
+  id, name,
+  paper: 'A4'|'A3'|'A2'|'A1',
+  orientation: 'landscape'|'portrait',
+  scale: { numerator, denominator },
+  viewDefinition: {
+    type: 'top'|'bottom'|'front'|'back'|'right'|'left'|'section'|'detail'|null,
+    normal: [x,y,z]|null,
+    up: [x,y,z]|null,
+  },
+  dimensions: [Dimension],   // separate from shapes[]
+  referenceImage?: { dataUrl, x, y, width, height, opacity },
+  layers: [Layer],
+  constraints?: [Constraint],
+}</code></pre>
+
+      <h3 id="schema-layer">Layer</h3>
+      <pre><code>{ id, name, visible, locked, shapes: [Shape] }</code></pre>
+
+      <h3 id="schema-shape">Shape</h3>
+      <pre><code>// Common
+{ id, type, stroke, fill, strokeWidth: 'thin'|'medium'|'thick',
+  rotation?, flipH?, flipV?,   // reflected in SVG, BBox, Profile, and 3D
+  ghost?: boolean }             // unconfirmed digitize proposal (excluded from 3D)
+
+// Types
+rect:    { x, y, width, height, rx? }
+circle:  { cx, cy, r }
+line:    { x1, y1, x2, y2 }
+text:    { x, y, text, fontSize?, fontFamily?, fontWeight?, textAlign?, lineHeight?, width? }
+         // text color uses stroke (not fill)
+bezier:  { nodes: [{x, y, h1:{x,y}|null, h2:{x,y}|null}], closed: bool }
+path:    { contours: ring[][][] }   // polygon-clipping format
+group:   { children: Shape[] }</code></pre>
+
+      <h3 id="schema-dimension">Dimension (<code>page.dimensions[]</code>)</h3>
+      <pre><code>{
+  id, type: 'dimension',
+  dimensionType: 'horizontal'|'vertical',
+  from: {x, y}, to: {x, y},
+  offset: number,
+  color?, lineWidth?, textSize?, arrowStyle?, fontFamily?,
+  value?, decimals?, prefix?, suffix?,
+  textOffsetX?, textOffsetY?, textRotation?,
+}</code></pre>
+      <p><code>addShape({ type:'dimension', ... })</code> is automatically routed to <code>page.dimensions[]</code>.</p>
+
+      <h3 id="schema-profile">Profile (derived; not stored in State)</h3>
+      <pre><code>{
+  id: 'profile-{shapeId}',
+  sourceId: string,
+  pageId: string,
+  rings: [[[x,y]...]],   // [0]=outer, [1..]=holes
+  bbox: { x, y, w, h },
+  area: number,
+}</code></pre>
+      <p>Supported: <code>rect / circle / bezier(closed) / path</code>. <code>group</code> is recursively expanded into child shapes for Profile extraction. Not supported: <code>line / text / dimension / bezier(open)</code>.</p>
+      <p><code>findShapeById(id)</code> → <code>{ shape, layer, page, isDimension }</code> (<code>layer</code> is null when <code>isDimension === true</code>).</p>
+
+      <h2 id="taste-memory">Taste Memory (design)</h2>
+      <p>
+        Extension spec for recording user aesthetic judgments in three layers (Global / Project / Artifact).
+        The Project layer (<code>state.projectBrief</code>), Global layer (IndexedDB <code>tasteGlobal</code>),
+        and Artifact layer (<code>projectBrief.artifactLog</code>) are implemented. Separate from geometric <code>partIntent</code>.
+        The human-facing UI lives in the right panel under <strong>Pages tab → Taste brief</strong>.
+      </p>
+      <ul>
+        <li><code>docs/TASTE-MEMORY.md</code> — schemas, workflow, MCP/API, promotion rules</li>
+        <li><code>docs/adr/0001-taste-memory-three-layer-model.md</code> — architecture decision summary</li>
+        <li><code>get_taste_context</code> / <code>update_project_brief</code> / <code>record_decision</code> / <code>append_artifact_log</code> — available via MCP</li>
+        <li><code>captures/</code> ZIP export is not implemented yet (project JSON stores relative paths only)</li>
+      </ul>
+
+      <h2 id="api">Global API</h2>
+      <p>All functions are exposed in the global scope (<code>window.xxx()</code> or DevTools console).</p>
+
+      <h3 id="api-state">state.js</h3>
+      <pre><code>getState()                   // → _state
+getCurrentPage()             // → current Page
+getCurrentLayer()            // → current Layer
+getAllShapesOnPage(page)     // → Shape[] (excludes dimensions)
+getAllDimensionsOnPage(page) // → Dimension[]
+findShapeById(id)            // → { shape, layer, page, isDimension } | null
+pushHistory()                // document parts only → triggers autosave
+undo() / redo()              // → boolean
+replaceState(newState)       // replace full state (resets history)
+genId(prefix)                // generate unique ID
+snapToShapes(pt, shapes, scale, threshold)  // snap</code></pre>
+
+      <h3 id="api-profiles">profiles.js</h3>
+      <pre><code>canBeProfile(shape)              // → boolean
+extractProfilesFromPage(page)      // → Profile[]
+shapeToProfile(shape, pageId)      // → Profile | null</code></pre>
+
+      <h3 id="api-3d">3d-view.js</h3>
+      <pre><code>update3DScene()       // regenerate mesh from all pages (CSG intersection)
+get3DSceneStatus()    // → { meshCount, message }
+exportSTL()           // download STL (warns if meshCount=0)</code></pre>
+
+      <h3 id="api-commands">commands.js</h3>
+      <pre><code>addShape(shape) / updateShape(id, values) / deleteShape(id)
+deleteSelectedShapes()
+moveShapeToPosition(id, x, y)    // with pushHistory
+alignShapes(dir)                 // 'left'|'centerH'|'right'|'top'|'centerV'|'bottom'
+distributeShapes(axis)           // 'h' | 'v'
+groupSelectedShapes() / ungroupSelectedShapes()
+mergeSelectedShapes()            // union
+subtractSelectedShapes()         // difference
+applyDrawingCommands([...])      // batch ops (single pushHistory at end)
+getShapeBBox(shape, scale)       // → { x, y, w, h } | null</code></pre>
+      <p>After geometry changes, call <code>render(); uiUpdate();</code>. For 3D, use <code>update3DScene(); get3DSceneStatus();</code>.</p>
+
+      <h3 id="api-export">export.js</h3>
+      <pre><code>exportProjectJsonString()
+exportCurrentPageSvg()
+exportAllPagesPdf()     // async
+exportSTL()</code></pre>
+
+      <h3 id="api-intent">Intent API (agent-api.js)</h3>
+      <p>High-level agent APIs. Accept mm and handle layout / multiview setup internally. Prefer these over raw <code>apply_commands</code>.</p>
+      <table>
+        <thead><tr><th>Function</th><th>Purpose</th></tr></thead>
+        <tbody>
+          <tr><td><code>createMultiviewBox(options)</code></td><td>width/depth/height mm → top + front (+ optional right) pages</td></tr>
+          <tr><td><code>createPart(options)</code></td><td>Semantic part (<code>kind:"box"</code> + <code>features[]</code>)</td></tr>
+          <tr><td><code>layoutRectOnPageMm(w, h)</code></td><td>Centered mm rectangle on current page</td></tr>
+          <tr><td><code>validate3DReadiness()</code></td><td>Pre-3D check (axes, closed contours, issues[])</td></tr>
+          <tr><td><code>applyDigitizeProposals(proposals)</code></td><td>Place ghost shapes</td></tr>
+          <tr><td><code>confirmDigitizeProposals()</code></td><td>Confirm ghosts</td></tr>
+        </tbody>
+      </table>
+
+      <h2 id="mcp">MCP / WebSocket</h2>
+      <p>
+        While Millrect is running, <code>main.js</code> starts a WebSocket server at
+        <code>ws://127.0.0.1:23450</code> (or port+1 if busy).
+        The auth token is written to <code>~/.millrect/millrect-ws-token</code>.
+        <code>mcp/server.js</code> bridges stdio MCP ↔ WebSocket.
+      </p>
+
+      <div class="docs-callout docs-callout-note">
+        <strong>User-facing setup</strong>
+        <p>
+          For Claude Desktop and other MCP client configuration, see
+          <a href="ai-mcp.html">AI / MCP</a>.
+          Agent manual: <code>AGENT.md</code> / <code>AGENT.ja.md</code> (MCP Resource <code>millrect://docs/agent-manual</code>).
+          Full MCP tool index: <code>docs/MCP-REFERENCE.md</code> (Resource <code>millrect://docs/mcp-reference</code>).
+        </p>
+      </div>
+
+      <h3 id="mcp-layers">Two naming layers</h3>
+      <table>
+        <thead><tr><th>Layer</th><th>Naming</th><th>Used by</th></tr></thead>
+        <tbody>
+          <tr><td>MCP tools</td><td><code>snake_case</code></td><td>Claude Desktop, etc. (<code>mcp/server.js</code>)</td></tr>
+          <tr><td>WS <code>action</code></td><td><code>camelCase</code></td><td>Direct WebSocket (<code>main.js</code>)</td></tr>
+          <tr><td><code>apply_commands</code> body</td><td><code>camelCase</code></td><td>Document ops like <code>addShape</code></td></tr>
+        </tbody>
+      </table>
+
+      <h3 id="mcp-workflow">Basic workflow</h3>
+      <ol class="docs-steps">
+        <li><strong>Launch Millrect</strong> — WS server and token file are created</li>
+        <li><strong>Connect MCP client</strong> — register <code>node mcp/server.js</code></li>
+        <li><strong><code>get_project_context</code></strong> — check new vs in-progress, profile count, viewDefinition</li>
+        <li><strong>Prefer Intent API</strong> — <code>create_multiview_box</code>, <code>validate_3d_readiness</code>, etc.</li>
+        <li><strong>Fine edits</strong> — <code>apply_commands</code> for individual shapes</li>
+        <li><strong>Verify 3D</strong> — <code>update_3d_scene</code> → <code>get_3d_scene_status</code></li>
+      </ol>
+
+      <h3 id="mcp-tools">MCP tools</h3>
+      <table>
+        <thead><tr><th>MCP tool</th><th>WS action</th><th>Description</th></tr></thead>
+        <tbody>
+          <tr><td><code>get_project_context</code></td><td><code>getProjectContext</code></td><td>Project summary (shapes / profiles / viewDefinition / briefSummary)</td></tr>
+          <tr><td><code>get_taste_context</code></td><td><code>getTasteContext</code></td><td><code>projectBrief</code> + Global taste</td></tr>
+          <tr><td><code>update_project_brief</code></td><td><code>updateProjectBrief</code></td><td>Partial update to <code>projectBrief</code></td></tr>
+          <tr><td><code>record_decision</code></td><td><code>recordDecision</code></td><td>Append accept / reject / revise reason</td></tr>
+          <tr><td><code>set_project_phase</code></td><td><code>setProjectPhase</code></td><td>discover / taste / brief / make / review / learn / done</td></tr>
+          <tr><td><code>append_session_learnings</code></td><td><code>appendSessionLearnings</code></td><td>Batch append session learnings</td></tr>
+          <tr><td><code>list_global_principles</code></td><td><code>listGlobalPrinciples</code></td><td>List Global principles</td></tr>
+          <tr><td><code>promote_principle</code></td><td><code>promotePrinciple</code></td><td>Promote Project principle to Global</td></tr>
+          <tr><td><code>append_artifact_log</code></td><td><code>appendArtifactLog</code></td><td>Append review / capture artifact log entry</td></tr>
+          <tr><td><code>get_state</code></td><td><code>getState</code></td><td>Current page shapes / dimensions / profiles</td></tr>
+          <tr><td><code>apply_commands</code></td><td><code>applyCommands</code></td><td>Batch drawing ops (see table below)</td></tr>
+          <tr><td><code>clear_canvas</code></td><td><code>clearCanvas</code></td><td>Clear shapes on current layer</td></tr>
+          <tr><td><code>get_svg</code></td><td><code>getSvg</code></td><td>Current page SVG</td></tr>
+          <tr><td><code>align_shapes</code></td><td><code>alignShapes</code></td><td>Align selection</td></tr>
+          <tr><td><code>distribute_shapes</code></td><td><code>distributeShapes</code></td><td>Distribute evenly</td></tr>
+          <tr><td><code>undo</code> / <code>redo</code></td><td><code>undo</code> / <code>redo</code></td><td>History</td></tr>
+          <tr><td><code>set_selected_shapes</code></td><td><code>setSelectedShapes</code></td><td>Change selection</td></tr>
+          <tr><td><code>group_shapes</code> / <code>ungroup_shapes</code></td><td><code>groupShapes</code> / <code>ungroupShapes</code></td><td>Grouping</td></tr>
+          <tr><td><code>boolean_union</code></td><td><code>booleanUnion</code></td><td>Boolean union</td></tr>
+          <tr><td><code>boolean_subtract</code></td><td><code>booleanSubtract</code></td><td>Boolean subtract</td></tr>
+          <tr><td><code>boolean_intersect</code></td><td><code>booleanIntersect</code></td><td>Boolean intersect</td></tr>
+          <tr><td><code>boolean_exclude</code></td><td><code>booleanExclude</code></td><td>Boolean exclude</td></tr>
+          <tr><td><code>boolean_flatten</code></td><td><code>booleanFlatten</code></td><td>Flatten to path</td></tr>
+          <tr><td><code>add_constraint</code></td><td><code>addConstraint</code></td><td>Add constraint</td></tr>
+          <tr><td><code>remove_constraint</code></td><td><code>removeConstraint</code></td><td>Remove constraint</td></tr>
+          <tr><td><code>get_constraints</code></td><td><code>getConstraints</code></td><td>List constraints</td></tr>
+          <tr><td><code>update_3d_scene</code></td><td><code>update3DScene</code></td><td>Regenerate 3D mesh</td></tr>
+          <tr><td><code>get_3d_scene_status</code></td><td><code>get3DSceneStatus</code></td><td>3D status (no regen)</td></tr>
+          <tr><td><code>validate_3d_readiness</code></td><td><code>validate3DReadiness</code></td><td>3D readiness check</td></tr>
+          <tr><td><code>create_multiview_box</code></td><td><code>createMultiviewBox</code></td><td>mm multiview box</td></tr>
+          <tr><td><code>create_part</code></td><td><code>createPart</code></td><td>Semantic part generation</td></tr>
+          <tr><td><code>layout_rect_mm</code></td><td><code>layoutRectOnPageMm</code></td><td>Center mm rectangle</td></tr>
+          <tr><td><code>load_reference_image</code></td><td><code>loadReferenceImageFromFile</code></td><td>Place reference image</td></tr>
+          <tr><td><code>set_reference_scale_anchor</code></td><td><code>setReferenceImageScaleAnchor</code></td><td>Scale from 2 points + mm</td></tr>
+          <tr><td><code>digitize_sketch</code></td><td><code>applyDigitizeProposals</code></td><td>Ghost shape proposals</td></tr>
+          <tr><td><code>confirm_digitize_proposals</code></td><td><code>confirmDigitizeProposals</code></td><td>Confirm ghosts</td></tr>
+          <tr><td><code>compile_part_dsl</code></td><td><code>compilePartDsl</code></td><td>Part DSL dry-run</td></tr>
+          <tr><td><code>apply_part_dsl</code></td><td><code>applyPartDsl</code></td><td>Part DSL → drawing</td></tr>
+          <tr><td><code>validate_manufacturability</code></td><td><code>validatePartManufacturability</code></td><td>Manufacturing rules check</td></tr>
+          <tr><td><code>update_part_param</code></td><td><code>updatePartParam</code></td><td>Update part parameter</td></tr>
+          <tr><td><code>import_part_dsl_file</code></td><td><code>importPartDslFile</code></td><td>Load <code>.mlr-part.json</code></td></tr>
+          <tr><td><code>list_docs_scenarios</code></td><td><code>listDocsScenarios</code></td><td>Docs scenario catalog</td></tr>
+          <tr><td><code>run_docs_scenario</code></td><td><code>runDocsScenario</code></td><td>Apply scenario</td></tr>
+          <tr><td><code>capture_screenshot</code></td><td>(main process)</td><td>PNG capture</td></tr>
+        </tbody>
+      </table>
+
+      <h3 id="apply-commands">apply_commands actions</h3>
+      <table>
+        <thead><tr><th>action</th><th>Description</th></tr></thead>
+        <tbody>
+          <tr><td><code>addShape</code></td><td>Add shape (<code>type:"dimension"</code> → <code>page.dimensions[]</code>)</td></tr>
+          <tr><td><code>updateShape</code></td><td>Update shape</td></tr>
+          <tr><td><code>deleteShape</code></td><td>Delete shape</td></tr>
+          <tr><td><code>addDimension</code></td><td>Add dimension (explicit)</td></tr>
+          <tr><td><code>updateDimension</code></td><td>Update dimension</td></tr>
+          <tr><td><code>selectShapes</code></td><td>Change selection</td></tr>
+          <tr><td><code>setPagePaper</code></td><td>Change paper / orientation</td></tr>
+          <tr><td><code>setPageScale</code></td><td>Change scale</td></tr>
+          <tr><td><code>setProjectName</code></td><td>Rename project</td></tr>
+          <tr><td><code>addPage</code></td><td>Add page</td></tr>
+          <tr><td><code>addConstraint</code></td><td>Add constraint</td></tr>
+          <tr><td><code>removeConstraint</code></td><td>Remove constraint</td></tr>
+          <tr><td><code>applyConstraints</code></td><td>Apply all constraints immediately</td></tr>
+        </tbody>
+      </table>
+
+      <h2 id="electron">Electron</h2>
+      <p>The desktop app loads <code>app/index.html</code> in Electron.</p>
+
+      <h3>Security</h3>
+      <ul>
+        <li><code>contextIsolation: true</code> — isolate renderer from Node</li>
+        <li><code>nodeIntegration: false</code></li>
+        <li><code>sandbox: true</code></li>
+        <li>Renderer uses only <code>window.electronAPI</code> via <code>preload.js</code></li>
+        <li>WebSocket MCP binds to <code>127.0.0.1</code> only; token auth required</li>
+        <li>App CSP: Content-Security-Policy meta tag in <code>app/index.html</code></li>
+      </ul>
+
+      <h3 id="electron-api">electronAPI (preload.js)</h3>
+      <table>
+        <thead><tr><th>API</th><th>Purpose</th></tr></thead>
+        <tbody>
+          <tr><td><code>saveProjectJson</code> / <code>openProjectJson</code></td><td>JSON file dialogs</td></tr>
+          <tr><td><code>saveSvg</code> / <code>savePdf</code></td><td>Save SVG / PDF</td></tr>
+          <tr><td><code>openImageFile</code></td><td>Reference / canvas images</td></tr>
+          <tr><td><code>readFont</code> / <code>outlineTextShape</code> / <code>measureTextLayout</code></td><td>Text rendering and outline</td></tr>
+          <tr><td><code>readFontLibrary</code> / <code>writeFontLibrary</code></td><td>User font library persistence</td></tr>
+          <tr><td><code>openHelpTopic(page, anchor)</code></td><td>In-app help modal</td></tr>
+          <tr><td><code>setAppLocale(locale)</code></td><td>UI language switch</td></tr>
+          <tr><td><code>onMenu(channel, callback)</code></td><td>Menu bar events (undo, export, help, etc.)</td></tr>
+          <tr><td><code>isDesktopApp</code></td><td><code>true</code> (undefined in browser)</td></tr>
+        </tbody>
+      </table>
+      <p>Electron-only: text outline (macOS Core Text → fontkit fallback), MCP WebSocket, file I/O.</p>
+
+      <h2 id="patterns">Known patterns &amp; gotchas</h2>
+      <ul>
+        <li><strong>Bezier overlay:</strong> always <code>render()</code> then <code>renderBezierOverlay()</code></li>
+        <li><strong>Bezier mouse handler:</strong> check before <code>if (!_ds) return</code></li>
+        <li><strong>Edit mode:</strong> <code>_bezierEditId</code> works regardless of active tool</li>
+        <li><strong>rotation / flipH / flipV:</strong> reflected in SVG, <code>getShapeBBox</code>, alignment, Profile, and 3D. Transform order is rotate → flip</li>
+        <li><strong>Ghost shapes:</strong> <code>shape.ghost</code> excluded from Profile / 3D until confirmed</li>
+        <li><strong>Web Components:</strong> do not use <code>display: contents</code> in <code>js/components/</code> (breaks absolute positioning)</li>
+        <li><strong>Autosave:</strong> <code>pushHistory()</code> → <code>onStateChanged()</code> → 2s debounce → <code>doAutosave()</code></li>
+        <li><strong>shiftShape():</strong> does not call <code>pushHistory()</code>; record history manually after direct edits</li>
+        <li><strong>render():</strong> RAF-debounced — rapid calls coalesce to one frame</li>
+        <li><strong>3D generation:</strong> do not use per-shape <code>feature.depth</code>; multiview CSG only</li>
+      </ul>
+
+      <div class="docs-callout docs-callout-tip">
+        <strong>Back to user guide</strong>
+        <p>
+          For drawing workflows, start at <a href="getting-started.html">Getting Started</a>.
+          For AI setup, see <a href="ai-mcp.html">AI / MCP</a>.
+        </p>
+      </div>
+    </article>
+  </div>
+
+  <footer class="docs-footer">
+    <div class="docs-footer-inner">
+      <span>Millrect Documentation</span>
+      <div class="docs-footer-links">
+        <a href="ai-mcp.html">← AI / MCP</a>
+        <a href="./">Documentation TOP</a>
+      </div>
+    </div>
+  </footer>
+
+  <script src="../../packages/help-index.js"></script>
+  <script src="../js/docs-search.js"></script>
+  <script src="../js/docs-nav.js"></script>
+  <script src="../js/docs.js"></script>
+</body>
+</html>

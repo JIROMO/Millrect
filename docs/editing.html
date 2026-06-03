@@ -1,0 +1,202 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <!-- Google tag (gtag.js) -->
+    <script async src="https://www.googletagmanager.com/gtag/js?id=G-0JMRZXG11T"></script>
+    <script>
+      window.dataLayer = window.dataLayer || [];
+      function gtag(){dataLayer.push(arguments);}
+      gtag('js', new Date());
+
+      gtag('config', 'G-0JMRZXG11T');
+    </script>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>編集操作 — Millrect ドキュメント</title>
+  <meta name="robots" content="index, follow" />
+  <script src="js/docs-seo.js"></script>
+  <link rel="stylesheet" href="css/docs.css">
+</head>
+<body data-page="editing">
+  <header class="docs-header">
+    <div class="docs-header-inner">
+      <a class="docs-logo" href="./">
+        <img class="docs-logo-img" src="../site/images/logo.svg" alt="Millrect" width="774" height="109">
+      </a>
+      <div class="docs-header-actions">
+        <button class="docs-menu-toggle" id="docs-menu-toggle" type="button" aria-label="メニュー">☰</button>
+      </div>
+    </div>
+  </header>
+
+  <div class="docs-layout">
+    <aside class="docs-sidebar" id="docs-sidebar"></aside>
+
+    <article class="docs-content">
+      <nav class="docs-breadcrumb"><a href="./">ドキュメント</a> / 編集操作</nav>
+      <h1>編集操作</h1>
+      <p class="docs-lead">
+        図形の選択、プロパティ編集、整列・均等配置、グループ化、合成・くり抜き、Undo/Redo について説明します。
+      </p>
+
+      <h2 id="select">選択と移動</h2>
+      <p>
+        <strong>選択ツール (V)</strong> で図形をクリックすると選択されます。
+        Shift を押しながらクリックで複数選択、ドラッグで範囲選択もできます。
+      </p>
+      <ul>
+        <li>選択した図形はハンドル付きの枠で表示されます</li>
+        <li>枠内をドラッグして移動、角のハンドルでサイズ変更</li>
+        <li>矢印キーで 1 mm ずつ移動（Shift + 矢印で 10 mm）</li>
+        <li>Ctrl+A（Mac: Cmd+A）ですべての図形・寸法線を選択</li>
+      </ul>
+
+      <figure class="docs-figure docs-figure-wide">
+        <img src="images/editing-multiselect.png" alt="くり抜き前の外枠と内枠の複数選択">
+        <figcaption>上面矩形を選択 — Design タブでサイズ・塗り色を編集。</figcaption>
+      </figure>
+
+      <h2 id="design">Design タブ（プロパティ）</h2>
+      <p>
+        右パネルの <strong>Design</strong> タブでは、選択中の図形の座標・サイズ・<strong>塗り・線色</strong>・線幅などを編集できます。
+        複数選択時は整列ボタンに加え、外観の一括変更もできます。
+      </p>
+
+      <figure class="docs-figure docs-figure-sidebar">
+        <img src="images/design-panel.png" alt="Design タブで path のプロパティを編集">
+        <figcaption>くり抜き後の枠を選択した状態。Design タブで塗り・線色、寸法線の追加も可能。</figcaption>
+      </figure>
+
+      <h3 id="appearance">外観（塗り・線色）</h3>
+      <p>
+        図形を 1 つ選択すると、プロパティ一覧の <strong>外観</strong> セクションで色を指定できます。
+        2D 図面上の表示に加え、<strong>3D プレビューのメッシュ色</strong>にも反映されます（詳細は <a href="multiview-3d.html#color">3D 生成 — 色の反映</a>）。
+      </p>
+      <table>
+        <thead><tr><th>項目</th><th>内容</th></tr></thead>
+        <tbody>
+          <tr><td>塗り</td><td>カラーピッカーで塗りつぶし色を指定。<strong>なし</strong> ボタンで透明（輪郭のみ）に戻せます</td></tr>
+          <tr><td>線色</td><td>輪郭線の色。テキスト図形では文字色として使われます</td></tr>
+          <tr><td>プリセット</td><td>8 色のスウォッチをクリックすると、塗りまたは線色に即適用</td></tr>
+          <tr><td>新規描画</td><td>ここで選んだ色は、次に描く矩形・円・線などのデフォルト色として記憶されます</td></tr>
+        </tbody>
+      </table>
+      <p>塗りを設定できるのは <strong>矩形・円・パス・閉じたベジェ</strong> です。線・テキストは線色のみ、寸法線は専用の「寸法線色」項目を使います。</p>
+      <p>2 つ以上の図形を選択したときは <strong>外観（一括）</strong> が表示され、選択中の図形すべてに同じ塗り・線色を適用できます。</p>
+
+      <table>
+        <thead><tr><th>項目</th><th>内容</th></tr></thead>
+        <tbody>
+          <tr><td>位置・サイズ</td><td>矩形は X/Y/W/H、円は中心と半径など、図形タイプごとの数値</td></tr>
+          <tr><td>線幅</td><td>細 / 中 / 太</td></tr>
+          <tr><td>角丸 (rx)</td><td>矩形のみ。角の丸み</td></tr>
+          <tr><td>回転・反転</td><td>表示、整列、Profile、3D 生成に反映されます</td></tr>
+        </tbody>
+      </table>
+
+      <h2 id="align">整列・均等配置</h2>
+      <p>2 つ以上の図形を選択すると、Design タブに整列ボタンが表示されます。</p>
+      <table>
+        <thead><tr><th>操作</th><th>説明</th></tr></thead>
+        <tbody>
+          <tr><td>左 / 中央 / 右揃え</td><td>水平方向の位置を揃える</td></tr>
+          <tr><td>上 / 中央 / 下揃え</td><td>垂直方向の位置を揃える</td></tr>
+          <tr><td>水平 / 垂直均等分布</td><td>3 つ以上選択時。端を固定して間隔を均等化</td></tr>
+        </tbody>
+      </table>
+      <p>1 つだけ選択している場合は、ページ（用紙）の端や中央に揃える操作も使えます。</p>
+
+      <h2 id="copy">コピー・複製・削除</h2>
+      <ul>
+        <li><strong>Ctrl+C / Ctrl+V</strong> — コピーして貼り付け</li>
+        <li><strong>Ctrl+D</strong> — 選択図形をその場で複製</li>
+        <li><strong>Delete / Backspace</strong> — 選択図形を削除</li>
+      </ul>
+
+      <h2 id="group">グループ化</h2>
+      <p>
+        2 つ以上の図形を選択して <strong>Ctrl+G</strong> でグループ化できます。
+        グループは 1 つの図形のように移動・選択できます。
+        グループを 1 つ選択した状態で <strong>Ctrl+Shift+G</strong> すると解除されます。
+      </p>
+      <div class="docs-callout docs-callout-warn">
+        <strong>3D 生成について</strong>
+        <p>グループ自体は 3D 輪郭には使えません。グループ内の各図形が個別に Profile 化されます。</p>
+      </div>
+
+      <h2 id="text-outline">テキストのアウトライン化</h2>
+      <p>
+        テキスト図形を選択すると、Design タブに <strong>テキスト編集</strong> と <strong>アウトライン化</strong> ボタンが表示されます。
+        右クリックメニューからも同じ操作ができます。
+      </p>
+      <ul>
+        <li><strong>テキスト編集</strong> — 文字列・フォント・サイズ・行間・色をダイアログで編集</li>
+        <li><strong>アウトライン化</strong> — 各文字を path 図形に変換し、1 つのグループにまとめる</li>
+      </ul>
+      <p>
+        アウトライン化後は元のテキストは削除され、グループ内の path 図形が 3D 生成の輪郭として使えます。
+        文字色（線色）は path の塗り色として引き継がれます。
+      </p>
+      <figure class="docs-figure docs-figure-sidebar">
+        <img src="images/design-panel-text.png" alt="テキスト選択時の Design タブ。アウトライン化ボタン">
+        <figcaption>テキスト選択時の Design タブ。「テキスト編集」「アウトライン化」ボタンが表示されます。</figcaption>
+      </figure>
+      <div class="docs-callout docs-callout-warn">
+        <strong>デスクトップ版のみ</strong>
+        <p>Electron 版でのみ利用可能です。macOS では Core Text、それ以外の OS では fontkit で輪郭を生成します。</p>
+      </div>
+
+      <h2 id="boolean">合成・くり抜き（Boolean）</h2>
+      <p>2 つ以上の<strong>閉じた輪郭</strong>（矩形・円・閉じたベジェ・path など）を選択すると、輪郭演算が使えます。右クリック →「ブール演算」、または Design タブのボタンから実行できます。</p>
+      <table>
+        <thead><tr><th>操作</th><th>ショートカット</th><th>説明</th></tr></thead>
+        <tbody>
+          <tr><td>結合 (Union)</td><td><kbd>Alt+Shift+U</kbd></td><td>複数の輪郭を 1 つの path にまとめる</td></tr>
+          <tr><td>減算 (Subtract)</td><td><kbd>Alt+Shift+S</kbd></td><td>前面から背面を引く（穴あけ）</td></tr>
+          <tr><td>交差 (Intersect)</td><td><kbd>Alt+Shift+I</kbd></td><td>重なり部分だけを残す</td></tr>
+          <tr><td>除外 (Exclude)</td><td><kbd>Alt+Shift+E</kbd></td><td>重なり部分を除いた部分を残す</td></tr>
+          <tr><td>統合 (Flatten)</td><td><kbd>Alt+Shift+F</kbd></td><td>選択中の path / グループを 1 つの path に平坦化</td></tr>
+        </tbody>
+      </table>
+      <p>結果は新しい path 図形として生成され、3D の輪郭としても利用できます。</p>
+
+      <h2 id="history">Undo / Redo と History タブ</h2>
+      <p>
+        図形の追加・移動・削除など、ドキュメントに影響する操作は Undo 対象です。
+        ツールバーの Undo/Redo ボタン、または <strong>Ctrl+Z / Ctrl+Y</strong>（Mac: Cmd+Z / Cmd+Shift+Z）で元に戻せます。
+      </p>
+      <p>
+        右パネルの <strong>History</strong> タブでは、操作履歴の一覧が表示されます。
+        行をクリックすると、その時点の状態にジャンプできます。
+        ズームやパン、ツール切替は履歴に含まれません。
+      </p>
+
+      <figure class="docs-figure docs-figure-sidebar">
+        <img src="images/history-panel.png" alt="History タブに操作履歴が表示">
+        <figcaption>図形を追加したあとの履歴。現在位置がハイライトされます。</figcaption>
+      </figure>
+
+      <h2 id="layers-lock">レイヤーのロック</h2>
+      <p>
+        Layers タブでレイヤーをロックすると、そのレイヤー上の図形は選択・編集できなくなります。
+        下書き用レイヤーや参考線レイヤーの保護に便利です。
+      </p>
+    </article>
+  </div>
+
+  <footer class="docs-footer">
+    <div class="docs-footer-inner">
+      <span>Millrect ドキュメント</span>
+      <div class="docs-footer-links">
+        <a href="drawing.html">← 2D 描画</a>
+        <a href="multiview-3d.html">次: 3D 生成 →</a>
+      </div>
+    </div>
+  </footer>
+
+  <script src="../packages/help-index.js"></script>
+  <script src="js/docs-search.js"></script>
+  <script src="js/docs-nav.js"></script>
+    <script src="js/docs.js"></script>
+</body>
+</html>

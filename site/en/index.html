@@ -1,0 +1,241 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>
+      Millrect — 2D Drawing, Multiview 3D &amp; STL | Browser &amp; macOS
+    </title>
+    <meta
+      name="description"
+      content="Lightweight CAD that builds 3D from 2D orthographic drawings. Free in the browser; macOS desktop adds MCP / AI integration. Dimensions, layers, STL export."
+    />
+    <meta
+      name="keywords"
+      content="Millrect,2D drawing,CAD,3D,STL,orthographic,browser CAD,macOS,MCP"
+    />
+    <meta name="author" content="JIROMO" />
+    <meta name="robots" content="index, follow" />
+    <link rel="canonical" href="https://millrect.com/en/" />
+    <link rel="icon" href="../favicon.ico" />
+    <link rel="alternate" hreflang="ja" href="https://millrect.com/" />
+    <link rel="alternate" hreflang="en" href="https://millrect.com/en/" />
+    <link rel="alternate" hreflang="x-default" href="https://millrect.com/" />
+    <meta property="og:type" content="website" />
+    <meta property="og:site_name" content="Millrect" />
+    <meta property="og:url" content="https://millrect.com/en/" />
+    <meta
+      property="og:title"
+      content="Millrect — 2D Drawing, Multiview 3D &amp; STL"
+    />
+    <meta
+      property="og:description"
+      content="Derive 3D solids from 2D drawings. Try free in the browser; macOS desktop supports MCP."
+    />
+    <meta
+      property="og:image"
+      content="https://millrect.com/site/images/ogp.jpg"
+    />
+    <meta property="og:locale" content="en_US" />
+    <meta property="og:locale:alternate" content="ja_JP" />
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content="Millrect — 2D Drawing, Multiview 3D" />
+    <meta
+      name="twitter:description"
+      content="Build 3D from 2D orthographic views. Free browser app; macOS desktop with MCP."
+    />
+    <meta
+      name="twitter:image"
+      content="https://millrect.com/site/images/ogp.jpg"
+    />
+    <script type="application/ld+json">
+      {
+        "@context": "https://schema.org",
+        "@graph": [
+          {
+            "@type": "WebSite",
+            "name": "Millrect",
+            "url": "https://millrect.com/en/",
+            "inLanguage": "en",
+            "description": "Lightweight CAD that generates 3D from 2D drawings"
+          },
+          {
+            "@type": "SoftwareApplication",
+            "name": "Millrect",
+            "applicationCategory": "DesignApplication",
+            "operatingSystem": "Web Browser, macOS",
+            "softwareVersion": "0.1.0",
+            "url": "https://millrect.com/app/",
+            "downloadUrl": "https://github.com/JIROMO/Millrect/releases/latest",
+            "offers": {
+              "@type": "Offer",
+              "price": "0",
+              "priceCurrency": "USD"
+            },
+            "description": "SVG-based 2D drawing with multiview CSG 3D generation and STL export."
+          }
+        ]
+      }
+    </script>
+    <link rel="stylesheet" href="../site/css/landing.css" />
+    <script src="../site/js/landing-i18n.js"></script>
+    <!-- Google tag (gtag.js) -->
+    <script
+      async
+      src="https://www.googletagmanager.com/gtag/js?id=G-0JMRZXG11T"
+    ></script>
+    <script>
+      window.dataLayer = window.dataLayer || [];
+      function gtag() {
+        dataLayer.push(arguments);
+      }
+      gtag("js", new Date());
+
+      gtag("config", "G-0JMRZXG11T");
+    </script>
+  </head>
+  <body>
+    <header class="site-header">
+      <div class="container">
+        <a class="logo" href="/en/">
+          <img
+            class="logo-img"
+            src="../site/images/logo-white.svg"
+            alt="Millrect"
+            width="752"
+            height="96"
+          />
+        </a>
+        <nav class="site-nav" aria-label="Site navigation">
+          <a href="#about">About</a>
+          <a href="../docs/en/">Documentation</a>
+          <div class="lang-switch" aria-label="Language">
+            <a href="../" hreflang="ja" lang="ja">日本語</a>
+            <a class="is-active" href="/en/" hreflang="en" lang="en">English</a>
+          </div>
+          <a class="btn btn-secondary" href="../app/">Try in browser</a>
+          <a class="btn btn-primary" href="#download">Download</a>
+        </nav>
+      </div>
+    </header>
+
+    <main>
+      <section class="hero">
+        <div class="container hero-grid">
+          <div>
+            <h1>Lightweight 2D drawing.</h1>
+            <p class="hero-lead">
+              Layers, dimensions, and multi-page orthographic views. Export to
+              PDF or SVG. When you need it, 3D preview and STL export are there
+              too.
+            </p>
+            <div class="hero-actions">
+              <a class="btn btn-primary" href="#download"
+                >Download desktop app</a
+              >
+              <a class="btn btn-secondary" href="../app/">Try in browser</a>
+              <a class="btn btn-secondary" href="../docs/en/">Docs</a>
+            </div>
+            <p class="hero-note">
+              Desktop builds add MCP / AI integration and text-to-3D outlines.
+              Pre-release builds are unsigned and free on
+              <a
+                href="https://github.com/JIROMO/Millrect/releases"
+                rel="noopener noreferrer"
+                >GitHub Releases</a
+              >.
+            </p>
+          </div>
+          <div class="hero-visual">
+            <figure class="hero-card">
+              <img
+                src="../docs/images/en/multiview-top-drawing.png"
+                alt="Drawing a box top view in Millrect"
+                width="1440"
+                height="900"
+              />
+              <figcaption class="hero-card-caption">Box top view</figcaption>
+            </figure>
+          </div>
+        </div>
+      </section>
+
+      <section class="features" id="about">
+        <div class="container">
+          <div class="feature-grid">
+            <article class="feature-card">
+              <h3>2D drawing</h3>
+              <p>Shapes, layers, and dimensions on an SVG canvas with undo.</p>
+            </article>
+            <article class="feature-card">
+              <h3>Multiple pages</h3>
+              <p>Top, front, and other views—one page each.</p>
+            </article>
+            <article class="feature-card">
+              <h3>3D preview</h3>
+              <p>Solidify when views align. STL export included.</p>
+            </article>
+            <article class="feature-card">
+              <h3>AI integration (desktop)</h3>
+              <p>
+                Operate drawings via MCP from Claude Desktop. Not available in
+                the browser.
+              </p>
+            </article>
+          </div>
+        </div>
+      </section>
+
+      <section class="download" id="download">
+        <div class="container">
+          <div class="download-panel">
+            <div>
+              <span class="eyebrow">Desktop app</span>
+              <h2>Install for the full feature set</h2>
+              <p>
+                macOS (Apple Silicon / Intel) only. Windows build not available
+                yet. Builds are <strong>unsigned</strong> pre-releases — see
+                <a href="../docs/en/desktop-download.html"
+                  >install instructions</a
+                >
+                if your OS shows a security warning on first launch.
+              </p>
+            </div>
+            <div class="download-actions" data-millrect-download></div>
+          </div>
+        </div>
+      </section>
+
+      <section class="cta-band">
+        <div class="container">
+          <div class="cta-panel">
+            <div>
+              <h2>Try it in your browser first</h2>
+              <p>
+                No login required. Need MCP or text-to-3D outlines?
+                <a href="#download">Get the desktop app</a>.
+              </p>
+            </div>
+            <a class="btn btn-primary" href="../app/">Open web app</a>
+          </div>
+        </div>
+      </section>
+    </main>
+
+    <footer class="site-footer">
+      <div class="container">
+        <span>© JIROMO · Millrect</span>
+        <div class="footer-links">
+          <a href="https://github.com/JIROMO/Millrect" rel="noopener noreferrer"
+            >GitHub</a
+          >
+          <a href="../docs/en/">Documentation</a>
+          <a href="../docs/en/desktop-download.html">Download</a>
+          <a href="../app/">Web app</a>
+        </div>
+      </div>
+    </footer>
+    <script src="../packages/download-config.js"></script>
+    <script src="../site/js/download-buttons.js"></script>
+  </body>
+</html>

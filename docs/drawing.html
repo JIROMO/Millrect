@@ -1,0 +1,429 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <!-- Google tag (gtag.js) -->
+    <script async src="https://www.googletagmanager.com/gtag/js?id=G-0JMRZXG11T"></script>
+    <script>
+      window.dataLayer = window.dataLayer || [];
+      function gtag(){dataLayer.push(arguments);}
+      gtag('js', new Date());
+
+      gtag('config', 'G-0JMRZXG11T');
+    </script>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>2D 描画 — Millrect ドキュメント</title>
+  <meta name="robots" content="index, follow" />
+  <script src="js/docs-seo.js"></script>
+  <link rel="stylesheet" href="css/docs.css">
+</head>
+<body data-page="drawing">
+  <header class="docs-header">
+    <div class="docs-header-inner">
+      <a class="docs-logo" href="./">
+        <img class="docs-logo-img" src="../site/images/logo.svg" alt="Millrect" width="774" height="109">
+      </a>
+      <div class="docs-header-actions">
+        <button class="docs-menu-toggle" id="docs-menu-toggle" type="button" aria-label="メニュー">☰</button>
+      </div>
+    </div>
+  </header>
+
+  <div class="docs-layout">
+    <aside class="docs-sidebar" id="docs-sidebar">
+      <nav class="docs-sidebar-nav docs-sidebar-page" aria-label="このページ">
+        <div class="docs-sidebar-label">このページ</div>
+        <a href="#tools">ツール一覧</a>
+        <a href="#rect">矩形</a>
+        <a href="#circle">円</a>
+        <a href="#line">線</a>
+        <a href="#bezier">ペン（ベジェ）</a>
+        <a href="#text">テキスト</a>
+        <a href="#project-fonts">プロジェクトフォント</a>
+        <a href="#text-outline">テキストのアウトライン化</a>
+        <a href="#dimensions">寸法線</a>
+        <a href="#canvas-images">キャンバス画像</a>
+        <a href="#sketch-import">スケッチ取り込み</a>
+        <a href="#layers">レイヤー</a>
+        <a href="#snap">スナップ</a>
+      </nav>
+    </aside>
+
+    <article class="docs-content">
+      <nav class="docs-breadcrumb"><a href="./">ドキュメント</a> / 2D 描画</nav>
+      <h1>2D 描画</h1>
+      <p class="docs-lead">
+        左のツールパレットから図形を描き、寸法線や注記を追加します。
+        閉じた輪郭が 3D 生成の材料になります。
+      </p>
+
+      <figure class="docs-figure docs-figure-wide">
+        <img src="images/drawing-features.png" alt="Module Joint 1 の上面図。寸法線、穴ピッチ、注記">
+        <figcaption>Module Joint 1 の上面図 — 24×100 mm、Ø6 穴、10 mm ピッチ、R2、切り込み線（1:1 スケール）。</figcaption>
+      </figure>
+
+      <h2 id="tools">ツール一覧</h2>
+      <figure class="docs-figure docs-figure-tools">
+        <img src="images/tools-panel.png" alt="左側のツールパレット">
+        <figcaption>パレットはドラッグで移動できます。各ツールにキーボードショートカットがあります（<a href="shortcuts.html">一覧</a>）。</figcaption>
+      </figure>
+      <table>
+        <thead><tr><th>ツール</th><th>キー</th><th>3D に使える</th><th>概要</th></tr></thead>
+        <tbody>
+          <tr><td>選択</td><td><kbd>V</kbd></td><td>—</td><td>図形の選択・移動・サイズ変更</td></tr>
+          <tr><td>パン</td><td><kbd>H</kbd></td><td>—</td><td>キャンバスの移動</td></tr>
+          <tr><td>矩形</td><td><kbd>R</kbd></td><td>✓</td><td>四角形（角丸も可）</td></tr>
+          <tr><td>円</td><td><kbd>C</kbd></td><td>✓</td><td>円</td></tr>
+          <tr><td>線</td><td><kbd>L</kbd></td><td>—</td><td>補助線・中心線</td></tr>
+          <tr><td>ペン</td><td>—</td><td>✓（閉じた場合）</td><td>ベジェ曲線・自由な輪郭</td></tr>
+          <tr><td>テキスト</td><td><kbd>T</kbd></td><td>—</td><td>注記・ラベル</td></tr>
+          <tr><td>寸法線</td><td><kbd>D</kbd></td><td>—</td><td>長さの表示（アノテーション）</td></tr>
+        </tbody>
+      </table>
+      <p><strong>3D に使えるのは「閉じた輪郭」だけ</strong>です。線・テキスト・寸法線・開いたベジェは 3D 生成に含まれません。</p>
+      <p>
+        矩形・円などの<strong>塗り色</strong>は 2D 表示に加え、3D プレビューのメッシュ色にも反映されます。
+        色の指定方法は <a href="editing.html#appearance">編集操作 — 外観（塗り・線色）</a> を参照してください。
+      </p>
+
+      <h2 id="rect">矩形 (R)</h2>
+      <ol>
+        <li>矩形ツールを選び、キャンバス上でドラッグ</li>
+        <li>Shift を押しながらドラッグすると正方形になります</li>
+        <li>選択後、Design タブで X/Y/W/H、<strong>塗り・線色</strong>、角丸 (rx) を編集できます</li>
+      </ol>
+      <figure class="docs-figure docs-figure-medium">
+        <img src="images/drawing-rect.png" alt="Module Joint 1 の外形と穴">
+        <figcaption>手順 1 — 実プロダクト Module Joint 1 の外形、穴、切り込みを上面図として整理する。</figcaption>
+      </figure>
+
+      <h2 id="circle">円 (C)</h2>
+      <ol>
+        <li>円ツールを選び、中心付近からドラッグして半径を決定</li>
+        <li>選択後、Design タブで中心座標 (cx, cy) と半径 (r) を編集</li>
+        <li>円は 3D 生成で円柱や穴の輪郭になります</li>
+      </ol>
+
+      <h2 id="line">線 (L)</h2>
+      <ol>
+        <li>線ツールで始点・終点をクリック（またはドラッグ）</li>
+        <li>補助線・中心線・参照線、カット（切り込み）線として使います</li>
+        <li>3D 立体には影響しませんが、スナップの基準として有効です</li>
+      </ol>
+      <p>
+        線は用途を <strong>役割（role）</strong> で区別できます。選択して Design タブの「線の役割」で切り替えると、表示スタイルが役割ごとに変わります。
+        既定は <strong>作図線</strong> です。
+      </p>
+      <table>
+        <thead><tr><th>役割</th><th>用途</th><th>表示</th><th>3D</th></tr></thead>
+        <tbody>
+          <tr><td>作図線 (drawing)</td><td>一般の作図線・参照線（既定）</td><td>実線</td><td>影響なし</td></tr>
+          <tr><td>カット / 切り込み (cut)</td><td>切り込み・スリット（製造意図の注釈）</td><td>実線（色で区別）</td><td>影響なし</td></tr>
+          <tr><td>注釈 (annotation)</td><td>引出線・コールアウト・注記の補助線</td><td>短い破線</td><td>影響なし</td></tr>
+          <tr><td>作図補助線 (construction)</td><td>一時的なガイド・あたり線</td><td>一点鎖線・半透明</td><td>影響なし</td></tr>
+        </tbody>
+      </table>
+      <div class="docs-callout docs-callout-note">
+        <strong>切り欠きは「図形そのもの」に入れます。</strong>
+        役割（role）は表示スタイルだけで、<code>role: "cut"</code> の線が暗黙に 3D を削ることはありません。
+        3D に切り欠きを出すには、<strong>図形のジオメトリ自体に切り欠き形状を持たせます</strong>
+        — 矩形・円を <a href="editing.html">ブール演算で差し引く</a>、または閉じたパスの輪郭にスリットを含める、など。
+        こうすると <strong>2D で見えている形がそのまま 3D になります</strong>（派生）。
+        Module Joint 1 のキーホール（穴＋端への切り込み）は、外形パスにこの切り欠きを焼き込んであります。
+      </div>
+
+      <h2 id="bezier">ペン（ベジェ）</h2>
+      <ul>
+        <li>クリックで点を追加、ドラッグで曲線のハンドルを調整</li>
+        <li>始点に戻ってクリックするとパスを閉じられます（3D 輪郭になる）</li>
+        <li>作図中 <kbd>Enter</kbd> で確定、<kbd>Backspace</kbd> で直前の点を削除</li>
+        <li>選択ツールで図形を選び「パス編集モード」でノードを個別編集</li>
+      </ul>
+
+      <h2 id="text">テキスト (T)</h2>
+      <ol>
+        <li>テキストツールでクリックし、文字列を入力（編集ダイアログが開きます）</li>
+        <li>Design タブ、または右クリック →「テキストを編集」で内容・書式を変更</li>
+        <li>部品名や材料名などの注記に使います</li>
+      </ol>
+      <p>テキスト図形で設定できる主な項目:</p>
+      <table>
+        <thead><tr><th>項目</th><th>内容</th></tr></thead>
+        <tbody>
+          <tr><td>文字列</td><td>複数行入力可</td></tr>
+          <tr><td>文字サイズ</td><td>px 単位（デフォルト 3.5）</td></tr>
+          <tr><td>行間</td><td>倍率（0.5〜4、デフォルト 1）</td></tr>
+          <tr><td>フォント</td><td>同梱 <strong><a href="https://gen.typesetting.jp/" target="_blank" rel="noopener">Gen Interface JP</a></strong>（和欧混植 UI 書体）、および<a href="#project-fonts">プロジェクトに登録した Google Fonts</a></td></tr>
+          <tr><td>ウェイト</td><td>Regular / Bold（登録フォントは 400 / 700 の TTF を使用。700 が無い場合は Regular にフォールバック）</td></tr>
+          <tr><td>揃え</td><td>左 / 中央 / 右</td></tr>
+          <tr><td>幅</td><td>折り返し幅（mm）。未指定なら 1 行表示</td></tr>
+          <tr><td>線色</td><td>文字色として使われます</td></tr>
+        </tbody>
+      </table>
+      <p>
+        表示プレビューとアウトライン化では HarfBuzz テキストエンジンを使い、登録済みフォントの TTF バイト列からグリフ輪郭を描画します。
+        ブラウザ単体でも HTTP サーバー経由（<code>npm run serve</code>）で同じエンジンが動作します。
+      </p>
+      <div class="docs-callout docs-callout-tip">
+        <strong>3D に文字を使いたい場合</strong>
+        <p>
+          テキスト図形そのものは 3D 輪郭になりません。
+          <a href="#text-outline">アウトライン化</a> して path 図形に変換すると、3D 生成の対象にできます。
+        </p>
+      </div>
+
+      <h2 id="project-fonts">プロジェクトフォント（Google Fonts）</h2>
+      <p>
+        右パネル <strong>Pages</strong> タブ内の <strong>プロジェクトフォント（任意）</strong> から、
+        Google Fonts をプロジェクトに追加できます。
+        同梱の Gen Interface JP に加え、ロゴ用・注記用の書体を選べます。
+      </p>
+      <div class="docs-callout docs-callout-note">
+        <strong>PC にインストールされたフォントではありません</strong>
+        <p>
+          「フォントを探す…」モーダルの一覧は、<strong>Fontsource API 経由の Google Fonts カタログ</strong>（オンライン）です。
+          OS のフォントフォルダや <code>queryLocalFonts</code> とは無関係です。
+          初回は Fontsource から一覧を取得し、キャッシュします（Electron: ユーザーデータフォルダ / ブラウザ: localStorage）。
+        </p>
+      </div>
+
+      <h3>登録のしかた</h3>
+      <ol>
+        <li><strong>フォントを探す…</strong> — モーダルで検索・フィルタ（日本語 / カテゴリ）→ 選択 → ライブラリに追加（デフォルトで現在のプロジェクトにも追加）</li>
+        <li><strong>Google Fonts URL</strong> — <code>https://fonts.googleapis.com/css2?family=...</code> を直接貼り付け（1 URL に複数 family があればまとめて登録）</li>
+        <li><strong>ライブラリから ＋</strong> — 過去に登録したフォントを別プロジェクトへ追加</li>
+      </ol>
+
+      <h3>2 層の保存先</h3>
+      <table>
+        <thead><tr><th>層</th><th>保存先</th><th>スコープ</th></tr></thead>
+        <tbody>
+          <tr>
+            <td><strong>ライブラリ</strong></td>
+            <td>Electron: <code>userData/fonts-library.json</code> / ブラウザ: localStorage</td>
+            <td>アプリ全体（プロジェクトをまたいで再利用）</td>
+          </tr>
+          <tr>
+            <td><strong>プロジェクト <code>fonts[]</code></strong></td>
+            <td>プロジェクト JSON に含まれる</td>
+            <td>そのプロジェクトだけ（Undo 対象・エクスポート対象）</td>
+          </tr>
+        </tbody>
+      </table>
+      <p>
+        URL 登録時も、自動的にライブラリへ保存されます。
+        ライブラリの <strong>×</strong> はライブラリから削除するだけで、既にプロジェクトに入っているフォントは残ります。
+      </p>
+
+      <h3>ウェイト（Regular / Bold）</h3>
+      <p>
+        登録時に Fontsource から <strong>400（Regular）</strong> と <strong>700（Bold）</strong> の TTF URL を解決します（700 が無いフォントは Regular のみ）。
+        テキストのウェイトを Bold にすると、アウトライン化・ネイティブプレビューでも Bold 用 TTF が使われます。
+      </p>
+      <p>各登録エントリの主なフィールド:</p>
+      <ul>
+        <li><code>family</code> — フォント名（例: <code>Roboto</code>）</li>
+        <li><code>cssUrl</code> — 表示用 Google Fonts CSS（Bold 対応時は <code>wght@400;700</code> 形式）</li>
+        <li><code>fileUrl</code> — アウトライン用 TTF（400）</li>
+        <li><code>fileUrlBold</code> — アウトライン用 TTF（700、省略可）</li>
+      </ul>
+
+      <div class="docs-callout docs-callout-tip">
+        <strong>使い分けの例</strong>
+        <p>
+          一度モーダルで <strong>Roboto</strong> をライブラリに入れておけば、次のプロジェクトではライブラリの <strong>＋</strong> だけで追加できます。
+          チームで共有する場合は、プロジェクト JSON の <code>fonts[]</code> をそのまま渡せば同じ書体構成を再現できます。
+        </p>
+      </div>
+
+      <h2 id="text-outline">テキストのアウトライン化</h2>
+      <p>
+        テキストをグリフごとの <strong>path 図形</strong> に変換する機能です。
+        ロゴ文字や刻印文字を 3D プリント用の輪郭にしたいときに使います。
+      </p>
+      <ol>
+        <li>テキスト図形を 1 つ選択</li>
+        <li>Design タブの「アウトライン化」、または右クリック →「アウトライン化」</li>
+        <li>元のテキストは <strong>グループ</strong>（path の集合）に置き換わります</li>
+      </ol>
+      <div class="docs-callout docs-callout-warn">
+        <strong>デスクトップ版のみ</strong>
+        <p>
+          アウトライン化は Electron 版でのみ利用できます（macOS では Core Text、それ以外は fontkit / HarfBuzz）。
+          ブラウザ単体ではボタンが無効になります。
+          登録フォントを使う場合は TTF をダウンロードしてから輪郭化します。
+        </p>
+      </div>
+      <p>詳しい編集操作は <a href="editing.html#text-outline">編集操作 — テキストのアウトライン化</a> を参照してください。</p>
+
+      <figure class="docs-figure docs-figure-medium">
+        <img src="images/drawing-text.png" alt="Module Joint 1 の注記テキスト">
+        <figcaption>Module Joint 1 に板厚、単位、R、穴径、切り込み線の注記を入れた例。</figcaption>
+      </figure>
+
+      <h2 id="dimensions">寸法線 (D)</h2>
+      <p>水平・垂直の寸法線を引いて、図面上に長さを表示できます。3D 生成には影響しません。</p>
+      <ol>
+        <li>寸法線ツール (<kbd>D</kbd>) を選択</li>
+        <li>計測したい 2 点を順にクリック</li>
+        <li>3 点目で寸法線の位置（オフセット）を決定</li>
+        <li>数値は座標から自動計算。Design タブで手動上書きも可能</li>
+      </ol>
+      <p>矢印スタイル（点・矢印・スラッシュ等）、文字サイズ、接頭辞・接尾辞（例: <code>L=</code>、<code> mm</code>）も設定できます。</p>
+
+      <h2 id="canvas-images">キャンバス画像</h2>
+      <p>
+        ツールバーの <strong>画像配置</strong> から、PNG / JPEG / WebP / SVG を図面キャンバス上に配置できます。
+        配置した画像は通常のオブジェクトとして、選択・移動・リサイズ・回転・反転ができ、プロジェクト JSON に保存されます。
+      </p>
+      <ul>
+        <li><strong>対応形式</strong> — PNG / JPEG / WebP / SVG</li>
+        <li><strong>編集</strong> — Design タブで X/Y、幅、高さ、不透明度、画像容量を確認・編集</li>
+        <li><strong>出力</strong> — SVG / PDF 出力に含まれます</li>
+        <li><strong>容量</strong> — ラスター画像は読み込み時に最大辺 1600px へ縮小し、容量が小さくなる場合だけ WebP として内部保存</li>
+      </ul>
+      <div class="docs-callout docs-callout-note">
+        <strong>参照画像との違い</strong>
+        <p>
+          キャンバス画像はレイヤー内の通常オブジェクトです。
+          <a href="#sketch-import">参照画像</a> は Pages タブ内のページ下敷きで、スケール校正やトレース用に使います。
+        </p>
+      </div>
+
+      <h2 id="sketch-import">スケッチ取り込み（参照画像）</h2>
+      <p>
+        手書きスケッチや写真を<strong>背景の参照画像</strong>として置き、スケールを合わせてから輪郭をトレースできます。
+        AI 連携（MCP）を使う場合は、外部の Vision が図形を<strong>ゴースト（半透明の提案）</strong>として置き、内容を確認してから確定します。
+      </p>
+
+      <figure class="docs-figure docs-figure-wide">
+        <img src="images/sketch-digitize.png" alt="参照画像の上にゴースト矩形が重なった上面図">
+        <figcaption>参照画像（下絵）+ ゴースト図形 — 確定前は 3D 生成の対象になりません。</figcaption>
+      </figure>
+
+      <h3 id="sketch-load">1. 参照画像を読み込む</h3>
+      <ol>
+        <li>右パネル <strong>Pages</strong> タブを開く</li>
+        <li>セクション <strong>参照画像</strong> を展開</li>
+        <li><strong>画像を読み込む</strong> で PNG / JPEG / WebP を選択</li>
+        <li><strong>不透明度</strong> スライダーで下絵の濃さを調整</li>
+      </ol>
+      <p>読み込み直後はキャンバス上をクリックしても下絵は動きません。位置や大きさを変えるときは次の手順で編集モードに入ります。</p>
+      <figure class="docs-figure docs-figure-panel">
+        <img src="images/reference-image-panel.png" alt="Pages タブの参照画像セクション">
+        <figcaption>参照画像パネル — 読込、位置・サイズ編集（ボタン再クリックで終了）、不透明度、スケール校正、ゴーストの確定/削除。</figcaption>
+      </figure>
+
+      <h3 id="sketch-transform">2. 位置・サイズを調整（任意）</h3>
+      <p>下絵の配置や表示サイズを直すときだけ、矩形ツールと同様の枠とハンドルで編集します。</p>
+      <ol>
+        <li><strong>位置・サイズを編集</strong> をクリック（青い枠と 8 つのハンドルが表示されます）</li>
+        <li><strong>選択</strong> (V) または<strong>手のひら</strong> (H) ツールのまま、ドラッグで移動、ハンドルでリサイズ（<kbd>Shift</kbd> で縦横比固定）</li>
+        <li>終わったら、ハイライトされた <strong>位置・サイズを編集</strong> をもう一度クリックして編集モードを終了</li>
+      </ol>
+      <ul>
+        <li>編集中はボタンが青くハイライトされます</li>
+        <li>編集モードを終了するまで、キャンバスをクリックしただけでは再び動かせません（誤操作防止）</li>
+        <li><kbd>Esc</kbd> でも終了できます</li>
+        <li>四角・線など別の描画ツールに切り替えても自動で終了します</li>
+        <li>移動・リサイズはマウスを離した時点で反映され、<kbd>Ctrl+Z</kbd> で戻せます</li>
+      </ul>
+
+      <h3 id="sketch-scale">3. スケール校正</h3>
+      <p>下絵上の<strong>実寸がわかる 1 本の線</strong>（例: 寸法表記のある辺、定規で測った長さ）を指定すると、画像全体がその実長に合わせて拡大縮小されます。</p>
+      <ol>
+        <li><strong>スケール校正</strong> をクリック（位置・サイズの編集モードは自動で終了します）</li>
+        <li>参照画像上で、わかる長さの線の<strong>一端</strong>をクリック</li>
+        <li>同じ線の<strong>もう一端</strong>をクリック（青/赤のマーカーと破線が表示されます）</li>
+        <li><strong>実長 (mm)</strong> に 2 点間の本当の長さを入力し、<strong>適用</strong>（スケール校正パネル内のボタン）</li>
+        <li>中止は <kbd>Esc</kbd> またはパネルの <strong>キャンセル</strong></li>
+      </ol>
+      <div class="docs-callout docs-callout-tip">
+        <strong>精度のコツ</strong>
+        <p>
+          スケール校正は図面全体の精度を決めます。寸法が書いてある辺、または定規で測った実長が分かる部分を選んでください。
+          手書きスケッチは誤差があるため、校正後も矩形ツールなどで仕上げる想定です。
+        </p>
+      </div>
+
+      <h3 id="sketch-ghost">4. ゴースト図形（AI 提案）</h3>
+      <p>
+        MCP の <code>digitize_sketch</code> 等で AI が矩形・円・線の提案を置くと、<strong>破線・半透明</strong>のゴーストとして表示されます。
+        ゴーストは編集・削除できますが、<strong>3D 生成には含まれません</strong>。
+      </p>
+      <ul>
+        <li><strong>ゴーストを確定</strong> — 通常の図形に変換（この時点から 3D 輪郭の対象）</li>
+        <li><strong>ゴーストを削除</strong> — 提案をすべて破棄</li>
+      </ul>
+      <p>手動でトレースする場合は、通常どおり矩形 (R) やペンで輪郭を描いてください。詳細は <a href="ai-mcp.html#sketch-digitize">AI 連携 — スケッチ digitize</a> も参照してください。</p>
+
+      <h2 id="layers">ページとレイヤー</h2>
+      <p>1 つのプロジェクトには複数の<strong>ページ</strong>（上面図・正面図など）があり、各ページに<strong>レイヤー</strong>があります。</p>
+      <ul>
+        <li><strong>ページ</strong> — Pages タブで追加・切替。3D 用の上面/正面/側面はページ追加時に面の向きを選びます</li>
+        <li><strong>レイヤー</strong> — Layers タブで管理。表示/非表示、ロック、名前変更</li>
+        <li>新しく描いた図形は、常に現在選択中のレイヤーに追加されます</li>
+      </ul>
+
+      <div class="docs-figure-grid">
+        <figure class="docs-figure docs-figure-panel">
+          <img src="images/layers-panel.png" alt="Layers タブで複数レイヤーを管理">
+          <figcaption>Layers タブ — 輪郭・注記など用途別にレイヤーを分けられます</figcaption>
+        </figure>
+        <figure class="docs-figure docs-figure-panel">
+          <img src="images/pages-multiview.png" alt="Pages タブで複数ページを管理">
+          <figcaption>Pages タブ — 上面図・正面図などページを追加</figcaption>
+        </figure>
+      </div>
+
+      <h2 id="snap">スナップ（吸着）</h2>
+      <p>作図中、近くの端点・交点・中点などにカーソルが自動的に吸着します。Pages タブの「スナップ」で ON/OFF できます。</p>
+      <table>
+        <thead><tr><th>種類</th><th>意味</th><th>表示</th></tr></thead>
+        <tbody>
+          <tr><td>端点</td><td>図形の角・線の端・ベジェノード</td><td>□</td></tr>
+          <tr><td>交点</td><td>線と線の交わる位置</td><td>×</td></tr>
+          <tr><td>中点</td><td>辺の中央</td><td>△</td></tr>
+          <tr><td>中心</td><td>円や矩形の中心</td><td>◎</td></tr>
+          <tr><td>垂線</td><td>カーソルから線分への垂線足</td><td>⊥</td></tr>
+        </tbody>
+      </table>
+      <p>優先順位: 端点 → 交点 → 中点 → 中心 → 垂線。該当がなければグリッド（1 / 5 / 10 mm）に吸着します。</p>
+
+      <h2 id="more">整列・合成など</h2>
+      <p>
+        複数図形の整列、グループ化、合成・くり抜き、Undo/Redo については
+        <a href="editing.html">編集操作</a> を参照してください。
+      </p>
+
+      <h2 id="transform">回転・反転について</h2>
+      <div class="docs-callout docs-callout-note">
+        <strong>輪郭にも反映されます</strong>
+        <p>
+          図形の回転・左右反転・上下反転は、画面表示だけでなく BBox、整列、Profile 抽出、3D 生成にも反映されます。
+          寸法線の数値は図形に自動追従しないため、必要に応じて寸法線を引き直してください。
+        </p>
+      </div>
+
+      <h2 id="units">単位と縮尺</h2>
+      <p>Millrect の数値は mm ベースです（内部 1 mm = 10 用紙単位）。ページの縮尺（例: 1/10）に応じて、用紙上の距離と実寸の関係が決まります。</p>
+      <p>ステータスバーの SCALE 表示で、現在のページの縮尺を確認できます。3D 生成用の図面では縮尺 1/1 を推奨します。</p>
+    </article>
+  </div>
+
+  <footer class="docs-footer">
+    <div class="docs-footer-inner">
+      <span>Millrect ドキュメント</span>
+      <div class="docs-footer-links">
+        <a href="interface.html">← 画面構成</a>
+        <a href="editing.html">次: 編集操作 →</a>
+      </div>
+    </div>
+  </footer>
+
+  <script src="../packages/help-index.js"></script>
+  <script src="js/docs-search.js"></script>
+  <script src="js/docs-nav.js"></script>
+    <script src="js/docs.js"></script>
+</body>
+</html>

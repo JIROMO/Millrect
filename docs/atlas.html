@@ -1,0 +1,222 @@
+<!DOCTYPE html>
+<html lang="ja">
+  <head>
+    <!-- Google tag (gtag.js) -->
+    <script async src="https://www.googletagmanager.com/gtag/js?id=G-0JMRZXG11T"></script>
+    <script>
+      window.dataLayer = window.dataLayer || [];
+      function gtag(){dataLayer.push(arguments);}
+      gtag('js', new Date());
+
+      gtag('config', 'G-0JMRZXG11T');
+    </script>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>設計標本帳 — Millrect ドキュメント</title>
+    <meta
+      name="description"
+      content="Millrect で作れる図面・3D・AI/DSL ワークフローを作例カードとして見る設計標本帳。"
+    />
+    <meta name="robots" content="index, follow" />
+    <link rel="canonical" href="https://millrect.com/docs/atlas.html" />
+    <link rel="icon" href="../favicon.ico" />
+    <meta property="og:type" content="article" />
+    <meta property="og:site_name" content="Millrect" />
+    <meta property="og:url" content="https://millrect.com/docs/atlas.html" />
+    <meta property="og:title" content="設計標本帳 — Millrect ドキュメント" />
+    <meta property="og:description" content="作例から Millrect でできることをたどるページ" />
+    <meta property="og:image" content="https://millrect.com/site/images/ogp.jpg" />
+    <link rel="stylesheet" href="css/docs.css" />
+  </head>
+  <body data-page="atlas" data-locale="ja">
+    <header class="docs-header">
+      <div class="docs-header-inner">
+        <a class="docs-logo" href="./">
+          <img
+            class="docs-logo-img"
+            src="../site/images/logo.svg"
+            alt="Millrect"
+            width="774"
+            height="109"
+          />
+        </a>
+        <div class="docs-header-actions">
+          <button
+            class="docs-menu-toggle"
+            id="docs-menu-toggle"
+            type="button"
+            aria-label="メニュー"
+          >
+            ☰
+          </button>
+        </div>
+      </div>
+    </header>
+
+    <div class="docs-layout">
+      <aside class="docs-sidebar" id="docs-sidebar"></aside>
+
+      <article class="docs-content docs-content-wide">
+        <nav class="docs-breadcrumb"><a href="./">ドキュメント</a> / 設計標本帳</nav>
+        <h1>設計標本帳</h1>
+        <p class="docs-lead">
+          使い方をページごとに説明するだけでなく、Millrect で作れるものを
+          <strong>作例</strong>として並べます。各作例は画像、できること、UI 手順、AI/MCP、
+          DSL の入口をひとつにまとめ、画像の追加や差し替えをシナリオ単位で管理します。
+        </p>
+
+        <nav class="docs-toc" aria-label="目次">
+          <div class="docs-toc-title">このページ</div>
+          <ul>
+            <li><a href="#model">標本帳の考え方</a></li>
+            <li><a href="#blueprint-direction">生成AIの設計図表現</a></li>
+            <li><a href="#specimens">作例カード</a></li>
+            <li><a href="#live-specimen">Live Specimen</a></li>
+            <li><a href="#image-system">画像運用</a></li>
+          </ul>
+        </nav>
+
+        <h2 id="model">標本帳の考え方</h2>
+        <p>
+          スクリーンショットを大量に貼る代わりに、少数の作例を深く見せます。
+          図面・3D・AI への頼み方・DSL を同じ作例に紐づけることで、
+          画像の枚数を抑えながら「何ができるのか」を強く伝えます。
+        </p>
+        <div class="atlas-flow" aria-label="ドキュメント構成">
+          <div class="atlas-flow-step">
+            <strong>Showcase</strong>
+            <span>完成図面と 3D を見せる代表画像</span>
+          </div>
+          <div class="atlas-flow-step">
+            <strong>Scenario</strong>
+            <span>画像を再生成できる作例 ID と手順</span>
+          </div>
+          <div class="atlas-flow-step">
+            <strong>Reference</strong>
+            <span>ツール、MCP、DSL、制約へつなぐ</span>
+          </div>
+        </div>
+
+        <h2 id="blueprint-direction">生成AIの設計図表現</h2>
+        <p>
+          複雑な作例は、アプリ画面のスクリーンショットだけで見せるのではなく、
+          生成AIで作る設計図ビジュアルを主役にします。UI 画像は操作の証拠に絞り、
+          まず「何が作れるのか」が伝わる完成図を置きます。
+        </p>
+        <figure class="atlas-direction-board">
+          <img
+            src="images/blueprint-direction-board.png"
+            alt="高度な治具プレートを題材にした設計図、加工品レンダー、技術資料スプレッドの方向性"
+          />
+          <figcaption>
+            左から、図面シート、加工品ヒーロー、技術資料スプレッド。今後の複雑な作例はこの表現を基準にします。
+          </figcaption>
+        </figure>
+        <div class="atlas-direction-grid">
+          <section>
+            <h3>Blueprint Sheet</h3>
+            <p>寸法線、穴、長穴、断面、注記を一枚で見せるドキュメントの主役画像。</p>
+          </section>
+          <section>
+            <h3>Machined Part Hero</h3>
+            <p>トップや標本帳で「作れるもの」を直感的に伝える完成品ビジュアル。</p>
+          </section>
+          <section>
+            <h3>Technical Spread</h3>
+            <p>図面、仕様、素材、DSL をまとめて見せる、AI/MCP 説明向けの表現。</p>
+          </section>
+        </div>
+
+        <h3 id="module-joint-1">実プロダクト例: Module Joint 1</h3>
+        <p>
+          実際のプロダクト図面も、この表現に変換して掲載できます。下の例は
+          厚さ 2mm、全寸法 mm、24×100mm のジョイントプレートを題材にした
+          掲載用の設計図ビジュアルです。製造寸法の正は元図・DSL に置き、
+          生成画像は「何を作るのか」を伝えるショーケースとして使います。
+        </p>
+        <figure class="atlas-product-sheet">
+          <img
+            src="images/module-joint-1-blueprint.png"
+            alt="厚さ2mm、24×100mm の Module Joint 1 を題材にした掲載用設計図"
+          />
+          <figcaption>
+            Module Joint 1: t=2mm、units=mm、Ø6 穴、R2、端部の横線は切り込み。実プロダクト由来の複雑な標本として展開できます。
+          </figcaption>
+        </figure>
+        <figure class="atlas-direction-board">
+          <img
+            src="images/module-joint-1-millrect.png"
+            alt="Millrect 上で作図した Module Joint 1 の上面図"
+          />
+          <figcaption>
+            同じ形状を Millrect 上で作図した状態。輪郭・穴、切り込み、注記をレイヤー分けし、24×100mm、Ø6、10mm ピッチを寸法として持たせています。
+          </figcaption>
+        </figure>
+
+        <h2 id="specimens">作例カード</h2>
+        <p>
+          作例カードは、スクリーンショットの置き場ではなく「教材データの目次」です。
+          ここから機能ページへ入ると、ユーザーは目的の成果物から逆算して学べます。
+        </p>
+        <div id="atlas-specimens" class="atlas-grid" aria-live="polite"></div>
+
+        <h2 id="live-specimen">Live Specimen</h2>
+        <p>
+          静的画像だけで説明しにくいパラメトリックな感覚は、この場で動かして見せます。
+          ここでは図面上のハンドルをドラッグすると、2D 図面、寸法アイソメ図、Part DSL が同時に更新されます。
+          穴配置は 2×2 のまま固定し、寸法だけを触れる教材として扱います。
+        </p>
+        <div id="specimen-lab" class="specimen-lab" data-locale="ja"></div>
+
+        <h2 id="image-system">画像運用</h2>
+        <table>
+          <thead>
+            <tr><th>画像の種類</th><th>役割</th><th>更新タイミング</th></tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>Showcase</td>
+              <td>トップや標本帳で成果物を見せる完成画像</td>
+              <td>作例の見栄えを変えたときだけ</td>
+            </tr>
+            <tr>
+              <td>Scenario capture</td>
+              <td>同じ作例 ID から再生成できる図面・3D</td>
+              <td>対象シナリオだけ再キャプチャ</td>
+            </tr>
+            <tr>
+              <td>UI proof</td>
+              <td>ボタンやパネルの場所を示す補助画像</td>
+              <td>UI の位置や名称が変わったときだけ</td>
+            </tr>
+          </tbody>
+        </table>
+        <div class="docs-callout docs-callout-note">
+          <strong>保守方針</strong>
+          <p>
+            新しい画像を増やす前に、既存の作例カードへ追加できないかを確認します。
+            作例が増える場合は、画像ファイル名より先に scenario ID を決めます。
+            詳細は <a href="design/documentation-system.md">Documentation System</a> と
+            <a href="design/blueprint-specimens.md">Blueprint Specimens</a> に残しています。
+          </p>
+        </div>
+      </article>
+    </div>
+
+    <footer class="docs-footer">
+      <div class="docs-footer-inner">
+        <span>Millrect — 2D 図面から 3D を導出</span>
+        <div class="docs-footer-links">
+          <a href="getting-started.html">はじめに</a>
+          <a href="multiview-3d.html">3D 生成</a>
+        </div>
+      </div>
+    </footer>
+
+    <script src="../packages/help-index.js"></script>
+    <script src="js/docs-search.js"></script>
+    <script src="js/docs-nav.js"></script>
+    <script src="js/docs-atlas.js"></script>
+    <script src="js/docs.js"></script>
+  </body>
+</html>

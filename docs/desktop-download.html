@@ -1,0 +1,140 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <!-- Google tag (gtag.js) -->
+    <script async src="https://www.googletagmanager.com/gtag/js?id=G-0JMRZXG11T"></script>
+    <script>
+      window.dataLayer = window.dataLayer || [];
+      function gtag(){dataLayer.push(arguments);}
+      gtag('js', new Date());
+
+      gtag('config', 'G-0JMRZXG11T');
+    </script>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>デスクトップ版 — Millrect ドキュメント</title>
+  <meta name="description" content="Millrect macOS版のダウンロード（GitHub Releases）、未署名アプリの起動方法、Web版との違い。" />
+  <meta name="robots" content="index, follow" />
+  <link rel="canonical" href="https://millrect.com/docs/desktop-download.html" />
+  <meta property="og:title" content="Millrect デスクトップ版ダウンロード" />
+  <meta property="og:description" content="macOS向けDMGの入手とインストール手順" />
+  <meta property="og:url" content="https://millrect.com/docs/desktop-download.html" />
+  <script src="js/docs-seo.js"></script>
+  <link rel="stylesheet" href="css/docs.css">
+</head>
+<body data-page="desktop-download">
+  <header class="docs-header">
+    <div class="docs-header-inner">
+      <a class="docs-logo" href="./">
+        <img class="docs-logo-img" src="../site/images/logo.svg" alt="Millrect" width="774" height="109">
+      </a>
+      <div class="docs-header-actions">
+        <button class="docs-menu-toggle" id="docs-menu-toggle" type="button" aria-label="メニュー">☰</button>
+      </div>
+    </div>
+  </header>
+
+  <div class="docs-layout">
+    <aside class="docs-sidebar" id="docs-sidebar"></aside>
+
+    <article class="docs-content">
+      <nav class="docs-breadcrumb"><a href="./">ドキュメント</a> / デスクトップ版</nav>
+      <h1>デスクトップ版のダウンロード</h1>
+      <p class="docs-lead">
+        Millrect はブラウザ版（<a href="../app/">millrect.com/app</a>）でも使えますが、
+        AI 連携・テキストの 3D 輪郭化などは<strong>macOS デスクトップ版</strong>向けの機能です。
+        プロジェクトの JSON 出力・インポートはブラウザ版でも利用できます。
+      </p>
+
+      <div class="docs-callout docs-callout-note">
+        <strong>現状 macOS のみ配布</strong>
+        <p>Windows 版は未リリースです。Windows では <a href="../app/">ブラウザ版</a>をご利用ください。</p>
+      </div>
+
+      <nav class="docs-toc" aria-label="目次">
+        <div class="docs-toc-title">このページの内容</div>
+        <ul>
+          <li><a href="#compare">Web 版との違い</a></li>
+          <li><a href="#download">ダウンロード</a></li>
+          <li><a href="#install-macos">macOS のインストール</a></li>
+          <li><a href="#security">セキュリティ警告について</a></li>
+          <li><a href="#next">次のステップ</a></li>
+        </ul>
+      </nav>
+
+      <h2 id="compare">Web 版との違い</h2>
+      <table>
+        <thead><tr><th>機能</th><th>ブラウザ版</th><th>デスクトップ版</th></tr></thead>
+        <tbody>
+          <tr><td>2D 作図・3D プレビュー</td><td>○</td><td>○</td></tr>
+          <tr><td>データ保存</td><td>IndexedDB + JSON 入出力</td><td>IndexedDB + JSON 入出力</td></tr>
+          <tr><td>テキスト → 3D 輪郭</td><td>×</td><td>○</td></tr>
+          <tr><td>AI 連携（MCP）</td><td>×</td><td>○</td></tr>
+          <tr><td>インストール</td><td>不要</td><td>必要</td></tr>
+        </tbody>
+      </table>
+
+      <h2 id="download">ダウンロード</h2>
+      <p>
+        最新版は GitHub Releases から入手できます（MIT ライセンス・無料・<strong>macOS のみ</strong>）。
+      </p>
+      <div class="docs-download-actions" data-millrect-download></div>
+      <p class="docs-download-note">
+        ソースからビルドする場合は
+        <a href="https://github.com/JIROMO/Millrect" rel="noopener noreferrer">GitHub リポジトリ</a>
+        を参照してください。
+      </p>
+
+      <h2 id="install-macos">macOS のインストール</h2>
+      <ol class="docs-steps">
+        <li><strong>DMG を開く</strong> — Apple Silicon か Intel か、お使いの Mac に合わせて選びます。</li>
+        <li><strong>Millrect を Applications にドラッグ</strong></li>
+        <li><strong>初回起動</strong> — 未署名配布のため警告が出る場合があります（次の節を参照）。</li>
+      </ol>
+
+      <h2 id="security">セキュリティ警告について</h2>
+      <div class="docs-callout docs-callout-note">
+        <strong>現状は未署名のプレリリース配布です</strong>
+        <p>
+          Apple のコード署名・公証は行っていません。配布ファイルは GitHub の
+          <a href="https://github.com/JIROMO/Millrect/releases" rel="noopener noreferrer">Releases</a>
+          から直接入手してください。
+        </p>
+      </div>
+
+      <p>「開発元を確認できないため開けません」と表示された場合:</p>
+      <ol>
+        <li>Finder で <strong>Millrect.app</strong> を<strong>右クリック（または Control+クリック）</strong></li>
+        <li><strong>開く</strong> を選び、ダイアログで再度 <strong>開く</strong></li>
+      </ol>
+      <p>
+        または <strong>システム設定 → プライバシーとセキュリティ</strong> に「このまま開く」が表示されたらそこから許可できます。
+        2 回目以降は通常どおり起動できます。
+      </p>
+
+      <h2 id="next">次のステップ</h2>
+      <ul>
+        <li><a href="getting-started.html">はじめに</a> — 起動と最初のプロジェクト</li>
+        <li><a href="ai-mcp.html">AI 連携</a> — Claude Desktop などから操作（デスクトップ版のみ）</li>
+      </ul>
+    </article>
+  </div>
+
+  <footer class="docs-footer">
+    <div class="docs-footer-inner">
+      <span>Millrect ドキュメント</span>
+      <div class="docs-footer-links">
+        <a href="getting-started.html">はじめに →</a>
+        <a href="./">ドキュメント TOP</a>
+      </div>
+    </div>
+  </footer>
+
+  <script src="../packages/download-config.js"></script>
+  <script src="../site/js/download-buttons.js"></script>
+  <script src="../packages/help-index.js"></script>
+  <script src="js/docs-search.js"></script>
+  <script src="js/docs-nav.js"></script>
+    <script src="js/docs.js"></script>
+</body>
+</html>

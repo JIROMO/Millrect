@@ -1,0 +1,433 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <!-- Google tag (gtag.js) -->
+    <script async src="https://www.googletagmanager.com/gtag/js?id=G-0JMRZXG11T"></script>
+    <script>
+      window.dataLayer = window.dataLayer || [];
+      function gtag(){dataLayer.push(arguments);}
+      gtag('js', new Date());
+
+      gtag('config', 'G-0JMRZXG11T');
+    </script>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>2D Drawing — Millrect Documentation</title>
+  <meta name="description" content="Draw shapes, dimensions, and annotations in Millrect. Closed outlines become the source for 3D generation.">
+  <meta name="robots" content="index, follow" />
+  <script src="../js/docs-seo.js"></script>
+  <link rel="stylesheet" href="../css/docs.css">
+</head>
+<body data-page="drawing">
+  <header class="docs-header">
+    <div class="docs-header-inner">
+      <a class="docs-logo" href="./">
+        <img class="docs-logo-img" src="../../site/images/logo.svg" alt="Millrect" width="774" height="109">
+      </a>
+      <div class="docs-header-actions">
+        <button class="docs-menu-toggle" id="docs-menu-toggle" type="button" aria-label="Menu">☰</button>
+      </div>
+    </div>
+  </header>
+
+  <div class="docs-layout">
+    <aside class="docs-sidebar" id="docs-sidebar">
+      <nav class="docs-sidebar-nav docs-sidebar-page" aria-label="On this page">
+        <div class="docs-sidebar-label">On this page</div>
+        <a href="#tools">Tools</a>
+        <a href="#rect">Rectangle</a>
+        <a href="#circle">Circle</a>
+        <a href="#line">Line</a>
+        <a href="#bezier">Pen (Bezier)</a>
+        <a href="#text">Text</a>
+        <a href="#project-fonts">Project fonts</a>
+        <a href="#text-outline">Text outline</a>
+        <a href="#dimensions">Dimensions</a>
+        <a href="#canvas-images">Canvas images</a>
+        <a href="#sketch-import">Sketch import</a>
+        <a href="#layers">Layers</a>
+        <a href="#snap">Snap</a>
+      </nav>
+    </aside>
+
+    <article class="docs-content">
+      <nav class="docs-breadcrumb" aria-label="Breadcrumb">
+        <a href="./">Documentation</a> / 2D Drawing
+      </nav>
+      <h1>2D Drawing</h1>
+      <p class="docs-lead">
+        Draw shapes from the left tool palette and add dimensions and annotations.
+        Closed outlines become the material for 3D generation.
+      </p>
+
+      <figure class="docs-figure docs-figure-wide">
+        <img src="../images/en/drawing-features.png" alt="Module Joint 1 top view with dimensions, hole pitch, and note">
+        <figcaption>Module Joint 1 top view — 24×100 mm, Ø6 holes, 10 mm pitch, R2 notches, and dimensions (1:1 scale).</figcaption>
+      </figure>
+
+      <h2 id="tools">Tools</h2>
+      <figure class="docs-figure docs-figure-tools">
+        <img src="../images/en/tools-panel.png" alt="Tool palette on the left">
+        <figcaption>The palette can be dragged. Each tool has a keyboard shortcut (<a href="shortcuts.html">list</a>).</figcaption>
+      </figure>
+      <table>
+        <thead><tr><th>Tool</th><th>Key</th><th>Usable for 3D</th><th>Summary</th></tr></thead>
+        <tbody>
+          <tr><td>Select</td><td><kbd>V</kbd></td><td>—</td><td>Select, move, and resize shapes</td></tr>
+          <tr><td>Pan</td><td><kbd>H</kbd></td><td>—</td><td>Move the canvas</td></tr>
+          <tr><td>Rectangle</td><td><kbd>R</kbd></td><td>✓</td><td>Rectangle (rounded corners optional)</td></tr>
+          <tr><td>Circle</td><td><kbd>C</kbd></td><td>✓</td><td>Circle</td></tr>
+          <tr><td>Line</td><td><kbd>L</kbd></td><td>—</td><td>Construction lines, center lines</td></tr>
+          <tr><td>Pen</td><td>—</td><td>✓ (when closed)</td><td>Bezier curves and free outlines</td></tr>
+          <tr><td>Text</td><td><kbd>T</kbd></td><td>—</td><td>Notes and labels</td></tr>
+          <tr><td>Dimension</td><td><kbd>D</kbd></td><td>—</td><td>Length display (annotation)</td></tr>
+        </tbody>
+      </table>
+      <p><strong>Only closed outlines can be used for 3D.</strong> Lines, text, dimensions, and open beziers are not included in 3D generation.</p>
+      <p>
+        The <strong>fill color</strong> of rectangles, circles, and similar shapes affects both the 2D display and the 3D preview mesh color.
+        See <a href="editing.html#appearance">Editing — Appearance (fill &amp; stroke)</a> for how to set colors.
+      </p>
+
+      <h2 id="rect">Rectangle (R)</h2>
+      <ol>
+        <li>Select the rectangle tool and drag on the canvas</li>
+        <li>Hold Shift while dragging to draw a square</li>
+        <li>After selection, edit X/Y/W/H, <strong>fill and stroke</strong>, and corner radius (rx) in the Design tab</li>
+      </ol>
+      <figure class="docs-figure docs-figure-medium">
+        <img src="../images/en/drawing-rect.png" alt="Module Joint 1 top outline">
+        <figcaption>Step 1 — Draw the 24×100 mm top outline (<a href="multiview-3d.html#workflow">3D walkthrough</a>).</figcaption>
+      </figure>
+
+      <h2 id="circle">Circle (C)</h2>
+      <ol>
+        <li>Select the circle tool and drag from near the center to set the radius</li>
+        <li>After selection, edit center (cx, cy) and radius (r) in the Design tab</li>
+        <li>Circles become cylindrical or hole outlines in 3D generation</li>
+      </ol>
+
+      <h2 id="line">Line (L)</h2>
+      <ol>
+        <li>Click (or drag) start and end points with the line tool</li>
+        <li>Use for construction lines, center lines, reference lines, and cut (score) lines</li>
+        <li>Does not affect the 3D solid, but works as a snap reference</li>
+      </ol>
+      <p>
+        Lines can be distinguished by their <strong>role</strong>. Select a line and switch it under
+        “Line role” in the Design tab; the display style changes per role. The default is <strong>Drawing</strong>.
+      </p>
+      <table>
+        <thead><tr><th>Role</th><th>Use</th><th>Display</th><th>3D</th></tr></thead>
+        <tbody>
+          <tr><td>Drawing</td><td>General drawing / reference lines (default)</td><td>Solid</td><td>No effect</td></tr>
+          <tr><td>Cut / score</td><td>Cut or slit intent (annotation)</td><td>Solid (distinguished by color)</td><td>No effect</td></tr>
+          <tr><td>Annotation</td><td>Leader lines, callouts, note helpers</td><td>Short dashes</td><td>No effect</td></tr>
+          <tr><td>Construction</td><td>Temporary guides / layout lines</td><td>Dash-dot, semi-transparent</td><td>No effect</td></tr>
+        </tbody>
+      </table>
+      <div class="docs-callout docs-callout-note">
+        <strong>Cuts live in the shape geometry itself.</strong>
+        Line role is display style only; a <code>role: "cut"</code> line never implicitly removes 3D material.
+        To make a cut show up in 3D, put the notch into the <strong>shape's own geometry</strong> — e.g.
+        <a href="editing.html">boolean-subtract</a> a rectangle/circle, or include the slit in a closed path
+        outline. Then <strong>what you see in 2D is exactly what you get in 3D</strong> (derived).
+        Module Joint 1's keyholes (hole + slit to the edge) are baked into the outline path this way.
+      </div>
+
+      <h2 id="bezier">Pen (Bezier)</h2>
+      <ul>
+        <li>Click to add points; drag to adjust curve handles</li>
+        <li>Click the start point again to close the path (becomes a 3D outline)</li>
+        <li>While drawing: <kbd>Enter</kbd> to confirm, <kbd>Backspace</kbd> to remove the last point</li>
+        <li>Select a shape with the select tool and use path edit mode to edit nodes individually</li>
+      </ul>
+
+      <h2 id="text">Text (T)</h2>
+      <ol>
+        <li>Click with the text tool and enter a string (an edit dialog opens)</li>
+        <li>Change content and formatting in the Design tab, or right-click → Edit text</li>
+        <li>Use for part names, material names, and other notes</li>
+      </ol>
+      <p>Main properties for text shapes:</p>
+      <table>
+        <thead><tr><th>Property</th><th>Description</th></tr></thead>
+        <tbody>
+          <tr><td>String</td><td>Multi-line input supported</td></tr>
+          <tr><td>Font size</td><td>In px (default 3.5)</td></tr>
+          <tr><td>Line height</td><td>Multiplier (0.5–4, default 1)</td></tr>
+          <tr><td>Font</td><td>Bundled <strong><a href="https://gen.typesetting.jp/" target="_blank" rel="noopener">Gen Interface JP</a></strong> (Latin + Japanese UI typeface), plus <a href="#project-fonts">Google Fonts registered in the project</a></td></tr>
+          <tr><td>Weight</td><td>Regular / Bold (registered fonts use 400 / 700 TTF; falls back to Regular if 700 is unavailable)</td></tr>
+          <tr><td>Alignment</td><td>Left / center / right</td></tr>
+          <tr><td>Width</td><td>Wrap width (mm). Single line if unset</td></tr>
+          <tr><td>Stroke color</td><td>Used as text color</td></tr>
+        </tbody>
+      </table>
+      <p>
+        Display preview and outline conversion use the HarfBuzz text engine, rendering glyph outlines from registered font TTF bytes.
+        The same engine works in a browser when served over HTTP (<code>npm run serve</code>).
+      </p>
+      <div class="docs-callout docs-callout-tip">
+        <strong>Using text in 3D</strong>
+        <p>
+          Text shapes themselves are not 3D outlines.
+          <a href="#text-outline">Convert to outline</a> to turn them into path shapes usable for 3D generation.
+        </p>
+      </div>
+
+      <h2 id="project-fonts">Project fonts (Google Fonts)</h2>
+      <p>
+        From <strong>Project fonts (optional)</strong> in the right panel <strong>Pages</strong> tab,
+        you can add Google Fonts to the project.
+        In addition to bundled Gen Interface JP, choose typefaces for logos and notes.
+      </p>
+      <div class="docs-callout docs-callout-note">
+        <strong>Not fonts installed on your PC</strong>
+        <p>
+          The <strong>Find fonts…</strong> modal lists the <strong>Google Fonts catalog via the Fontsource API</strong> (online).
+          It is unrelated to OS font folders or <code>queryLocalFonts</code>.
+          The catalog is fetched from Fontsource on first use and cached (Electron: user data folder / browser: localStorage).
+        </p>
+      </div>
+
+      <h3>How to register</h3>
+      <ol>
+        <li><strong>Find fonts…</strong> — Search and filter (Japanese / category) in the modal → select → add to library (by default also adds to the current project)</li>
+        <li><strong>Google Fonts URL</strong> — Paste <code>https://fonts.googleapis.com/css2?family=...</code> directly (multiple families in one URL are registered together)</li>
+        <li><strong>From library +</strong> — Add previously registered fonts to another project</li>
+      </ol>
+
+      <h3>Two storage layers</h3>
+      <table>
+        <thead><tr><th>Layer</th><th>Storage</th><th>Scope</th></tr></thead>
+        <tbody>
+          <tr>
+            <td><strong>Library</strong></td>
+            <td>Electron: <code>userData/fonts-library.json</code> / browser: localStorage</td>
+            <td>App-wide (reuse across projects)</td>
+          </tr>
+          <tr>
+            <td><strong>Project <code>fonts[]</code></strong></td>
+            <td>Included in project JSON</td>
+            <td>That project only (Undo target, export target)</td>
+          </tr>
+        </tbody>
+      </table>
+      <p>
+        URL registration also saves automatically to the library.
+        <strong>×</strong> on a library entry removes it from the library only; fonts already in a project remain.
+      </p>
+
+      <h3>Weight (Regular / Bold)</h3>
+      <p>
+        On registration, Fontsource resolves TTF URLs for <strong>400 (Regular)</strong> and <strong>700 (Bold)</strong> (Regular only if 700 is unavailable).
+        Setting text weight to Bold uses the Bold TTF for outline conversion and native preview as well.
+      </p>
+      <p>Main fields per registered entry:</p>
+      <ul>
+        <li><code>family</code> — Font name (e.g. <code>Roboto</code>)</li>
+        <li><code>cssUrl</code> — Google Fonts CSS for display (<code>wght@400;700</code> when Bold is supported)</li>
+        <li><code>fileUrl</code> — TTF for outline (400)</li>
+        <li><code>fileUrlBold</code> — TTF for outline (700, optional)</li>
+      </ul>
+
+      <div class="docs-callout docs-callout-tip">
+        <strong>Usage example</strong>
+        <p>
+          Add <strong>Roboto</strong> to the library once in the modal, then use library <strong>+</strong> in the next project.
+          To share with a team, pass the project JSON <code>fonts[]</code> as-is to reproduce the same typeface setup.
+        </p>
+      </div>
+
+      <h2 id="text-outline">Text outline conversion</h2>
+      <p>
+        Converts text into <strong>path shapes</strong> per glyph.
+        Use when you want logo or engraved text as printable 3D outlines.
+      </p>
+      <ol>
+        <li>Select one text shape</li>
+        <li>Design tab → Outline, or right-click → Outline</li>
+        <li>The original text is replaced by a <strong>group</strong> (collection of paths)</li>
+      </ol>
+      <div class="docs-callout docs-callout-warn">
+        <strong>Desktop only</strong>
+        <p>
+          Outline conversion is available only in the Electron app (Core Text on macOS, fontkit / HarfBuzz elsewhere).
+          The button is disabled in a browser-only setup.
+          Registered fonts download TTF before outlining.
+        </p>
+      </div>
+      <p>See <a href="editing.html#text-outline">Editing — Text outline conversion</a> for detailed editing steps.</p>
+
+      <figure class="docs-figure docs-figure-medium">
+        <img src="../images/en/drawing-text.png" alt="Text note on the Module Joint 1 drawing">
+        <figcaption>Text note on the Module Joint 1 drawing. Multi-line, bold, and wrap width can be configured.</figcaption>
+      </figure>
+
+      <h2 id="dimensions">Dimensions (D)</h2>
+      <p>Draw horizontal and vertical dimensions to show lengths on the drawing. Does not affect 3D generation.</p>
+      <ol>
+        <li>Select the dimension tool (<kbd>D</kbd>)</li>
+        <li>Click two points to measure in order</li>
+        <li>A third click sets the dimension line position (offset)</li>
+        <li>Values are computed from coordinates; manual override is available in the Design tab</li>
+      </ol>
+      <p>Arrow style (dot, arrow, slash, etc.), text size, and prefix/suffix (e.g. <code>L=</code>, <code> mm</code>) can also be set.</p>
+
+      <h2 id="canvas-images">Canvas images</h2>
+      <p>
+        Use the toolbar <strong>Place image</strong> button to put PNG / JPEG / WebP / SVG files directly on the drawing canvas.
+        Placed images are normal objects: select, move, resize, rotate, flip, and save them in project JSON.
+      </p>
+      <ul>
+        <li><strong>Formats</strong> — PNG / JPEG / WebP / SVG</li>
+        <li><strong>Editing</strong> — In the Design tab, edit X/Y, width, height, opacity, and inspect stored image size</li>
+        <li><strong>Export</strong> — Included in SVG / PDF output</li>
+        <li><strong>Storage</strong> — Raster images are downscaled to a max side of 1600 px on import and stored as WebP only when that reduces size</li>
+      </ul>
+      <div class="docs-callout docs-callout-note">
+        <strong>Different from reference images</strong>
+        <p>
+          A canvas image is a normal object on a layer.
+          A <a href="#sketch-import">reference image</a> is a page underlay in the Pages tab, used for scale calibration and tracing.
+        </p>
+      </div>
+
+      <h2 id="sketch-import">Sketch import (reference image)</h2>
+      <p>
+        Place a hand-drawn sketch or photo as a <strong>reference underlay</strong>, calibrate scale, then trace outlines.
+        With AI integration (MCP), an external Vision model can place <strong>ghost shapes</strong> (semi-transparent proposals) for you to review and confirm.
+      </p>
+
+      <figure class="docs-figure docs-figure-wide">
+        <img src="../images/en/sketch-digitize.png" alt="Top view with reference underlay and ghost rectangle">
+        <figcaption>Reference underlay + ghost shape — not included in 3D until confirmed.</figcaption>
+      </figure>
+
+      <h3 id="sketch-load">1. Load a reference image</h3>
+      <ol>
+        <li>Open the right panel <strong>Pages</strong> tab</li>
+        <li>Expand the <strong>Reference image</strong> section</li>
+        <li>Click <strong>Load image</strong> and choose a PNG / JPEG / WebP file</li>
+        <li>Adjust <strong>Opacity</strong> so the underlay is easy to trace over</li>
+      </ol>
+      <p>After loading, clicking the canvas does not move the underlay. Use the steps below only when you need to adjust position or size.</p>
+      <figure class="docs-figure docs-figure-panel">
+        <img src="../images/en/reference-image-panel.png" alt="Reference image section in the Pages tab">
+        <figcaption>Reference image panel — load, move &amp; resize (click button again to finish), opacity, scale calibration, confirm/remove ghosts.</figcaption>
+      </figure>
+
+      <h3 id="sketch-transform">2. Move and resize (optional)</h3>
+      <p>When you need to adjust placement or on-screen size, edit with the same frame and handles as rectangle selection.</p>
+      <ol>
+        <li>Click <strong>Move &amp; resize</strong> (blue frame and eight handles appear)</li>
+        <li>With <strong>Select</strong> (V) or <strong>Hand</strong> (H) still active, drag to move or drag handles to resize (<kbd>Shift</kbd> locks aspect ratio)</li>
+        <li>When finished, click the highlighted <strong>Move &amp; resize</strong> button again to leave edit mode</li>
+      </ol>
+      <ul>
+        <li>The button is highlighted in blue while editing</li>
+        <li>Until you exit edit mode, clicking the canvas alone does not start another edit (avoids accidental moves)</li>
+        <li><kbd>Esc</kbd> also exits edit mode</li>
+        <li>Switching to another drawing tool (rectangle, line, etc.) exits automatically</li>
+        <li>Each drag is committed on mouse up and can be undone with <kbd>Ctrl+Z</kbd></li>
+      </ul>
+
+      <h3 id="sketch-scale">3. Calibrate scale</h3>
+      <p>Pick one <strong>line of known real length</strong> on the underlay (e.g. a dimensioned edge or a measured span) to scale the entire image to real units.</p>
+      <ol>
+        <li>Click <strong>Calibrate scale</strong> (any active move/resize edit mode ends automatically)</li>
+        <li>On the reference image, click <strong>one end</strong> of that line</li>
+        <li>Click the <strong>other end</strong> of the same line (blue/red markers and a dashed line appear)</li>
+        <li>Enter the <strong>real distance (mm)</strong> between those points and click <strong>Apply</strong> in the scale calibration panel</li>
+        <li>Press <kbd>Esc</kbd> or <strong>Cancel</strong> in the panel to abort</li>
+      </ol>
+      <div class="docs-callout docs-callout-tip">
+        <strong>Accuracy tip</strong>
+        <p>
+          Scale calibration sets the drawing’s overall accuracy. Use a dimension written on the sketch or a edge you measured.
+          Hand sketches are approximate — expect to refine with the rectangle tool and dimensions after calibration.
+        </p>
+      </div>
+
+      <h3 id="sketch-ghost">4. Ghost shapes (AI proposals)</h3>
+      <p>
+        When AI uses MCP <code>digitize_sketch</code>, rectangles, circles, and lines appear as <strong>dashed, semi-transparent ghosts</strong>.
+        You can edit or delete them, but they are <strong>excluded from 3D generation</strong> until confirmed.
+      </p>
+      <ul>
+        <li><strong>Confirm ghosts</strong> — convert to normal shapes (3D profiles enabled from this point)</li>
+        <li><strong>Remove ghosts</strong> — discard all proposals</li>
+      </ul>
+      <p>For manual tracing, draw outlines with the rectangle (R) or pen tools as usual. See also <a href="ai-mcp.html#sketch-digitize">AI / MCP — Sketch digitize</a>.</p>
+
+      <h2 id="layers">Pages and layers</h2>
+      <p>A project has multiple <strong>pages</strong> (top view, front view, etc.), each with <strong>layers</strong>.</p>
+      <ul>
+        <li><strong>Pages</strong> — Add and switch in the Pages tab. Choose the face direction when adding top/front/side pages for 3D</li>
+        <li><strong>Layers</strong> — Manage in the Layers tab: show/hide, lock, rename</li>
+        <li>Newly drawn shapes are always added to the currently selected layer</li>
+      </ul>
+
+      <div class="docs-figure-grid">
+        <figure class="docs-figure docs-figure-panel">
+          <img src="../images/en/layers-panel.png" alt="Managing multiple layers in the Layers tab">
+          <figcaption>Layers tab — separate layers for outlines, notes, and other purposes</figcaption>
+        </figure>
+        <figure class="docs-figure docs-figure-panel">
+          <img src="../images/en/pages-multiview.png" alt="Managing multiple pages in the Pages tab">
+          <figcaption>Pages tab — add pages such as top and front views</figcaption>
+        </figure>
+      </div>
+
+      <h2 id="snap">Snap</h2>
+      <p>While drawing, the cursor auto-snaps to nearby endpoints, intersections, midpoints, and more. Toggle in the Pages tab with Snap.</p>
+      <table>
+        <thead><tr><th>Type</th><th>Meaning</th><th>Indicator</th></tr></thead>
+        <tbody>
+          <tr><td>Endpoint</td><td>Shape corners, line ends, bezier nodes</td><td>□</td></tr>
+          <tr><td>Intersection</td><td>Where lines cross</td><td>×</td></tr>
+          <tr><td>Midpoint</td><td>Edge center</td><td>△</td></tr>
+          <tr><td>Center</td><td>Circle or rectangle center</td><td>◎</td></tr>
+          <tr><td>Perpendicular</td><td>Foot of perpendicular from cursor to segment</td><td>⊥</td></tr>
+        </tbody>
+      </table>
+      <p>Priority: endpoint → intersection → midpoint → center → perpendicular. If none match, snap to the grid (1 / 5 / 10 mm).</p>
+
+      <h2 id="more">Alignment, boolean ops, and more</h2>
+      <p>
+        For multi-shape alignment, grouping, union/subtract, and Undo/Redo,
+        see <a href="editing.html">Editing</a>.
+      </p>
+
+      <h2 id="transform">Rotation and flip</h2>
+      <div class="docs-callout docs-callout-note">
+        <strong>Reflected in outlines</strong>
+        <p>
+          Shape rotation, horizontal flip, and vertical flip are reflected in display, BBox, alignment,
+          Profile extraction, and 3D generation. Dimension annotations do not automatically track edited shapes,
+          so redraw dimensions when needed.
+        </p>
+      </div>
+
+      <h2 id="units">Units and scale</h2>
+      <p>Millrect values are mm-based (internally 1 mm = 10 paper units). Page scale (e.g. 1/10) determines the relationship between paper distance and real size.</p>
+      <p>Check the current page scale in the status bar SCALE display. Use scale 1/1 for drawings intended for 3D generation.</p>
+    </article>
+  </div>
+
+  <footer class="docs-footer">
+    <div class="docs-footer-inner">
+      <span>Millrect Documentation</span>
+      <div class="docs-footer-links">
+        <a href="interface.html">← Interface</a>
+        <a href="editing.html">Next: Editing →</a>
+      </div>
+    </div>
+  </footer>
+
+  <script src="../../packages/help-index.js"></script>
+  <script src="../js/docs-search.js"></script>
+  <script src="../js/docs-nav.js"></script>
+    <script src="../js/docs.js"></script>
+</body>
+</html>

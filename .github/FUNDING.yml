@@ -1,0 +1,11 @@
+# Sponsor button configuration for GitHub repository pages.
+# Docs: https://docs.github.com/repositories/managing-your-repositorys-settings-and-features/customizing-your-repository/displaying-a-sponsor-button-in-your-repository
+#
+# GitHub Sponsors (requires org enrollment): https://github.com/sponsors
+github: JIROMO
+
+# Uncomment and replace placeholders when ready:
+# open_collective: millrect
+# ko_fi: your-ko-fi-username
+# custom:
+#   - https://your-donation-page.example

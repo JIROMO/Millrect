@@ -1,0 +1,216 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <!-- Google tag (gtag.js) -->
+    <script async src="https://www.googletagmanager.com/gtag/js?id=G-0JMRZXG11T"></script>
+    <script>
+      window.dataLayer = window.dataLayer || [];
+      function gtag(){dataLayer.push(arguments);}
+      gtag('js', new Date());
+
+      gtag('config', 'G-0JMRZXG11T');
+    </script>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Interface — Millrect Documentation</title>
+  <meta name="description" content="Millrect main window layout: toolbar, tool palette, canvas, right panel, 3D preview, and status bar.">
+  <meta name="robots" content="index, follow" />
+  <script src="../js/docs-seo.js"></script>
+  <link rel="stylesheet" href="../css/docs.css">
+</head>
+<body data-page="interface">
+  <header class="docs-header">
+    <div class="docs-header-inner">
+      <a class="docs-logo" href="./">
+        <img class="docs-logo-img" src="../../site/images/logo.svg" alt="Millrect" width="774" height="109">
+      </a>
+      <div class="docs-header-actions">
+        <button class="docs-menu-toggle" id="docs-menu-toggle" type="button" aria-label="Menu">☰</button>
+      </div>
+    </div>
+  </header>
+
+  <div class="docs-layout">
+    <aside class="docs-sidebar" id="docs-sidebar"></aside>
+
+    <article class="docs-content">
+      <nav class="docs-breadcrumb" aria-label="Breadcrumb">
+        <a href="./">Documentation</a> / Interface
+      </nav>
+      <h1>Interface</h1>
+      <p class="docs-lead">
+        The Millrect window consists of a top toolbar, a left tool palette, a central canvas,
+        a right management panel, and a status bar at the bottom.
+      </p>
+
+      <figure class="docs-figure docs-figure-wide">
+        <img src="../images/en/main-window.png" alt="Millrect main window overview">
+        <figcaption>Main window overview. Draw on the white canvas in the center.</figcaption>
+      </figure>
+
+      <h2 id="toolbar">Toolbar (top)</h2>
+      <figure class="docs-figure docs-figure-bar">
+        <img src="../images/en/toolbar.png" alt="Top toolbar: 2D/3D switch, file operations, export, Undo/Redo, project name">
+        <figcaption>Left side: 2D / 3D switch, file operations, export, Undo/Redo. Right end: project name.</figcaption>
+      </figure>
+      <table>
+        <thead><tr><th>Button</th><th>Function</th><th>Shortcut</th></tr></thead>
+        <tbody>
+          <tr><td>New / Open / Save</td><td>Create, open, or save a project</td><td>Ctrl+N / Ctrl+S</td></tr>
+          <tr><td>Import SVG</td><td>Import an external SVG into the current page</td><td>—</td></tr>
+          <tr><td>Place image</td><td>Place PNG / JPEG / WebP / SVG on the canvas as selectable image objects</td><td>—</td></tr>
+          <tr><td>Export SVG / PDF / JSON</td><td>Write drawings or the project to a file</td><td>—</td></tr>
+          <tr><td>2D / 3D</td><td>Switch between the 2D drawing canvas and the 3D preview generated from the current drawing</td><td>—</td></tr>
+          <tr><td>Undo / Redo</td><td>Undo or redo shape edits</td><td>Ctrl+Z / Ctrl+Y</td></tr>
+          <tr><td>Left / Right panels</td><td>Toggle side panel visibility</td><td>—</td></tr>
+        </tbody>
+      </table>
+      <p>On macOS, use Cmd instead of Ctrl.</p>
+
+      <h2 id="tools">Tool palette (left)</h2>
+      <figure class="docs-figure docs-figure-tools">
+        <img src="../images/en/tools-panel.png" alt="Floating tool palette on the left">
+        <figcaption>Draggable tool palette. From top: selection, pan, rectangle, circle, line, pen, text, and more.</figcaption>
+      </figure>
+      <p>The palette can be dragged anywhere on screen. In addition to the selection tool, it includes:</p>
+      <ul>
+        <li><strong>Pan</strong> — Move the canvas (also: hold Space and drag)</li>
+        <li><strong>Rectangle / Circle / Line</strong> — Basic shapes (<kbd>R</kbd> / <kbd>C</kbd> / <kbd>L</kbd>)</li>
+        <li><strong>Pen (Bezier)</strong> — Free curves and closed outlines</li>
+        <li><strong>Text / Dimension</strong> — Annotations and dimensions (<kbd>T</kbd> / <kbd>D</kbd>)</li>
+      </ul>
+
+      <h2 id="canvas">Canvas (center)</h2>
+      <p>The drawing area shows white paper and a grid.</p>
+      <ul>
+        <li><strong>Zoom</strong> — Mouse wheel, +/- buttons at bottom right, or Ctrl+± / Ctrl+0</li>
+        <li><strong>Pan</strong> — Space + drag, or middle-button drag</li>
+        <li><strong>Snap</strong> — Auto-snap to endpoints, intersections, etc. (toggle in the Pages tab of the right panel)</li>
+        <li><strong>Shortcut list</strong> — <strong>?</strong> button at bottom right (<a href="shortcuts.html">details</a>)</li>
+      </ul>
+      <figure class="docs-figure docs-figure-help">
+        <img src="../images/en/help-shortcuts.png" alt="Shortcut help popover">
+        <figcaption>The ? button at the bottom right of the canvas shows commonly used shortcuts.</figcaption>
+      </figure>
+      <p>The current zoom level (e.g. 339%) appears at the right end of the status bar.</p>
+
+      <h2 id="right-panel">Right panel</h2>
+      <p>Four tabs manage project structure and settings.</p>
+
+      <div class="docs-figure-grid">
+        <figure class="docs-figure docs-figure-panel">
+          <img src="../images/en/layers-panel.png" alt="Layers tab">
+          <figcaption>Layers tab — add layers, show/hide, lock</figcaption>
+        </figure>
+        <figure class="docs-figure docs-figure-panel">
+          <img src="../images/en/pages-add-view.png" alt="Pages tab in the right panel with displayed page and add page controls">
+          <figcaption>Pages tab — switch displayed pages and add pages by face direction</figcaption>
+        </figure>
+        <figure class="docs-figure docs-figure-panel">
+          <img src="../images/en/design-panel.png" alt="Design tab property editing">
+          <figcaption>Design tab — numeric editing and alignment for selected shapes</figcaption>
+        </figure>
+        <figure class="docs-figure docs-figure-panel">
+          <img src="../images/en/history-panel.png" alt="History tab">
+          <figcaption>History tab — Undo history list and jump</figcaption>
+        </figure>
+      </div>
+
+      <table>
+        <thead><tr><th>Tab</th><th>Contents</th></tr></thead>
+        <tbody>
+          <tr><td>Layers</td><td>Add layers, show/hide, lock. Shapes are organized per layer.</td></tr>
+          <tr><td>Pages</td><td>Switch and add pages. Use <strong>Add page</strong> to choose face direction (top, front, side, etc.); existing faces cannot be added again. Paper, scale, <strong>Reference image</strong>, <strong>project fonts</strong>, and the <strong>Taste brief</strong> also live in this tab.</td></tr>
+          <tr><td>Design</td><td>Edit coordinates, <strong>fill and stroke</strong>, line width, and other properties for the selected shape. For images, opacity and stored image size are shown. Bulk appearance changes when multiple shapes are selected.</td></tr>
+          <tr><td>History</td><td>View Undo / Redo history.</td></tr>
+        </tbody>
+      </table>
+      <p>Drag the right edge of the panel to change its width.</p>
+
+      <h3 id="reference-image-panel">Reference image (in Pages tab)</h3>
+      <p>
+        Open the <strong>Reference image</strong> section to load a sketch or photo underlay.
+        See <a href="drawing.html#sketch-import">2D Drawing — Sketch import</a> for the full workflow.
+      </p>
+      <ul>
+        <li><strong>Load image</strong> — place PNG / JPEG / WebP on the page background</li>
+        <li><strong>Move &amp; resize</strong> — click to enter (blue highlight), drag on canvas, click again to exit (<kbd>Esc</kbd> or switching drawing tools also exits)</li>
+        <li><strong>Opacity</strong> — underlay strength</li>
+        <li><strong>Calibrate scale</strong> — click both ends of a known-length line on the underlay + real length (mm) + <strong>Apply</strong> in the calibration panel</li>
+        <li><strong>Confirm / remove ghosts</strong> — finalize or discard AI proposals (when using MCP)</li>
+      </ul>
+
+      <h3 id="project-fonts-panel">Project fonts (in Pages tab)</h3>
+      <p>
+        Open the section <strong>Project fonts (optional)</strong> to show the Google Fonts UI.
+        See <a href="drawing.html#project-fonts">2D Drawing — Project fonts</a> for details.
+      </p>
+      <ul>
+        <li><strong>Find fonts…</strong> — Search the Fontsource catalog (not installed PC fonts)</li>
+        <li><strong>This project</strong> — Fonts included in the current project JSON</li>
+        <li><strong>Library</strong> — Registered fonts reused across the app (<strong>+</strong> adds to the project)</li>
+      </ul>
+
+      <h3 id="taste-brief-panel">Taste brief (in Pages tab)</h3>
+      <figure class="docs-figure docs-figure-panel">
+        <img src="../images/en/taste-brief-panel.png" alt="Taste brief section inside the Pages tab">
+        <figcaption>Taste brief — store intent, phase, design principles, and decision history in this project.</figcaption>
+      </figure>
+      <p>
+        The <strong>Taste brief</strong> section displays the <code>projectBrief</code> used by AI/MCP.
+        Keeping it in the Pages tab puts project-wide context next to page settings, reference images, and project fonts.
+      </p>
+      <ul>
+        <li><strong>Intent</strong> — what the project is trying to make and prioritize</li>
+        <li><strong>Design principles</strong> — decision rules for this project</li>
+        <li><strong>Require brief before generating parts</strong> — guard Part DSL generation until the brief is ready</li>
+      </ul>
+
+      <h2 id="3d-panel">3D preview panel</h2>
+      <figure class="docs-figure docs-figure-panel">
+        <img src="../images/en/3d-panel.png" alt="3D preview of Module Joint 1">
+        <figcaption>Module Joint 1 from top view + front view (24×100×2 mm, Ø6 holes, notched ends). Drag to rotate; export STL.</figcaption>
+      </figure>
+      <p>
+        A solid appears when you have two or more pages with views (e.g. top and front).
+        Shape <strong>fill color</strong> is reflected in the 3D mesh (<a href="multiview-3d.html#color">Color mapping</a>).
+        If views are insufficient, a guidance message explains which page to add.
+        When you click 3D, the preview screen appears immediately and the mesh appears after generation finishes.
+      </p>
+
+      <h2 id="status-bar">Status bar (bottom)</h2>
+      <p>The thin bar below the canvas shows:</p>
+      <ul>
+        <li><strong>XY</strong> — Cursor position (mm)</li>
+        <li><strong>TOOL</strong> — Current tool name</li>
+        <li><strong>SCALE</strong> — Page scale</li>
+        <li><strong>ZOOM</strong> — Display magnification</li>
+        <li><strong>Saved</strong> — Autosave status</li>
+      </ul>
+
+      <div class="docs-callout docs-callout-tip">
+        <strong>Layout tip</strong>
+        <p>
+          Hide the left and right panels to maximize the canvas while drawing,
+          and open the 3D preview only when you need to check the solid.
+        </p>
+      </div>
+    </article>
+  </div>
+
+  <footer class="docs-footer">
+    <div class="docs-footer-inner">
+      <span>Millrect Documentation</span>
+      <div class="docs-footer-links">
+        <a href="getting-started.html">← Getting Started</a>
+        <a href="drawing.html">Next: 2D Drawing →</a>
+      </div>
+    </div>
+  </footer>
+
+  <script src="../../packages/help-index.js"></script>
+  <script src="../js/docs-search.js"></script>
+  <script src="../js/docs-nav.js"></script>
+    <script src="../js/docs.js"></script>
+</body>
+</html>

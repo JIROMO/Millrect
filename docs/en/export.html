@@ -1,0 +1,141 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <!-- Google tag (gtag.js) -->
+    <script async src="https://www.googletagmanager.com/gtag/js?id=G-0JMRZXG11T"></script>
+    <script>
+      window.dataLayer = window.dataLayer || [];
+      function gtag(){dataLayer.push(arguments);}
+      gtag('js', new Date());
+
+      gtag('config', 'G-0JMRZXG11T');
+    </script>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Save &amp; Export — Millrect Documentation</title>
+  <meta name="description" content="Save and load Millrect projects, export PDF and SVG drawings, export STL for 3D printing, and autosave behavior.">
+  <meta name="robots" content="index, follow" />
+  <script src="../js/docs-seo.js"></script>
+  <link rel="stylesheet" href="../css/docs.css">
+</head>
+<body data-page="export">
+  <header class="docs-header">
+    <div class="docs-header-inner">
+      <a class="docs-logo" href="./">
+        <img class="docs-logo-img" src="../../site/images/logo.svg" alt="Millrect" width="774" height="109">
+      </a>
+      <div class="docs-header-actions">
+        <button class="docs-menu-toggle" id="docs-menu-toggle" type="button" aria-label="Menu">☰</button>
+      </div>
+    </div>
+  </header>
+
+  <div class="docs-layout">
+    <aside class="docs-sidebar" id="docs-sidebar"></aside>
+
+    <article class="docs-content">
+      <nav class="docs-breadcrumb" aria-label="Breadcrumb">
+        <a href="./">Documentation</a> / Save &amp; Export
+      </nav>
+      <h1>Save &amp; Export</h1>
+      <p class="docs-lead">
+        Project save and load, PDF / SVG export for drawings, STL export for 3D, and autosave.
+      </p>
+
+      <figure class="docs-figure docs-figure-bar">
+        <img src="../images/en/toolbar.png" alt="Toolbar file operations and export buttons">
+        <figcaption>Save and export from the toolbar. The same actions are available under File in the menu bar.</figcaption>
+      </figure>
+
+      <h2 id="autosave">Autosave</h2>
+      <p>
+        Each time you add or edit shapes, your work is saved automatically.
+        The status bar at the bottom right shows <strong>Saved</strong> and a timestamp for the last save.
+      </p>
+      <p>
+        When you quit and relaunch the app, you can choose whether to resume the previous session.
+        To keep a copy as a file in a specific location, use <strong>Save to project file</strong> below.
+      </p>
+
+      <h2 id="project-file">Project file (JSON)</h2>
+      <p>
+        Saves the entire Millrect project (all pages, layers, shapes, dimensions,
+        <strong>registered fonts</strong>, canvas images, and settings) in one file.
+      </p>
+      <p>
+        Project JSON <code>fonts[]</code> stores Google Fonts registration data
+        (family, cssUrl, fileUrl, fileUrlBold, etc.).
+        The font library (<code>fonts-library.json</code>) is kept separately in app user data, not inside the project file.
+        See <a href="drawing.html#project-fonts">2D Drawing — Project fonts</a> for how to register fonts.
+      </p>
+      <table>
+        <thead><tr><th>Action</th><th>How</th></tr></thead>
+        <tbody>
+          <tr><td>Save</td><td>Toolbar save icon / File → Save / Ctrl+S (Cmd+S on macOS)</td></tr>
+          <tr><td>Open</td><td>Toolbar folder icon / File → Open</td></tr>
+          <tr><td>New</td><td>File → New / Ctrl+N</td></tr>
+        </tbody>
+      </table>
+      <p>Choose folder and filename in the save dialog.</p>
+
+      <h2 id="svg">SVG export and import</h2>
+      <ul>
+        <li><strong>Export SVG</strong> — Export the current page as an SVG file (for handoff to Illustrator, etc.)</li>
+        <li><strong>Import SVG</strong> — Import an external SVG into a layer on the current page</li>
+      </ul>
+      <p>SVG is for 2D drawings. Canvas images are included, but 3D data is not.</p>
+
+      <h2 id="pdf">PDF export</h2>
+      <p>
+        Export <strong>all pages</strong> in the project into a single PDF file, including canvas images.
+        Useful for printing and sharing.
+      </p>
+      <p>Use File → Export as PDF, or the PDF icon on the toolbar.</p>
+
+      <h2 id="stl">STL export (3D)</h2>
+      <figure class="docs-figure docs-figure-panel">
+        <img src="../images/en/3d-panel.png" alt="STL button and Module Joint 1 mesh in the 3D preview panel">
+        <figcaption>Use the STL button at the top right of the 3D panel to export the generated mesh.</figcaption>
+      </figure>
+      <p>
+        After a solid appears following the steps in <a href="multiview-3d.html">3D Generation</a>,
+        click <strong>STL</strong> in the 3D panel to save an STL file for 3D printing.
+      </p>
+      <div class="docs-callout docs-callout-note">
+        <strong>STL export requirements</strong>
+        <p>
+          You need at least two axis pages (e.g. top + front) and a visible mesh in the 3D preview.
+        </p>
+      </div>
+
+      <h2 id="menu">File menu reference</h2>
+      <table>
+        <thead><tr><th>Menu item</th><th>Description</th></tr></thead>
+        <tbody>
+          <tr><td>New</td><td>Start a new project</td></tr>
+          <tr><td>Open</td><td>Load a saved project</td></tr>
+          <tr><td>Save</td><td>Save the project file</td></tr>
+          <tr><td>Export as SVG</td><td>Export the current page as SVG</td></tr>
+          <tr><td>Export as PDF</td><td>Export all pages as PDF</td></tr>
+          <tr><td>Export as JSON</td><td>Export the project in JSON format</td></tr>
+        </tbody>
+      </table>
+    </article>
+  </div>
+
+  <footer class="docs-footer">
+    <div class="docs-footer-inner">
+      <span>Millrect Documentation</span>
+      <div class="docs-footer-links">
+        <a href="multiview-3d.html">← 3D Generation</a>
+        <a href="shortcuts.html">Next: Shortcuts →</a>
+      </div>
+    </div>
+  </footer>
+
+  <script src="../../packages/help-index.js"></script>
+  <script src="../js/docs-search.js"></script>
+  <script src="../js/docs-nav.js"></script>
+    <script src="../js/docs.js"></script>
+</body>
+</html>

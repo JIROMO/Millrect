@@ -1,0 +1,266 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <!-- Google tag (gtag.js) -->
+    <script async src="https://www.googletagmanager.com/gtag/js?id=G-0JMRZXG11T"></script>
+    <script>
+      window.dataLayer = window.dataLayer || [];
+      function gtag(){dataLayer.push(arguments);}
+      gtag('js', new Date());
+
+      gtag('config', 'G-0JMRZXG11T');
+    </script>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>はじめに — Millrect ドキュメント</title>
+  <meta name="robots" content="index, follow" />
+  <script src="js/docs-seo.js"></script>
+  <link rel="stylesheet" href="css/docs.css">
+</head>
+<body data-page="getting-started">
+  <header class="docs-header">
+    <div class="docs-header-inner">
+      <a class="docs-logo" href="./">
+        <img class="docs-logo-img" src="../site/images/logo.svg" alt="Millrect" width="774" height="109">
+      </a>
+      <div class="docs-header-actions">
+        <button class="docs-menu-toggle" id="docs-menu-toggle" type="button" aria-label="メニュー">☰</button>
+      </div>
+    </div>
+  </header>
+
+  <div class="docs-layout">
+    <aside class="docs-sidebar" id="docs-sidebar"></aside>
+
+    <article class="docs-content">
+      <nav class="docs-breadcrumb" aria-label="パンくず">
+        <a href="./">ドキュメント</a> / はじめに
+      </nav>
+
+      <h1>はじめに</h1>
+      <p class="docs-lead">
+        Millrect の起動方法と、最初のプロジェクトを作成して図形を描くまでの流れを説明します。
+      </p>
+
+      <nav class="docs-toc" aria-label="目次">
+        <div class="docs-toc-title">このページの内容</div>
+        <ul>
+          <li><a href="#first-stl">STL 出力まで</a></li>
+          <li><a href="#launch">アプリの起動</a></li>
+          <li><a href="#new-project">新規プロジェクト</a></li>
+          <li><a href="#sample-3d">3D を試す</a></li>
+          <li><a href="#first-shape">最初の図形を描く</a></li>
+          <li><a href="#concepts">覚えておくこと</a></li>
+          <li><a href="#next">次のステップ</a></li>
+        </ul>
+      </nav>
+
+      <h2 id="first-stl">STL 出力まで</h2>
+      <p>
+        思想や MCP の説明は後回しで OK です。まず次の 4 ステップだけ試してください。
+      </p>
+      <ol class="docs-steps">
+        <li>
+          <strong>アプリを開く</strong><br>
+          <a href="../app/">millrect.com/app</a>（ブラウザ）または
+          <a href="desktop-download.html">macOS デスクトップ版</a>
+        </li>
+        <li>
+          <strong>新規プロジェクトを作る</strong><br>
+          起動ダイアログで <strong>＋ 新規プロジェクト</strong> → 用紙・縮尺を確認して <strong>作成</strong>
+        </li>
+        <li>
+          <strong>3D プレビュー</strong><br>
+          ツールバーの <strong>3D</strong> ボタンで立体を表示
+        </li>
+        <li>
+          <strong>STL 出力</strong><br>
+          3D パネルの <strong>STL出力</strong> で 3D プリント用ファイルを保存
+        </li>
+      </ol>
+      <p>
+        同梱サンプル（JSON）:
+        <a href="../samples/starter-box.json">初めての直方体</a> ·
+        <a href="../samples/mounting-plate.json">穴付き取付板</a> ·
+        <a href="../samples/l-bracket.json">L字ブラケット</a> ·
+        <a href="../samples/enclosure.json">3面筐体</a> ·
+        <a href="../samples/laser-panel.json">レーザー用パネル</a> ·
+        <a href="../samples/module-joint-1.json">Module Joint 1</a>
+        — 起動画面の <strong>JSON インポート</strong> から開けます。
+      </p>
+
+      <h2 id="launch">アプリの起動</h2>
+      <p>
+        Millrect は<strong>ブラウザ版</strong>（<a href="../app/">millrect.com/app</a>）と
+        <strong>デスクトップ版</strong>の 2 通りがあります。手軽に試すならブラウザ、
+        AI 連携・テキストの 3D 輪郭化が必要なら
+        <a href="desktop-download.html">macOS デスクトップ版</a>をインストールしてください（現状 macOS のみ配布）。
+        プロジェクトの保存・読み込み（JSON）はブラウザ版でも利用できます。
+      </p>
+      <p>
+        デスクトップ版は Applications から <strong>Millrect</strong> を起動します。
+        未署名配布のため初回起動で OS の警告が出ることがあります —
+        <a href="desktop-download.html#security">対処方法</a>を参照してください。
+      </p>
+      <p>
+        起動すると、前回の作業を再開するか、新しいプロジェクトを作るかを選ぶ画面が表示されます。
+        メニューバーの「ヘルプ → ヘルプを検索…」（<kbd>⌘⇧/</kbd>）でキーワード検索、または「ドキュメント TOP」などからアプリ内モーダルでこのガイドをいつでも開けます。
+      </p>
+
+      <h2 id="new-project">新規プロジェクト</h2>
+      <p>
+        真っさらなキャンバスから始める場合は「＋ 新規プロジェクト」を選びます。
+        起動ダイアログでは、プロジェクト一覧の検索、既存プロジェクトの再開、JSON インポート、新規作成ができます。
+      </p>
+
+      <figure class="docs-figure docs-figure-medium">
+        <img src="images/startup-dialog.png" alt="起動時のダイアログ。新規プロジェクト、JSON インポート、プロジェクト一覧と検索">
+        <figcaption>起動時のダイアログ — ＋ 新規プロジェクト、JSON インポート、プロジェクト一覧。</figcaption>
+      </figure>
+
+      <p>「＋ 新規プロジェクト」を押すと、作成フォームが開きます。</p>
+
+      <figure class="docs-figure docs-figure-medium">
+        <img src="images/startup-new-form.png" alt="新規プロジェクト作成フォーム。プロジェクト名、用紙サイズ、向き、縮尺">
+        <figcaption>新規プロジェクト — プロジェクト名・用紙・縮尺を設定して「作成」を押します。</figcaption>
+      </figure>
+
+      <table>
+        <thead>
+          <tr><th>項目</th><th>説明</th></tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>プロジェクト名</td>
+            <td>後からツールバー左上の入力欄でも変更できます。</td>
+          </tr>
+          <tr>
+            <td>用紙サイズ</td>
+            <td>A4 / A3 など。キャンバスの大きさに対応します。</td>
+          </tr>
+          <tr>
+            <td>向き</td>
+            <td>横（landscape）または縦（portrait）。</td>
+          </tr>
+          <tr>
+            <td>縮尺</td>
+            <td>例: 1/10 は「用紙上 1 mm = 実寸 10 mm」を意味します。通常は 1/1 または 1/10 を選びます。</td>
+          </tr>
+        </tbody>
+      </table>
+
+      <p>「作成」を押すとメイン画面が開き、白いグリッド付きのキャンバスが表示されます。</p>
+
+      <h2 id="sample-3d">3D を試す</h2>
+      <p>
+        初めて 3D を試す場合は、新規プロジェクトを作成して、上面図に輪郭を描き、Pages タブの
+        <strong>ページ追加</strong>から <strong>正面図 (front)</strong> や <strong>右側面図 (right)</strong> を追加します。
+        既に同じ面のページがある場合、その面は追加メニューで選べません。
+      </p>
+      <p>同梱サンプルを確認したい場合は、起動ダイアログの <strong>JSON インポート</strong> から <code>samples/module-joint-1.json</code> などを開きます。</p>
+      <ul>
+        <li><strong>上面図</strong> — Module Joint 1 は 24 mm × 100 mm の外形、Ø6 穴、10 mm ピッチを持つ実プロダクト図面です</li>
+        <li><strong>正面図</strong> — 24 mm × 2 mm の板厚断面で、薄板として 3D プレビューできます</li>
+        <li>このドキュメントの画像は Module Joint 1 を基準にしています</li>
+      </ul>
+
+      <figure class="docs-figure docs-figure-medium">
+        <img src="images/startup-project-list.png" alt="プロジェクト一覧と検索窓">
+        <figcaption>プロジェクト一覧 — 保存済みプロジェクトを検索し、必要なら JSON インポートでサンプルを開きます。</figcaption>
+      </figure>
+
+      <div class="docs-callout docs-callout-tip">
+        <strong>3D を確認したいとき</strong>
+        <p>
+          2D / 3D の切替はツールバー左側にあります。3D を押すと先にプレビュー画面へ切り替わり、メッシュは生成後に表示されます。
+          手順の詳細は <a href="multiview-3d.html#workflow">3D 生成 — 制作例</a> も参照してください。
+        </p>
+      </div>
+
+      <p>空のキャンバスから自分でページを増やして描きたい場合は、上記の「新規プロジェクト」を使います。</p>
+
+      <figure class="docs-figure docs-figure-wide">
+        <img src="images/main-window.png" alt="新規プロジェクト作成後のメイン画面">
+        <figcaption>プロジェクト作成直後の画面。左にツール、右にレイヤーパネル、下部にステータスバーがあります。</figcaption>
+      </figure>
+
+      <h2 id="first-shape">最初の図形を描く</h2>
+      <ol class="docs-steps">
+        <li>
+          <strong>矩形ツールを選ぶ</strong><br>
+          左側のツールパレットで矩形アイコンをクリックします。
+        </li>
+        <li>
+          <strong>キャンバス上をドラッグ</strong><br>
+          ドラッグした範囲が矩形になります。スナップが有効な場合、グリッドや端点に吸着します。
+        </li>
+        <li>
+          <strong>選択して編集</strong><br>
+          選択ツール（矢印）に戻し、図形をクリックして移動・サイズ変更ができます。
+          Design タブでは<strong>塗り・線色</strong>も変更でき、3D プレビューに反映されます。
+        </li>
+      </ol>
+
+      <figure class="docs-figure docs-figure-wide">
+        <img src="images/drawing-rect.png" alt="Module Joint 1 の上面図">
+        <figcaption>実プロダクト Module Joint 1 を Millrect で作図した例（24×100 mm、A4 縦・1:1）。</figcaption>
+      </figure>
+
+      <div class="docs-callout docs-callout-tip">
+        <strong>保存について</strong>
+        <p>
+          作業内容は自動保存されます。ファイルとして残したい場合は、ツールバーの保存ボタン
+          （または メニュー「ファイル → 保存」）でプロジェクトファイルを保存してください。
+        </p>
+      </div>
+
+      <h2 id="concepts">覚えておくこと</h2>
+      <table>
+        <thead>
+          <tr><th>ポイント</th><th>内容</th></tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>2D 図面が本体</td>
+            <td>Millrect では編集するのは図面だけです。3D は図面から自動的に作られます。</td>
+          </tr>
+          <tr>
+            <td>3D には複数ページ</td>
+            <td>上面図だけでは立体になりません。Pages タブのページ追加で、正面図など別の投影図ページを追加してください。</td>
+          </tr>
+          <tr>
+            <td>Undo / Redo</td>
+            <td>図形の追加・移動などは元に戻せます（Ctrl+Z / Ctrl+Y）。ズームやパンは Undo されません。</td>
+          </tr>
+          <tr>
+            <td>塗り・線色</td>
+            <td>Design タブの「外観」で指定。塗り色は 3D プレビューのメッシュ色にも使われます。</td>
+          </tr>
+        </tbody>
+      </table>
+
+      <h2 id="next">次のステップ</h2>
+      <ul>
+        <li><a href="interface.html">画面構成</a> — 各パネルの役割を詳しく確認</li>
+        <li><a href="drawing.html">2D 描画</a> — ツールやレイヤーの使い方</li>
+        <li><a href="multiview-3d.html">3D 生成</a> — 上面図 + 正面図で立体を作る</li>
+      </ul>
+    </article>
+  </div>
+
+  <footer class="docs-footer">
+    <div class="docs-footer-inner">
+      <span>Millrect ドキュメント</span>
+      <div class="docs-footer-links">
+        <a href="./">TOP</a>
+        <a href="interface.html">次: 画面構成 →</a>
+      </div>
+    </div>
+  </footer>
+
+  <script src="../packages/help-index.js"></script>
+  <script src="js/docs-search.js"></script>
+  <script src="js/docs-nav.js"></script>
+    <script src="js/docs.js"></script>
+</body>
+</html>

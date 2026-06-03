@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <!-- Google tag (gtag.js) -->
+    <script async src="https://www.googletagmanager.com/gtag/js?id=G-0JMRZXG11T"></script>
+    <script>
+      window.dataLayer = window.dataLayer || [];
+      function gtag(){dataLayer.push(arguments);}
+      gtag('js', new Date());
+
+      gtag('config', 'G-0JMRZXG11T');
+    </script>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>設計思想 — Millrect ドキュメント</title>
+  <meta name="robots" content="index, follow" />
+  <script src="js/docs-seo.js"></script>
+  <link rel="stylesheet" href="css/docs.css">
+</head>
+<body data-page="philosophy">
+  <header class="docs-header">
+    <div class="docs-header-inner">
+      <a class="docs-logo" href="./">
+        <img class="docs-logo-img" src="../site/images/logo.svg" alt="Millrect" width="774" height="109">
+      </a>
+      <div class="docs-header-actions">
+        <button class="docs-menu-toggle" id="docs-menu-toggle" type="button" aria-label="メニュー">☰</button>
+      </div>
+    </div>
+  </header>
+
+  <div class="docs-layout">
+    <aside class="docs-sidebar" id="docs-sidebar"></aside>
+
+    <article class="docs-content">
+      <nav class="docs-breadcrumb" aria-label="パンくず">
+        <a href="./">ドキュメント</a> / 設計思想
+      </nav>
+
+      <h1>設計思想</h1>
+      <p class="docs-lead">
+        Millrect は、図面を中心にした軽量な作図アプリです。3D、AI、出力機能は、図面づくりを置き換えるものではなく、図面から自然に広がる補助機能として設計しています。
+      </p>
+
+      <nav class="docs-toc" aria-label="目次">
+        <div class="docs-toc-title">このページの内容</div>
+        <ul>
+          <li><a href="#drawing-first">図面が本体</a></li>
+          <li><a href="#derived-3d">3D は派生物</a></li>
+          <li><a href="#small-tool">小さく、確かめやすく</a></li>
+          <li><a href="#ai-assist">AI は操作者ではなく補助者</a></li>
+          <li><a href="#portable">手元に残せる形式</a></li>
+        </ul>
+      </nav>
+
+      <h2 id="drawing-first">図面が本体</h2>
+      <p>
+        Millrect で最初に触るものは 3D モデルではなく、上面図・正面図などの 2D 図面です。寸法、形状、ページ構成を図面として持つことで、後から見返したときに「何を作ろうとしていたか」が残ります。
+      </p>
+      <p>
+        3D 表示や STL 出力は便利ですが、編集の中心は常に図面です。図面を直せば、そこから立体を作り直せます。
+      </p>
+
+      <h2 id="derived-3d">3D は派生物</h2>
+      <p>
+        Millrect の 3D は、上面図・正面図など複数の投影図から生成されます。3D だけを直接こねるのではなく、根拠になる 2D の輪郭を残すことで、作業の説明性とやり直しやすさを優先しています。
+      </p>
+      <table>
+        <thead>
+          <tr><th>考え方</th><th>Millrect での扱い</th></tr>
+        </thead>
+        <tbody>
+          <tr><td>編集対象</td><td>2D 図面、ページ、寸法、輪郭</td></tr>
+          <tr><td>生成対象</td><td>図面から作られる 3D プレビューと STL</td></tr>
+          <tr><td>やり直し</td><td>図面を修正して再生成</td></tr>
+        </tbody>
+      </table>
+
+      <h2 id="small-tool">小さく、確かめやすく</h2>
+      <p>
+        ブラウザでもデスクトップでも同じ図面データを扱えるようにし、作図、プレビュー、保存がひとつの流れでつながることを大事にしています。
+      </p>
+      <p>
+        機能を増やすときも、作図中の視線を奪わないこと、プロジェクトファイルとして読み書きしやすいこと、Undo / Redo の予測が立つことを優先します。
+      </p>
+
+      <h2 id="ai-assist">AI は操作者ではなく補助者</h2>
+      <p>
+        MCP 連携やスケッチ取り込みは、作図の入口を用意するための機能です。AI が勝手に確定するのではなく、提案を見て、必要なら調整してから図面に反映する流れを基本にしています。
+      </p>
+      <div class="docs-callout docs-callout-note">
+        <strong>確認できる自動化</strong>
+        <p>
+          AI 連携は「図面の代わり」ではなく、図面を作るための補助線です。最終的な形はキャンバス上で確認できる状態に残します。
+        </p>
+      </div>
+
+      <h2 id="portable">手元に残せる形式</h2>
+      <p>
+        プロジェクトは JSON として保存でき、出力は PDF / SVG / STL など用途に合わせた形式を選べます。作ったものを特定の画面の中だけに閉じ込めず、後から開ける・渡せる・加工できる状態にすることを重視しています。
+      </p>
+
+      <h2 id="next">次のステップ</h2>
+      <ul>
+        <li><a href="getting-started.html">はじめに</a> — まず 5 分で 3D まで試す</li>
+        <li><a href="drawing.html">2D 描画</a> — 図面を作る基本操作</li>
+        <li><a href="ai-mcp.html">AI 連携</a> — AI や MCP で補助する方法</li>
+      </ul>
+    </article>
+  </div>
+
+  <footer class="docs-footer">
+    <div class="docs-footer-inner">
+      <span>Millrect ドキュメント</span>
+      <div class="docs-footer-links">
+        <a href="./">TOP</a>
+        <a href="getting-started.html">前: はじめに</a>
+        <a href="desktop-download.html">次: デスクトップ版 →</a>
+      </div>
+    </div>
+  </footer>
+
+  <script src="../packages/help-index.js"></script>
+  <script src="js/docs-search.js"></script>
+  <script src="js/docs-nav.js"></script>
+  <script src="js/docs.js"></script>
+</body>
+</html>

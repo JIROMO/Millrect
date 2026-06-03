@@ -1,0 +1,247 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <!-- Google tag (gtag.js) -->
+    <script async src="https://www.googletagmanager.com/gtag/js?id=G-0JMRZXG11T"></script>
+    <script>
+      window.dataLayer = window.dataLayer || [];
+      function gtag(){dataLayer.push(arguments);}
+      gtag('js', new Date());
+
+      gtag('config', 'G-0JMRZXG11T');
+    </script>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>AI / MCP — Millrect Documentation</title>
+  <meta name="robots" content="index, follow" />
+  <script src="../js/docs-seo.js"></script>
+  <link rel="stylesheet" href="../css/docs.css">
+</head>
+<body data-page="ai-mcp">
+  <header class="docs-header">
+    <div class="docs-header-inner">
+      <a class="docs-logo" href="./">
+        <img class="docs-logo-img" src="../../site/images/logo.svg" alt="Millrect" width="774" height="109">
+      </a>
+      <div class="docs-header-actions">
+        <button class="docs-menu-toggle" id="docs-menu-toggle" type="button" aria-label="Menu">☰</button>
+      </div>
+    </div>
+  </header>
+
+  <div class="docs-layout">
+    <aside class="docs-sidebar" id="docs-sidebar"></aside>
+
+    <article class="docs-content">
+      <nav class="docs-breadcrumb"><a href="./">Documentation</a> / AI / MCP</nav>
+      <h1>AI Integration (Optional)</h1>
+      <p class="docs-lead">
+        Connect Millrect to AI assistants such as Claude Desktop to operate the app remotely.
+        This is not required for normal drawing — use it when you want AI help creating drawings.
+      </p>
+
+      <div class="docs-callout docs-callout-note">
+        <strong>Not required for everyday use</strong>
+        <p>
+          Millrect works fully without AI. This page is reference material for users who want to set up AI integration.
+        </p>
+      </div>
+
+      <h2 id="what-is">What is AI integration?</h2>
+      <p>
+        While Millrect is running, an AI (such as Claude) can add shapes, move objects, regenerate 3D, and more on your behalf.
+        The AI gives instructions; Millrect performs the actual geometry and rendering.
+      </p>
+      <p>
+        Example: you can tell the AI things like “Draw a 100 mm wide rectangle” or “Add a top view page,”
+        and it will relay those requests to Millrect.
+      </p>
+
+      <h2 id="requirements">Requirements</h2>
+      <ul>
+        <li>Millrect must be running (AI integration is only active while the app is open)</li>
+        <li>An AI client that supports MCP (Model Context Protocol), such as Claude Desktop</li>
+        <li><a href="#mcp-setup">MCP server configuration</a> (bundled with the desktop app; requires <strong>Node.js</strong> on PATH)</li>
+      </ul>
+
+      <h2 id="mcp-setup">MCP server setup</h2>
+      <p>
+        The desktop build bundles an MCP server. While Millrect is running, point your AI client at:
+      </p>
+      <table>
+        <thead><tr><th>Environment</th><th>Example path to <code>server.js</code></th></tr></thead>
+        <tbody>
+          <tr>
+            <td>macOS (.app)</td>
+            <td><code>/Applications/Millrect.app/Contents/Resources/mcp/server.js</code></td>
+          </tr>
+          <tr>
+            <td>Windows</td>
+            <td><code>C:\Program Files\Millrect\resources\mcp\server.js</code> (depends on install dir)</td>
+          </tr>
+          <tr>
+            <td>Development (repo)</td>
+            <td><code>mcp/server.js</code></td>
+          </tr>
+        </tbody>
+      </table>
+      <p>Claude Desktop (<code>claude_desktop_config.json</code>) example:</p>
+      <pre><code>{
+  "mcpServers": {
+    "millrect": {
+      "command": "node",
+      "args": ["/Applications/Millrect.app/Contents/Resources/mcp/server.js"]
+    }
+  }
+}</code></pre>
+      <p>
+        On Windows, use the path from the table above and escape backslashes for JSON.
+        Launch <strong>Millrect first</strong>, then restart Claude Desktop.
+      </p>
+      <p>
+        Other MCP clients (e.g. Cursor) use the same <code>node</code> + <code>server.js</code> entry.
+        See the <a href="developer.html#mcp">Developer guide (MCP)</a> and <code>AGENT.md</code> in the repository for agent instructions.
+      </p>
+
+      <h2 id="workflow">Basic workflow with AI</h2>
+      <ol class="docs-steps">
+        <li>
+          <strong>Launch Millrect</strong><br>
+          Open the app as usual and create or open a project.
+        </li>
+        <li>
+          <strong>Connect the AI client to Millrect</strong><br>
+          Once MCP is configured, the AI can read Millrect’s state.
+        </li>
+        <li>
+          <strong>Give instructions to the AI</strong><br>
+          Ask in natural language, e.g. “Show me the current drawing” or “Draw a 24×100 joint outline.”
+        </li>
+        <li>
+          <strong>Review results in the app</strong><br>
+          Changes made by the AI appear on the Millrect canvas. Edit manually if needed.
+        </li>
+      </ol>
+
+      <h2 id="part-dsl-workflow">Useful levels of AI work</h2>
+      <p>
+        Millrect’s AI integration is centered on structured drawing, part, and judgment APIs rather than UI clicking.
+        The usual flow is to inspect the current document, read the Taste Memory brief when needed, generate drawings from millimeter specs,
+        then validate 3D readiness and manufacturing constraints.
+      </p>
+      <table>
+        <thead><tr><th>Layer</th><th>Main tools</th><th>Best for</th></tr></thead>
+        <tbody>
+          <tr><td>Context</td><td><code>get_project_context</code>, <code>validate_3d_readiness</code></td><td>Read pages, face directions, profiles, and 3D readiness</td></tr>
+          <tr><td>Intent API</td><td><code>create_multiview_box</code>, <code>layout_rect_mm</code></td><td>Generate drawings from width/depth/height in mm</td></tr>
+          <tr><td>Part DSL</td><td><code>compile_part_dsl</code>, <code>apply_part_dsl</code>, <code>update_part_param</code></td><td>Create boxes, panels, L-brackets, enclosures, holes, slots, and fillets declaratively</td></tr>
+          <tr><td>Manufacturing check</td><td><code>validate_manufacturability</code></td><td>Check hole size, wall thickness, fillet, and other rule warnings</td></tr>
+          <tr><td>Review</td><td><code>capture_screenshot</code>, <code>append_artifact_log</code></td><td>Record visual review and feed the next revision</td></tr>
+        </tbody>
+      </table>
+
+      <h2 id="ai-can-do">What AI can do (examples)</h2>
+      <table>
+        <thead><tr><th>Operation</th><th>Description</th></tr></thead>
+        <tbody>
+          <tr><td>Add / edit shapes</td><td>Rectangles, circles, lines, dimensions, etc.</td></tr>
+          <tr><td>Pages &amp; layers</td><td>Add top view pages, set viewDefinition</td></tr>
+          <tr><td>Sketch import</td><td>Reference underlay, scale calibration, <code>digitize_sketch</code> ghost proposals</td></tr>
+          <tr><td>Parts / multiview</td><td><code>create_multiview_box</code>, Part DSL (<code>apply_part_dsl</code>), and other mm-based APIs</td></tr>
+          <tr><td>Taste Memory</td><td>Record intent, constraints, preferences, design decisions, and review history in <code>projectBrief</code></td></tr>
+          <tr><td>Align &amp; combine</td><td>Align shapes, Boolean union / subtract</td></tr>
+          <tr><td>3D verification</td><td>Regenerate 3D, check generation status</td></tr>
+          <tr><td>Undo / Redo</td><td>Roll back or replay operations</td></tr>
+        </tbody>
+      </table>
+
+      <h2 id="taste-memory">Taste Memory (design judgment)</h2>
+      <p>
+        Taste Memory lets agents understand why a shape should move in a certain direction.
+        It stores structured project intent, constraints, references, design principles, accept/reject reasons, and review outcomes,
+        not full conversation logs.
+        In the app, check it in the right panel under <strong>Pages tab → Taste brief</strong>.
+      </p>
+      <table>
+        <thead><tr><th>Store</th><th>Contents</th><th>Use</th></tr></thead>
+        <tbody>
+          <tr><td><code>projectBrief</code></td><td>Project intent / constraints / designPrinciples / decisions / artifactLog</td><td>The brief an agent should follow in this project</td></tr>
+          <tr><td>Global Memory</td><td>Preferences reinforced across multiple projects</td><td>Seed new project briefs</td></tr>
+          <tr><td>Artifact Log</td><td>Captures, 3D status, evaluation, outcomes</td><td>Keep review reasons attached to revisions</td></tr>
+        </tbody>
+      </table>
+      <p>
+        Related tools: <code>get_taste_context</code>, <code>update_project_brief</code>, <code>record_decision</code>,
+        <code>set_project_phase</code>, <code>append_session_learnings</code>, <code>list_global_principles</code>,
+        <code>promote_principle</code>, <code>append_artifact_log</code>.
+        See <a href="developer.html#taste-memory">Developer Guide — Taste Memory</a> and <code>docs/TASTE-MEMORY.md</code>.
+      </p>
+
+      <h2 id="sketch-digitize">Sketch digitize (reference image + ghosts)</h2>
+      <p>
+        Millrect does not run Vision internally. An <strong>external AI</strong> (e.g. Claude) analyzes the image and sends mm-based shape proposals via MCP.
+        You review proposals in the app before confirming them.
+      </p>
+      <ol class="docs-steps">
+        <li>
+          <strong>Place reference image</strong><br>
+          MCP <code>load_reference_image</code>, or UI: Pages → Reference image → <strong>Load image</strong>.
+        </li>
+        <li>
+          <strong>Move &amp; resize (optional)</strong><br>
+          UI: <strong>Move &amp; resize</strong> → adjust on canvas → click the same button again to exit. MCP can also set <code>x</code> / <code>y</code> / <code>widthMm</code> on <code>load_reference_image</code>.
+        </li>
+        <li>
+          <strong>Calibrate scale</strong><br>
+          <code>set_reference_scale_anchor</code> (both ends of a known-length line + mm), or UI <strong>Calibrate scale</strong>.
+        </li>
+        <li>
+          <strong>Place proposals</strong><br>
+          AI calls <code>digitize_sketch</code> with rect/circle/line proposals (mm) → shown as ghosts.
+        </li>
+        <li>
+          <strong>Confirm and edit</strong><br>
+          UI or <code>confirm_digitize_proposals</code> to finalize; adjust dimensions manually if needed.
+        </li>
+      </ol>
+      <div class="docs-callout docs-callout-warn">
+        <strong>Ghosts are not included in 3D</strong>
+        <p>
+          Ghost shapes are excluded from Profile extraction and 3D until confirmed. Always confirm before generating solids.
+        </p>
+      </div>
+      <p>See the <a href="developer.html#api">Developer guide (API)</a> and <code>AGENT.md</code> (sketch digitization section) for the full agent API.</p>
+
+      <h2 id="notes">Notes</h2>
+      <ul>
+        <li>To build 3D, you still need <strong>multiple orthographic view pages</strong>, same as manual workflow</li>
+        <li>Shapes drawn by AI can always be edited or deleted by hand</li>
+        <li>AI integration is a helper — always verify the final design yourself</li>
+      </ul>
+
+      <div class="docs-callout docs-callout-tip">
+        <strong>Manual operation guide</strong>
+        <p>
+          If you use Millrect without AI, start with
+          <a href="getting-started.html">Getting Started</a> and read through the guide in order.
+        </p>
+      </div>
+    </article>
+  </div>
+
+  <footer class="docs-footer">
+    <div class="docs-footer-inner">
+      <span>Millrect Documentation</span>
+      <div class="docs-footer-links">
+        <a href="shortcuts.html">← Shortcuts</a>
+        <a href="./">Documentation TOP →</a>
+      </div>
+    </div>
+  </footer>
+
+  <script src="../../packages/help-index.js"></script>
+  <script src="../js/docs-search.js"></script>
+  <script src="../js/docs-nav.js"></script>
+    <script src="../js/docs.js"></script>
+</body>
+</html>

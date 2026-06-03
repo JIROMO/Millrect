@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <!-- Google tag (gtag.js) -->
+    <script async src="https://www.googletagmanager.com/gtag/js?id=G-0JMRZXG11T"></script>
+    <script>
+      window.dataLayer = window.dataLayer || [];
+      function gtag(){dataLayer.push(arguments);}
+      gtag('js', new Date());
+
+      gtag('config', 'G-0JMRZXG11T');
+    </script>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Shortcuts — Millrect Documentation</title>
+  <meta name="robots" content="index, follow" />
+  <script src="../js/docs-seo.js"></script>
+  <link rel="stylesheet" href="../css/docs.css">
+</head>
+<body data-page="shortcuts">
+  <header class="docs-header">
+    <div class="docs-header-inner">
+      <a class="docs-logo" href="./">
+        <img class="docs-logo-img" src="../../site/images/logo.svg" alt="Millrect" width="774" height="109">
+      </a>
+      <div class="docs-header-actions">
+        <button class="docs-menu-toggle" id="docs-menu-toggle" type="button" aria-label="Menu">☰</button>
+      </div>
+    </div>
+  </header>
+
+  <div class="docs-layout">
+    <aside class="docs-sidebar" id="docs-sidebar"></aside>
+
+    <article class="docs-content">
+      <nav class="docs-breadcrumb"><a href="./">Documentation</a> / Shortcuts</nav>
+      <h1>Keyboard Shortcuts</h1>
+      <p class="docs-lead">
+        You can also open the same list from the <strong>?</strong> button at the bottom-right of the canvas.
+        On macOS, use the Cmd key instead of Ctrl.
+      </p>
+
+      <figure class="docs-figure docs-figure-help">
+        <img src="../images/en/help-shortcuts.png" alt="Shortcuts popover listing">
+        <figcaption>Help shown from the ? button at the bottom-right of the canvas.</figcaption>
+      </figure>
+
+      <h2 id="tools">Tool Switching</h2>
+      <table>
+        <thead><tr><th>Key</th><th>Tool</th></tr></thead>
+        <tbody>
+          <tr><td><kbd>V</kbd></td><td>Select</td></tr>
+          <tr><td><kbd>H</kbd></td><td>Pan (move)</td></tr>
+          <tr><td><kbd>R</kbd></td><td>Rectangle</td></tr>
+          <tr><td><kbd>C</kbd></td><td>Circle</td></tr>
+          <tr><td><kbd>L</kbd></td><td>Line</td></tr>
+          <tr><td><kbd>T</kbd></td><td>Text</td></tr>
+          <tr><td><kbd>D</kbd></td><td>Dimension</td></tr>
+        </tbody>
+      </table>
+      <p>Select the Pen (Bezier) tool from the palette. Tool switching is disabled while typing (when a text field has focus).</p>
+
+      <h2 id="edit">Editing</h2>
+      <table>
+        <thead><tr><th>Key</th><th>Action</th></tr></thead>
+        <tbody>
+          <tr><td><kbd>Ctrl+Z</kbd></td><td>Undo</td></tr>
+          <tr><td><kbd>Ctrl+Y</kbd> / <kbd>Ctrl+Shift+Z</kbd></td><td>Redo</td></tr>
+          <tr><td><kbd>Ctrl+C</kbd></td><td>Copy</td></tr>
+          <tr><td><kbd>Ctrl+V</kbd></td><td>Paste</td></tr>
+          <tr><td><kbd>Ctrl+D</kbd></td><td>Duplicate</td></tr>
+          <tr><td><kbd>Ctrl+A</kbd></td><td>Select all</td></tr>
+          <tr><td><kbd>Delete</kbd> / <kbd>Backspace</kbd></td><td>Delete</td></tr>
+          <tr><td><kbd>Ctrl+G</kbd></td><td>Group</td></tr>
+          <tr><td><kbd>Ctrl+Shift+G</kbd></td><td>Ungroup</td></tr>
+          <tr><td><kbd>Alt+Shift+U</kbd></td><td>Path union</td></tr>
+          <tr><td><kbd>Alt+Shift+S</kbd></td><td>Path subtract</td></tr>
+          <tr><td><kbd>Alt+Shift+I</kbd></td><td>Path intersect</td></tr>
+          <tr><td><kbd>Alt+Shift+E</kbd></td><td>Path exclude</td></tr>
+          <tr><td><kbd>Alt+Shift+F</kbd></td><td>Path flatten</td></tr>
+          <tr><td>Arrow keys</td><td>Move selected shapes by 1 mm</td></tr>
+          <tr><td><kbd>Shift</kbd> + arrow</td><td>Move by 10 mm</td></tr>
+        </tbody>
+      </table>
+
+      <h2 id="view">View &amp; Navigation</h2>
+      <table>
+        <thead><tr><th>Key / action</th><th>Description</th></tr></thead>
+        <tbody>
+          <tr><td><kbd>Ctrl+S</kbd></td><td>Save (trigger autosave immediately)</td></tr>
+          <tr><td><kbd>Space</kbd> + drag</td><td>Pan the canvas</td></tr>
+          <tr><td>Mouse wheel</td><td>Zoom</td></tr>
+          <tr><td><kbd>Esc</kbd></td><td>Deselect / cancel drawing</td></tr>
+          <tr><td>While drawing Bezier <kbd>Enter</kbd></td><td>Confirm path</td></tr>
+          <tr><td>While drawing Bezier <kbd>Backspace</kbd></td><td>Remove last point</td></tr>
+        </tbody>
+      </table>
+
+      <h2 id="file">File (toolbar)</h2>
+      <table>
+        <thead><tr><th>Key</th><th>Action</th></tr></thead>
+        <tbody>
+          <tr><td><kbd>Ctrl+N</kbd></td><td>New project</td></tr>
+          <tr><td><kbd>Ctrl+O</kbd></td><td>Open project</td></tr>
+          <tr><td><kbd>Ctrl+S</kbd></td><td>Save</td></tr>
+        </tbody>
+      </table>
+    </article>
+  </div>
+
+  <footer class="docs-footer">
+    <div class="docs-footer-inner">
+      <span>Millrect Documentation</span>
+      <div class="docs-footer-links">
+        <a href="export.html">← Save &amp; Export</a>
+        <a href="ai-mcp.html">Next: AI / MCP →</a>
+      </div>
+    </div>
+  </footer>
+
+  <script src="../../packages/help-index.js"></script>
+  <script src="../js/docs-search.js"></script>
+  <script src="../js/docs-nav.js"></script>
+    <script src="../js/docs.js"></script>
+</body>
+</html>

@@ -1,0 +1,274 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <!-- Google tag (gtag.js) -->
+    <script async src="https://www.googletagmanager.com/gtag/js?id=G-0JMRZXG11T"></script>
+    <script>
+      window.dataLayer = window.dataLayer || [];
+      function gtag(){dataLayer.push(arguments);}
+      gtag('js', new Date());
+
+      gtag('config', 'G-0JMRZXG11T');
+    </script>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>3D 生成 — Millrect ドキュメント</title>
+  <meta name="robots" content="index, follow" />
+  <script src="js/docs-seo.js"></script>
+  <link rel="stylesheet" href="css/docs.css">
+</head>
+<body data-page="multiview-3d">
+  <header class="docs-header">
+    <div class="docs-header-inner">
+      <a class="docs-logo" href="./">
+        <img class="docs-logo-img" src="../site/images/logo.svg" alt="Millrect" width="774" height="109">
+      </a>
+      <div class="docs-header-actions">
+        <button class="docs-menu-toggle" id="docs-menu-toggle" type="button" aria-label="メニュー">☰</button>
+      </div>
+    </div>
+  </header>
+
+  <div class="docs-layout">
+    <aside class="docs-sidebar" id="docs-sidebar"></aside>
+
+    <article class="docs-content">
+      <nav class="docs-breadcrumb"><a href="./">ドキュメント</a> / 3D 生成</nav>
+      <h1>3D 生成</h1>
+      <p class="docs-lead">
+        上面図・正面図・右側面図など、複数の正投影図を組み合わせて 3D モデルを生成する方法を説明します。
+      </p>
+
+      <div class="docs-figure-grid">
+        <figure class="docs-figure">
+          <img src="images/multiview-top-drawing.png" alt="Module Joint 1 の上面図">
+          <figcaption>上面図 — 24×100 mm、Ø6 穴、切り込み線</figcaption>
+        </figure>
+        <figure class="docs-figure">
+          <img src="images/multiview-front-drawing.png" alt="Module Joint 1 の板厚断面図">
+          <figcaption>正面図 — 板厚 2 mm</figcaption>
+        </figure>
+        <figure class="docs-figure docs-figure-panel">
+          <img src="images/3d-panel.png" alt="Module Joint 1 の3Dプレビュー">
+          <figcaption>3D プレビュー — 穴と端部切り欠きを反映</figcaption>
+        </figure>
+      </div>
+
+      <h2 id="how-it-works">仕組み</h2>
+      <p>
+        Millrect では、各ページの「閉じた輪郭」を、そのページの投影方向へ伸ばした立体同士を
+        <strong>交差</strong>させることで、最終的な 3D 形状を求めます。
+      </p>
+      <p>イメージとしては、上面・正面・側面それぞれから作った「板」が重なる部分が、実際の立体になります。3 方向そろうと、形のイメージがより分かりやすくなります。</p>
+
+      <div class="docs-callout docs-callout-warn">
+        <strong>2 枚以上の投影図が必要</strong>
+        <p>
+          上面図だけ、または正面図だけでは立体は作れません。
+          最低でも<strong>異なる 2 方向</strong>（例: 上面 + 正面、上面 + 右側面）のページが必要です。
+        </p>
+      </div>
+
+      <h2 id="view-type">面の向きを選んでページ追加</h2>
+      <p>
+        各ページが「どの方向から見た図面か」は、右パネル Pages タブの
+        <strong>ページ追加</strong>で決めます。上面図・正面図・右側面図など、追加したい面を選ぶと、その向きのページが作成されます。
+        既に存在する面は追加メニューで無効になり、同じ <code>front</code> などを重複して追加できません。
+      </p>
+
+      <figure class="docs-figure docs-figure-panel">
+        <img src="images/pages-add-view.png" alt="Pages タブで面の向きを選んでページ追加">
+        <figcaption>Pages タブ — 表示ページを切り替え、ページ追加で面の向きを選びます。</figcaption>
+      </figure>
+
+      <table>
+        <thead><tr><th>設定</th><th>意味</th></tr></thead>
+        <tbody>
+          <tr><td>上面図 (top)</td><td>上から見下ろした図（幅 × 奥行）</td></tr>
+          <tr><td>正面図 (front)</td><td>正面から見た図（幅 × 高さ）</td></tr>
+          <tr><td>右側面図 (right)</td><td>右側から見た図（奥行 × 高さ）</td></tr>
+          <tr><td>下面 / 背面 / 左側面</td><td>反対方向からの投影図</td></tr>
+        </tbody>
+      </table>
+
+      <h2 id="sample">空のプロジェクトから始める</h2>
+      <p>
+        現在の起動ダイアログはサンプル開始ではなく、プロジェクト一覧・JSON インポート・新規作成を中心にしています。
+        自分で 3D を作るときは、まず <strong>＋ 新規プロジェクト</strong>で空のキャンバスを作成し、Pages タブから必要な面を追加します。
+      </p>
+      <ul>
+        <li>上面図: 幅 × 奥行の輪郭を描く</li>
+        <li>正面図: 幅 × 高さの輪郭を描く</li>
+        <li>右側面図: 奥行 × 高さの輪郭を描く（必要に応じて追加）</li>
+      </ul>
+      <div class="docs-callout docs-callout-tip">
+        <strong>同梱サンプルを見るには</strong>
+        <p><code>samples/module-joint-1.json</code> などは、起動ダイアログの <strong>JSON インポート</strong>から開けます。</p>
+      </div>
+
+      <h2 id="workflow">制作例: Module Joint 1（24×100×2 mm）</h2>
+      <p>
+        ドキュメントでは、実プロダクト <strong>Module Joint 1</strong> を共通題材にします。
+        A4 縦・<strong>1:1 スケール</strong>で、24×100 mm の外形、Ø6 穴、R2、切り込み線、板厚 2 mm を確認できる密度にしています。
+      </p>
+
+      <div class="docs-callout docs-callout-tip">
+        <strong>まず矩形、次に設計図</strong>
+        <p>
+          3D の仕組みは単純な矩形でも理解できますが、実プロダクトで見ると、
+          図面・寸法・穴・断面・STL までが同じ流れとしてつながります。
+        </p>
+      </div>
+
+      <ol class="docs-steps">
+        <li><strong>上面</strong> — 24×100 mm の外形、Ø6 穴、切り込み線 → <code>drawing-rect.png</code></li>
+        <li><strong>設計図化</strong> — 24 mm、100 mm、Ø6、10 mm ピッチの寸法線を入れる → <code>drawing-features.png</code></li>
+        <li><strong>正面</strong> — ページ追加で「正面図 (front)」を選択。24×2 mm の板厚断面 → <code>multiview-front-drawing.png</code></li>
+        <li><strong>3D プレビュー</strong> — 交差結果を確認 → STL → <code>3d-panel.png</code></li>
+      </ol>
+
+      <figure class="docs-figure docs-figure-medium">
+        <img src="images/drawing-rect.png" alt="上面矩形">
+        <figcaption>① 上面図 — 24×100 mm</figcaption>
+      </figure>
+
+      <figure class="docs-figure docs-figure-medium">
+        <img src="images/editing-multiselect.png" alt="矩形の選択">
+        <figcaption>② 矩形を選択 — Design タブでサイズ・色を調整</figcaption>
+      </figure>
+
+      <figure class="docs-figure docs-figure-wide">
+        <img src="images/drawing-features.png" alt="上面と寸法線">
+        <figcaption>③ 外形寸法、10 mm ピッチ、Ø6 穴、切り込み線</figcaption>
+      </figure>
+
+      <figure class="docs-figure docs-figure-wide">
+        <img src="images/multiview-top-drawing.png" alt="多ビュー上面図">
+        <figcaption>④ 上面図 — 24×100 mm、Ø6 穴</figcaption>
+      </figure>
+
+      <figure class="docs-figure docs-figure-wide">
+        <img src="images/multiview-front-drawing.png" alt="正面図">
+        <figcaption>⑤ 正面図 — 24×2 mm</figcaption>
+      </figure>
+
+      <figure class="docs-figure docs-figure-panel">
+        <img src="images/pages-multiview.png" alt="上面図・正面図">
+        <figcaption>Pages タブ — 上面図 + 正面図</figcaption>
+      </figure>
+
+      <figure class="docs-figure docs-figure-panel">
+        <img src="images/3d-panel.png" alt="Module Joint 1 の3Dプレビュー">
+        <figcaption>⑥ 3D プレビュー — 薄板形状、穴、端部切り欠きを反映</figcaption>
+      </figure>
+
+      <ul>
+        <li>上面図: 24×100 mm のジョイントプレート（幅 × 長さ）</li>
+        <li>正面図: 24×2 mm の板厚断面（幅 × 厚み）</li>
+        <li>用紙: A4 縦、スケール 1:1</li>
+        <li>上面 + 断面の 2 ページで、薄板の立体として確認できます</li>
+      </ul>
+
+      <h2 id="example">手順の詳細</h2>
+      <p>上記と同じ Module Joint 1 を、空のプロジェクトから作る手順です。</p>
+
+      <ol class="docs-steps">
+        <li>
+          <strong>ページ 1 — 上面図</strong><br>
+          初期ページは上面図として使います。24 mm × 100 mm の外形を作り、
+          Ø6 穴、R2、切り込み線を追加します。
+        </li>
+        <li>
+          <strong>ページ 2 — 正面図</strong><br>
+          Pages タブの <strong>ページ追加</strong>で「正面図 (front)」を選び、24 mm × 2 mm の板厚断面を描きます。
+        </li>
+        <li>
+          <strong>ページ 3 — 右側面図</strong>（任意）<br>
+          <strong>ページ追加</strong>で「右側面図 (right)」を選び、必要に応じて側面断面を追加します。2 ページ（上面 + 正面）でも薄板形状は確認できます。
+        </li>
+      </ol>
+
+      <figure class="docs-figure docs-figure-wide">
+        <img src="images/startup-project-list.png" alt="起動ダイアログのプロジェクト一覧">
+        <figcaption>プロジェクト一覧 — 保存済みプロジェクトの検索と JSON インポート。</figcaption>
+      </figure>
+
+      <ol class="docs-steps" start="3">
+        <li>
+          <strong>3D プレビューを開く</strong><br>
+          ツールバー左側の <strong>3D</strong> をクリック。先に 3D プレビュー画面へ切り替わり、生成が終わるとメッシュが表示されます。
+        </li>
+        <li>
+          <strong>STL を書き出す</strong><br>
+          3D パネル右上の「STL」ボタンで、3D プリント用ファイルを保存します。
+        </li>
+      </ol>
+
+      <figure class="docs-figure docs-figure-panel">
+        <img src="images/3d-panel.png" alt="Module Joint 1 の3Dプレビュー">
+        <figcaption>ドキュメント用 3D プレビュー — Module Joint 1 の薄板形状</figcaption>
+      </figure>
+
+      <h2 id="color">色の反映</h2>
+      <p>
+        2D 図面で図形に設定した<strong>塗り色</strong>は、3D プレビューのメッシュ色として表示されます。
+        Design タブの <strong>外観</strong> で色を変更すると、図面と 3D の両方が更新されます（<a href="editing.html#appearance">編集操作 — 外観</a>）。
+      </p>
+      <ul>
+        <li>塗りが <strong>なし</strong> の図形だけの場合、3D はデフォルトの青紫（#5965f9）で表示されます</li>
+        <li>複数の図形に異なる塗り色がある場合、色ごとにメッシュを分けて生成します。同じ色の図形は 1 メッシュに統合されます</li>
+        <li><code>get3DSceneStatus().materialColors</code> で、3D プレビュー内の色一覧を確認できます</li>
+        <li>線色・テキスト色・寸法線色は 3D メッシュには反映されません</li>
+      </ul>
+      <div class="docs-callout docs-callout-tip">
+        <strong>色分けのヒント</strong>
+        <p>
+          色分けしたい場合は、上面図など主になるビューで部品ごとに別の閉じた輪郭を作り、塗り色を分けます。
+          同じ色にした部品は 3D 側でもまとめて扱われます。
+        </p>
+      </div>
+
+      <h2 id="tips">うまくいかないとき</h2>
+      <ul>
+        <li><strong>3D が表示されない</strong> — 上面図に加えて、正面図または側面図のページがあるか確認してください</li>
+        <li><strong>形がおかしい</strong> — 各ページの矩形サイズが、同じ実物体を表しているか確認（上面の幅 = 正面の幅 など）。現状はページ間の位置ズレにも注意が必要です</li>
+        <li><strong>輪郭が開いている</strong> — 線だけでは 3D になりません。矩形・閉じたベジェ・合成パスを使ってください</li>
+        <li><strong>図面を直したあと</strong> — 3D プレビューを一度閉じて開き直すか、再表示すると更新されます</li>
+      </ul>
+
+      <h2 id="holes">穴やくり抜き</h2>
+      <p>
+        上面図に外周の path と内側の円（穴）を描く、または Boolean くり抜きで差分を作ると、
+        貫通穴のある 3D モデルも生成できます。各投影図で同じ穴の位置・サイズを合わせてください。
+      </p>
+      <p>
+        上面・正面・右側面の矩形を組み合わせる例は
+        <a href="drawing.html">2D 描画</a> の制作例を参照してください。
+      </p>
+
+      <div class="docs-callout docs-callout-tip">
+        <strong>3D プリントの前に</strong>
+        <p>
+          3D プレビューで形状を確認してから STL を書き出してください。
+          スライサーに読み込む前に、向きやスケールが意図どおりか確認することをおすすめします。
+        </p>
+      </div>
+    </article>
+  </div>
+
+  <footer class="docs-footer">
+    <div class="docs-footer-inner">
+      <span>Millrect ドキュメント</span>
+      <div class="docs-footer-links">
+        <a href="editing.html">← 編集操作</a>
+        <a href="export.html">次: 保存と出力 →</a>
+      </div>
+    </div>
+  </footer>
+
+  <script src="../packages/help-index.js"></script>
+  <script src="js/docs-search.js"></script>
+  <script src="js/docs-nav.js"></script>
+    <script src="js/docs.js"></script>
+</body>
+</html>

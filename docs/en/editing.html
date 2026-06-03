@@ -1,0 +1,206 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <!-- Google tag (gtag.js) -->
+    <script async src="https://www.googletagmanager.com/gtag/js?id=G-0JMRZXG11T"></script>
+    <script>
+      window.dataLayer = window.dataLayer || [];
+      function gtag(){dataLayer.push(arguments);}
+      gtag('js', new Date());
+
+      gtag('config', 'G-0JMRZXG11T');
+    </script>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Editing — Millrect Documentation</title>
+  <meta name="description" content="Select and edit shapes, align and distribute, group, boolean operations, and Undo/Redo in Millrect.">
+  <meta name="robots" content="index, follow" />
+  <script src="../js/docs-seo.js"></script>
+  <link rel="stylesheet" href="../css/docs.css">
+</head>
+<body data-page="editing">
+  <header class="docs-header">
+    <div class="docs-header-inner">
+      <a class="docs-logo" href="./">
+        <img class="docs-logo-img" src="../../site/images/logo.svg" alt="Millrect" width="774" height="109">
+      </a>
+      <div class="docs-header-actions">
+        <button class="docs-menu-toggle" id="docs-menu-toggle" type="button" aria-label="Menu">☰</button>
+      </div>
+    </div>
+  </header>
+
+  <div class="docs-layout">
+    <aside class="docs-sidebar" id="docs-sidebar"></aside>
+
+    <article class="docs-content">
+      <nav class="docs-breadcrumb" aria-label="Breadcrumb">
+        <a href="./">Documentation</a> / Editing
+      </nav>
+      <h1>Editing</h1>
+      <p class="docs-lead">
+        Shape selection, property editing, alignment and distribution, grouping,
+        boolean union/subtract, and Undo/Redo.
+      </p>
+
+      <h2 id="select">Selection and movement</h2>
+      <p>
+        Click a shape with the <strong>select tool (V)</strong> to select it.
+        Shift+click for multi-select; drag for marquee selection.
+      </p>
+      <ul>
+        <li>Selected shapes show a frame with handles</li>
+        <li>Drag inside the frame to move; corner handles to resize</li>
+        <li>Arrow keys move 1 mm (Shift+arrow for 10 mm)</li>
+        <li>Ctrl+A (Mac: Cmd+A) selects all shapes and dimensions</li>
+      </ul>
+
+      <figure class="docs-figure docs-figure-wide">
+        <img src="../images/en/editing-multiselect.png" alt="Outer and inner rectangles selected before subtract">
+        <figcaption>Step 2 — Select outer + inner rectangles, then Boolean subtract (<a href="editing.html#boolean">Editing</a>).</figcaption>
+      </figure>
+
+      <h2 id="design">Design tab (properties)</h2>
+      <p>
+        In the right panel <strong>Design</strong> tab, edit coordinates, size, <strong>fill and stroke</strong>, line width, and more for the selected shape.
+        With multiple shapes selected, alignment buttons and bulk appearance changes are available.
+      </p>
+
+      <figure class="docs-figure docs-figure-sidebar">
+        <img src="../images/en/design-panel.png" alt="Editing path properties in the Design tab">
+        <figcaption>Frame after subtract selected. Edit fill, stroke, and add dimensions in the Design tab.</figcaption>
+      </figure>
+
+      <h3 id="appearance">Appearance (fill &amp; stroke)</h3>
+      <p>
+        With one shape selected, set colors in the <strong>Appearance</strong> section of the property list.
+        In addition to the 2D drawing, colors are reflected in the <strong>3D preview mesh</strong> (<a href="multiview-3d.html#color">3D Generation — Color mapping</a>).
+      </p>
+      <table>
+        <thead><tr><th>Property</th><th>Description</th></tr></thead>
+        <tbody>
+          <tr><td>Fill</td><td>Pick fill color. <strong>None</strong> restores transparency (outline only)</td></tr>
+          <tr><td>Stroke</td><td>Outline color. For text shapes, used as text color</td></tr>
+          <tr><td>Presets</td><td>Click an 8-color swatch to apply to fill or stroke immediately</td></tr>
+          <tr><td>New drawings</td><td>Colors chosen here become defaults for the next rectangle, circle, line, etc.</td></tr>
+        </tbody>
+      </table>
+      <p>Fill applies to <strong>rectangles, circles, paths, and closed beziers</strong>. Lines and text use stroke only; dimensions use a dedicated dimension color field.</p>
+      <p>With two or more shapes selected, <strong>Appearance (bulk)</strong> applies the same fill and stroke to all selected shapes.</p>
+
+      <table>
+        <thead><tr><th>Property</th><th>Description</th></tr></thead>
+        <tbody>
+          <tr><td>Position &amp; size</td><td>Per shape type: X/Y/W/H for rectangles, center and radius for circles, etc.</td></tr>
+          <tr><td>Line width</td><td>Thin / medium / thick</td></tr>
+          <tr><td>Corner radius (rx)</td><td>Rectangles only</td></tr>
+          <tr><td>Rotation &amp; flip</td><td>Reflected in display, alignment, Profile extraction, and 3D generation</td></tr>
+        </tbody>
+      </table>
+
+      <h2 id="align">Alignment and distribution</h2>
+      <p>With two or more shapes selected, alignment buttons appear in the Design tab.</p>
+      <table>
+        <thead><tr><th>Action</th><th>Description</th></tr></thead>
+        <tbody>
+          <tr><td>Align left / center / right</td><td>Align horizontally</td></tr>
+          <tr><td>Align top / center / bottom</td><td>Align vertically</td></tr>
+          <tr><td>Distribute horizontally / vertically</td><td>With 3+ selections: fix ends and equalize spacing</td></tr>
+        </tbody>
+      </table>
+      <p>With a single selection, you can also align to page (paper) edges or center.</p>
+
+      <h2 id="copy">Copy, duplicate, delete</h2>
+      <ul>
+        <li><strong>Ctrl+C / Ctrl+V</strong> — Copy and paste</li>
+        <li><strong>Ctrl+D</strong> — Duplicate selection in place</li>
+        <li><strong>Delete / Backspace</strong> — Delete selected shapes</li>
+      </ul>
+
+      <h2 id="group">Grouping</h2>
+      <p>
+        Select two or more shapes and press <strong>Ctrl+G</strong> to group.
+        Groups move and select like a single shape.
+        With a group selected, <strong>Ctrl+Shift+G</strong> ungroups.
+      </p>
+      <div class="docs-callout docs-callout-warn">
+        <strong>3D generation</strong>
+        <p>Groups themselves are not 3D outlines. Each shape inside a group is profiled individually.</p>
+      </div>
+
+      <h2 id="text-outline">Text outline conversion</h2>
+      <p>
+        With a text shape selected, the Design tab shows <strong>Edit text</strong> and <strong>Outline</strong>.
+        The same actions are available from the right-click menu.
+      </p>
+      <ul>
+        <li><strong>Edit text</strong> — Edit string, font, size, line height, and color in a dialog</li>
+        <li><strong>Outline</strong> — Convert each character to a path shape and combine into one group</li>
+      </ul>
+      <p>
+        After outlining, the original text is removed and path shapes in the group become 3D outlines.
+        Text color (stroke) carries over as path fill color.
+      </p>
+      <figure class="docs-figure docs-figure-sidebar">
+        <img src="../images/en/design-panel-text.png" alt="Design tab with text selected and Outline button">
+        <figcaption>Design tab with text selected. Edit text and Outline buttons are shown.</figcaption>
+      </figure>
+      <div class="docs-callout docs-callout-warn">
+        <strong>Desktop only</strong>
+        <p>Available only in the Electron app. Core Text on macOS; fontkit on other OSes for outline generation.</p>
+      </div>
+
+      <h2 id="boolean">Union and subtract (Boolean)</h2>
+      <p>With two or more <strong>closed outlines</strong> selected (rectangle, circle, closed bezier, path, etc.), boolean operations are available. Right-click → Boolean, or use Design tab buttons.</p>
+      <table>
+        <thead><tr><th>Operation</th><th>Shortcut</th><th>Description</th></tr></thead>
+        <tbody>
+          <tr><td>Union</td><td><kbd>Alt+Shift+U</kbd></td><td>Combine multiple outlines into one path</td></tr>
+          <tr><td>Subtract</td><td><kbd>Alt+Shift+S</kbd></td><td>Subtract back from front (cut holes)</td></tr>
+          <tr><td>Intersect</td><td><kbd>Alt+Shift+I</kbd></td><td>Keep overlap only</td></tr>
+          <tr><td>Exclude</td><td><kbd>Alt+Shift+E</kbd></td><td>Keep everything except overlap</td></tr>
+          <tr><td>Flatten</td><td><kbd>Alt+Shift+F</kbd></td><td>Flatten selected paths / groups into one path</td></tr>
+        </tbody>
+      </table>
+      <p>Results are new path shapes usable as 3D outlines.</p>
+
+      <h2 id="history">Undo / Redo and History tab</h2>
+      <p>
+        Operations that affect the document — adding, moving, or deleting shapes — are Undo targets.
+        Use toolbar Undo/Redo or <strong>Ctrl+Z / Ctrl+Y</strong> (Mac: Cmd+Z / Cmd+Shift+Z).
+      </p>
+      <p>
+        The right panel <strong>History</strong> tab lists operation history.
+        Click a row to jump to that state.
+        Zoom, pan, and tool changes are not recorded.
+      </p>
+
+      <figure class="docs-figure docs-figure-sidebar">
+        <img src="../images/en/history-panel.png" alt="Operation history in the History tab">
+        <figcaption>History after adding shapes. Current position is highlighted.</figcaption>
+      </figure>
+
+      <h2 id="layers-lock">Layer lock</h2>
+      <p>
+        Lock a layer in the Layers tab to prevent selecting or editing shapes on that layer.
+        Useful for draft layers or reference line layers.
+      </p>
+    </article>
+  </div>
+
+  <footer class="docs-footer">
+    <div class="docs-footer-inner">
+      <span>Millrect Documentation</span>
+      <div class="docs-footer-links">
+        <a href="drawing.html">← 2D Drawing</a>
+        <a href="multiview-3d.html">Next: 3D Generation →</a>
+      </div>
+    </div>
+  </footer>
+
+  <script src="../../packages/help-index.js"></script>
+  <script src="../js/docs-search.js"></script>
+  <script src="../js/docs-nav.js"></script>
+    <script src="../js/docs.js"></script>
+</body>
+</html>

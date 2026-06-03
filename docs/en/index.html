@@ -1,0 +1,352 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <!-- Google tag (gtag.js) -->
+    <script async src="https://www.googletagmanager.com/gtag/js?id=G-0JMRZXG11T"></script>
+    <script>
+      window.dataLayer = window.dataLayer || [];
+      function gtag(){dataLayer.push(arguments);}
+      gtag('js', new Date());
+
+      gtag('config', 'G-0JMRZXG11T');
+    </script>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Millrect Documentation</title>
+    <meta
+      name="description"
+      content="Millrect user guide: 2D drawing, multiview 3D, STL export, sketch import, AI/MCP workflows, and Taste Memory."
+    />
+    <meta name="robots" content="index, follow" />
+    <link rel="canonical" href="https://millrect.com/docs/en/" />
+    <link rel="icon" href="../../favicon.ico" />
+    <meta property="og:type" content="website" />
+    <meta property="og:site_name" content="Millrect" />
+    <meta property="og:url" content="https://millrect.com/docs/en/" />
+    <meta property="og:title" content="Millrect Documentation" />
+    <meta
+      property="og:description"
+      content="Guide from 2D drawings to 3D generation"
+    />
+    <meta
+      property="og:image"
+      content="https://millrect.com/site/images/ogp.jpg"
+    />
+    <link rel="stylesheet" href="../css/docs.css" />
+  </head>
+  <body data-page="home">
+    <header class="docs-header">
+      <div class="docs-header-inner">
+        <a class="docs-logo" href="/docs/en/">
+          <img
+            class="docs-logo-img"
+            src="../../site/images/logo.svg"
+            alt="Millrect"
+            width="774"
+            height="109"
+          />
+        </a>
+        <div class="docs-header-actions">
+          <button
+            class="docs-menu-toggle"
+            id="docs-menu-toggle"
+            type="button"
+            aria-label="Menu"
+          >
+            ☰
+          </button>
+        </div>
+      </div>
+    </header>
+
+    <div class="docs-layout docs-layout--home">
+      <aside class="docs-sidebar" id="docs-sidebar"></aside>
+
+      <div class="docs-main">
+        <main>
+          <section class="docs-hero">
+            <span class="docs-hero-badge">Millrect User Guide</span>
+            <h1>From drawing to solid.</h1>
+            <p class="docs-hero-lead">
+              Millrect generates 3D models from orthographic views such as top
+              and front projections. Available in the browser and as a desktop
+              app. The guide walks through the real
+              <strong>Module Joint 1</strong> product: 24×100 mm, 2 mm thick, documented at 1:1 on A4 portrait.
+            </p>
+            <div class="docs-hero-actions">
+              <a class="docs-btn docs-btn-primary" href="getting-started.html"
+                >Getting Started →</a
+              >
+              <a class="docs-btn docs-btn-ghost" href="atlas.html"
+                >Design Atlas</a
+              >
+              <a class="docs-btn docs-btn-ghost" href="desktop-download.html"
+                >Desktop app</a
+              >
+              <a class="docs-btn docs-btn-ghost" href="multiview-3d.html"
+                >3D workflow</a
+              >
+            </div>
+          </section>
+
+          <section class="docs-section" style="padding-top: 0">
+            <figure class="docs-figure docs-figure-wide">
+              <img
+                src="../images/en/multiview-top-drawing.png"
+                alt="Top view of Module Joint 1 with Pages panel"
+              />
+              <figcaption>
+                Module Joint 1 top view — dimensions, hole pitch, cut lines, and contours stay editable before 3D.
+              </figcaption>
+            </figure>
+            <figure
+              class="docs-figure docs-figure-wide"
+              style="margin-top: 24px"
+            >
+              <img
+                src="../images/en/3d-panel.png"
+                alt="Module Joint 1 in the 3D preview panel"
+              />
+              <figcaption>3D preview — a 24×100×2 mm plate generated from the drawing contours, holes, and notched ends.</figcaption>
+            </figure>
+          </section>
+
+          <section class="docs-features">
+            <div class="docs-features-inner">
+              <div class="docs-feature-item">
+                <h4>Drawings come first</h4>
+                <p>
+                  3D can always be regenerated from drawings. Edit the drawing
+                  and the solid updates.
+                </p>
+              </div>
+              <div class="docs-feature-item">
+                <h4>Multiview solidification</h4>
+                <p>
+                  Combine two or more views (e.g. top + front) to build 3D via
+                  CSG intersection.
+                </p>
+              </div>
+              <div class="docs-feature-item">
+                <h4>Autosave</h4>
+                <p>
+                  Work is saved automatically. Resume where you left off on the
+                  next launch.
+                </p>
+              </div>
+              <div class="docs-feature-item">
+                <h4>STL export</h4>
+                <p>Export the model from the 3D preview as an STL file.</p>
+              </div>
+            </div>
+          </section>
+
+          <section class="docs-section" id="capabilities">
+            <h2 class="docs-section-title">What Millrect Can Do</h2>
+            <div class="docs-grid">
+              <a class="docs-card" href="drawing.html">
+                <span class="docs-card-icon">2D</span>
+                <h3>Create 2D drawings</h3>
+                <p>
+                  Draw rectangles, circles, lines, beziers, text, and dimensions.
+                  Organize work with pages and layers, add Google Fonts, and place reference images.
+                </p>
+                <span class="docs-card-link">Read 2D Drawing →</span>
+              </a>
+              <a class="docs-card" href="multiview-3d.html">
+                <span class="docs-card-icon">3D</span>
+                <h3>Generate 3D from views</h3>
+                <p>
+                  Combine top, front, and side orthographic views with CSG intersection,
+                  preview the solid, and export STL.
+                </p>
+                <span class="docs-card-link">Read 3D Generation →</span>
+              </a>
+              <a class="docs-card" href="editing.html">
+                <span class="docs-card-icon">OPS</span>
+                <h3>Refine drawings</h3>
+                <p>
+                  Edit fill and stroke, align shapes, group, run Boolean operations,
+                  outline text, and use Undo/Redo while keeping drawings editable.
+                </p>
+                <span class="docs-card-link">Read Editing →</span>
+              </a>
+              <a class="docs-card" href="ai-mcp.html#sketch-digitize">
+                <span class="docs-card-icon">IMG</span>
+                <h3>Use sketches as underlays</h3>
+                <p>
+                  Place reference images, calibrate scale from a known length, and with AI/MCP,
+                  review ghost proposals before confirming them.
+                </p>
+                <span class="docs-card-link">Read Sketch Digitize →</span>
+              </a>
+              <a class="docs-card" href="ai-mcp.html#part-dsl-workflow">
+                <span class="docs-card-icon">API</span>
+                <h3>Create parts with AI</h3>
+                <p>
+                  Use Intent API and Part DSL over MCP to create boxes, panels,
+                  L-brackets, enclosures, and features from millimeter specs.
+                </p>
+                <span class="docs-card-link">Read AI / MCP →</span>
+              </a>
+              <a class="docs-card" href="ai-mcp.html#taste-memory">
+                <span class="docs-card-icon">TM</span>
+                <h3>Record design judgment</h3>
+                <p>
+                  Taste Memory keeps intent, constraints, preferences, decisions,
+                  and review notes in projectBrief. Check it from the Taste brief in the Pages tab.
+                </p>
+                <span class="docs-card-link">Read Taste Memory →</span>
+              </a>
+            </div>
+          </section>
+
+          <section class="docs-section">
+            <h2 class="docs-section-title">Guide</h2>
+            <div class="docs-grid">
+              <a class="docs-card" href="getting-started.html">
+                <span class="docs-card-icon">🚀</span>
+                <h3>Getting Started</h3>
+                <p>
+                  Launch the app, create a new project, import JSON, and draw your first shape.
+                </p>
+                <span class="docs-card-link">Read →</span>
+              </a>
+              <a class="docs-card" href="philosophy.html">
+                <span class="docs-card-icon">◎</span>
+                <h3>Philosophy</h3>
+                <p>
+                  Why Millrect treats drawings as primary, with 3D, AI, and
+                  export as supporting layers.
+                </p>
+                <span class="docs-card-link">Read →</span>
+              </a>
+              <a class="docs-card" href="atlas.html">
+                <span class="docs-card-icon">AT</span>
+                <h3>Design Atlas</h3>
+                <p>
+                  A specimen catalogue that connects drawings, 3D, AI/MCP, and
+                  Part DSL from reusable design examples.
+                </p>
+                <span class="docs-card-link">View →</span>
+              </a>
+              <a class="docs-card" href="desktop-download.html">
+                <span class="docs-card-icon">⬇️</span>
+                <h3>Desktop app</h3>
+                <p>
+                  Download macOS builds from GitHub Releases and open unsigned
+                  apps.
+                </p>
+                <span class="docs-card-link">Read →</span>
+              </a>
+              <a class="docs-card" href="interface.html">
+                <span class="docs-card-icon">🖥</span>
+                <h3>Interface</h3>
+                <p>
+                  Toolbar, tool palette, canvas, right panel, and 3D preview
+                  layout.
+                </p>
+                <span class="docs-card-link">Read →</span>
+              </a>
+              <a class="docs-card" href="drawing.html">
+                <span class="docs-card-icon">✏️</span>
+                <h3>2D Drawing</h3>
+                <p>
+                  Rectangles, circles, lines, Bézier, text,
+                  <strong>Google Fonts</strong>, dimensions, and
+                  <strong>canvas images</strong>.
+                  <strong>Sketch import</strong> (reference image, scale
+                  calibration).
+                </p>
+                <span class="docs-card-link">Read →</span>
+              </a>
+              <a class="docs-card" href="editing.html">
+                <span class="docs-card-icon">🔧</span>
+                <h3>Editing</h3>
+                <p>
+                  Selection, properties, <strong>fill &amp; stroke</strong>,
+                  align, group, <strong>text outline</strong>, Boolean ops,
+                  Undo/Redo.
+                </p>
+                <span class="docs-card-link">Read →</span>
+              </a>
+              <a class="docs-card" href="multiview-3d.html">
+                <span class="docs-card-icon">📦</span>
+                <h3>3D Generation</h3>
+                <p>
+                  Add top and front pages, preview the solid,
+                  <strong>fill color in 3D</strong>, STL export.
+                </p>
+                <span class="docs-card-link">Read →</span>
+              </a>
+              <a class="docs-card" href="export.html">
+                <span class="docs-card-icon">💾</span>
+                <h3>Save &amp; Export</h3>
+                <p>Save and open projects, export PDF / SVG, autosave.</p>
+                <span class="docs-card-link">Read →</span>
+              </a>
+              <a class="docs-card" href="shortcuts.html">
+                <span class="docs-card-icon">⌨️</span>
+                <h3>Shortcuts</h3>
+                <p>Keyboard shortcuts for tools, editing, and navigation.</p>
+                <span class="docs-card-link">Read →</span>
+              </a>
+              <a class="docs-card" href="ai-mcp.html">
+                <span class="docs-card-icon">🤖</span>
+                <h3>AI / MCP (optional)</h3>
+                <p>
+                  Operate Millrect from Claude Desktop and other MCP clients.
+                  Includes <strong>sketch digitize</strong>.
+                </p>
+                <span class="docs-card-link">Read →</span>
+              </a>
+              <a class="docs-card" href="developer.html">
+                <span class="docs-card-icon">⚙️</span>
+                <h3>Developer guide</h3>
+                <p>
+                  Repository layout, APIs, and MCP reference. Not needed for
+                  everyday drawing.
+                </p>
+                <span class="docs-card-link">Read →</span>
+              </a>
+            </div>
+          </section>
+
+          <section class="docs-section">
+            <h2 class="docs-section-title">Build a solid quickly</h2>
+            <div class="docs-callout docs-callout-tip">
+              <strong>Sample path</strong>
+              <p>
+                <strong>Fastest:</strong> Startup dialog → Import JSON →
+                open <code>samples/module-joint-1.json</code> → open 3D preview
+                (24×100×2 mm thin joint plate)<br />
+                <strong>Draw yourself:</strong> ① New project → ② draw contour
+                on top view → ③ use Add page in the Pages tab to add a front view and draw contour → ④ open 3D
+                preview → ⑤ export STL
+              </p>
+            </div>
+            <p style="color: var(--docs-text-2); font-size: 14px">
+              Details: <a href="multiview-3d.html">3D Generation</a>.
+            </p>
+          </section>
+        </main>
+      </div>
+    </div>
+
+    <footer class="docs-footer">
+      <div class="docs-footer-inner">
+        <span>Millrect — 2D drawings derive 3D</span>
+        <div class="docs-footer-links">
+          <a href="getting-started.html">Getting Started</a>
+          <a href="multiview-3d.html">3D Generation</a>
+          <a href="../">日本語</a>
+        </div>
+      </div>
+    </footer>
+
+    <script src="../../packages/help-index.js"></script>
+    <script src="../js/docs-search.js"></script>
+    <script src="../js/docs-nav.js"></script>
+    <script src="../js/docs.js"></script>
+  </body>
+</html>

@@ -1,0 +1,200 @@
+{
+  "projectName": "L字ブラケット",
+  "unit": "mm",
+  "fonts": [],
+  "pages": [
+    {
+      "id": "page-1780225163018-10",
+      "name": "上面図",
+      "paper": "A4",
+      "orientation": "landscape",
+      "scale": {
+        "numerator": 1,
+        "denominator": 10
+      },
+      "viewDefinition": {
+        "type": "top",
+        "normal": null,
+        "up": null
+      },
+      "dimensions": [],
+      "constraints": [],
+      "referenceImage": null,
+      "layers": [
+        {
+          "id": "layer-1780225163018-9",
+          "name": "本体",
+          "visible": true,
+          "locked": false,
+          "shapes": [
+            {
+              "id": "part-lbracket-top",
+              "type": "path",
+              "contours": [
+                [
+                  [
+                    [
+                      14450,
+                      10200
+                    ],
+                    [
+                      15250,
+                      10200
+                    ],
+                    [
+                      15250,
+                      10250
+                    ],
+                    [
+                      14500,
+                      10250
+                    ],
+                    [
+                      14500,
+                      10800
+                    ],
+                    [
+                      14450,
+                      10800
+                    ]
+                  ]
+                ]
+              ],
+              "stroke": "#14213d",
+              "fill": "#8fb7ff",
+              "strokeWidth": "medium"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "page-1780225163018-12",
+      "name": "正面図",
+      "paper": "A4",
+      "orientation": "landscape",
+      "scale": {
+        "numerator": 1,
+        "denominator": 10
+      },
+      "viewDefinition": {
+        "type": "front",
+        "normal": null,
+        "up": null
+      },
+      "dimensions": [],
+      "constraints": [],
+      "referenceImage": null,
+      "layers": [
+        {
+          "id": "layer-1780225163018-11",
+          "name": "本体",
+          "visible": true,
+          "locked": false,
+          "shapes": [
+            {
+              "id": "part-lbracket-front",
+              "type": "rect",
+              "x": 14450,
+              "y": 10300,
+              "width": 800,
+              "height": 400,
+              "stroke": "#14213d",
+              "fill": "#ffb347",
+              "strokeWidth": "medium"
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "partIntent": {
+    "version": 1,
+    "dsl": {
+      "version": 1,
+      "part": "l_bracket",
+      "params": {
+        "A": 80,
+        "B": 60,
+        "T": 5,
+        "H": 40
+      },
+      "views": [
+        "top",
+        "front"
+      ],
+      "features": [],
+      "constraints": [],
+      "manufacturing": {
+        "process": "laser_cut",
+        "thickness_mm": 3,
+        "kerf_mm": 0.2,
+        "min_hole_diameter_mm": 2,
+        "min_edge_distance_mm": 3
+      },
+      "meta": {
+        "sampleId": "l-bracket"
+      }
+    },
+    "features": [],
+    "buildOptions": {
+      "paper": "A4",
+      "orientation": "landscape",
+      "scale": {
+        "numerator": 1,
+        "denominator": 10
+      },
+      "views": [
+        "top",
+        "front"
+      ],
+      "includeSideView": false
+    },
+    "bindings": {
+      "top": {
+        "view": "top",
+        "shapeId": "part-lbracket-top",
+        "pageId": "page-1780225163018-10",
+        "widthParam": "A",
+        "heightParam": "B",
+        "profile": "l_path"
+      },
+      "front": {
+        "view": "front",
+        "shapeId": "part-lbracket-front",
+        "pageId": "page-1780225163018-12",
+        "widthParam": "A",
+        "heightParam": "H"
+      }
+    },
+    "paramConstraints": [
+      {
+        "id": "dsl-param-A",
+        "kind": "param_bind",
+        "param": "A",
+        "value": 80,
+        "binds": [
+          {
+            "view": "front",
+            "axis": "width",
+            "mm": 80
+          }
+        ]
+      },
+      {
+        "id": "dsl-param-H",
+        "kind": "param_bind",
+        "param": "H",
+        "value": 40,
+        "binds": [
+          {
+            "view": "front",
+            "axis": "height",
+            "mm": 40
+          }
+        ]
+      }
+    ],
+    "geometricConstraints": []
+  }
+}
