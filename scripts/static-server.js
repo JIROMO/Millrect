@@ -38,6 +38,7 @@ function resolveRequestPath(urlPath) {
   if (urlPath === "/en" || urlPath === "/en/") return "/site/en/index.html";
   if (urlPath === "/robots.txt") return "/site/robots.txt";
   if (urlPath === "/sitemap.xml") return "/site/sitemap.xml";
+  if (urlPath === "/favicon.ico") return "/site/favicon.ico";
   if (urlPath === "/app" || urlPath === "/app/") return "/app/index.html";
   return urlPath;
 }

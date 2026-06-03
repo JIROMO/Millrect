@@ -26,7 +26,7 @@ module.exports = {
     // SEO / root files
     { from: "site/robots.txt", to: "robots.txt" }, // /robots.txt
     { from: "site/sitemap.xml", to: "sitemap.xml" }, // /sitemap.xml
-    "favicon.ico",
+    { from: "site/favicon.ico", to: "favicon.ico" }, // /favicon.ico
 
     // Web app + its first-party libraries
     "app",
