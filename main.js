@@ -290,7 +290,9 @@ function startWebSocketServer(port = WS_PORT) {
             }))()
           `);
         } else if (action === "setSelectedShapes") {
-          const ids = JSON.stringify(msg.ids);
+          // selectedShapeIds は常に配列でなければならない。配列以外（undefined 等）が
+          // 渡されると renderer/interaction/ui が .includes/.length で落ちるため矯正する。
+          const ids = JSON.stringify(Array.isArray(msg.ids) ? msg.ids : []);
           result = await _win.webContents.executeJavaScript(`
             (() => {
               getState().selectedShapeIds = ${ids};

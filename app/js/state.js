@@ -47,6 +47,11 @@ function initState() {
 }
 
 function getState() {
+  // selectedShapeIds は配列であることが renderer/interaction/ui の前提。
+  // 外部コマンド等で undefined/非配列になっても落ちないよう自己修復する。
+  if (_state && !Array.isArray(_state.selectedShapeIds)) {
+    _state.selectedShapeIds = [];
+  }
   return _state;
 }
 

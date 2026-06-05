@@ -495,13 +495,26 @@ function shapeToPolygon(shape) {
 }
 
 function shapeToClipPolygon(shape) {
+  let multipoly = null;
   if (shape.type === "path") {
-    return shape.contours?.length ? shape.contours : null;
+    multipoly = shape.contours?.length ? shape.contours : null;
+  } else if (shape.type === "group") {
+    return null;
+  } else {
+    const rings = shapeToProfileRings(shape);
+    if (rings?.length) multipoly = [rings];
   }
-  if (shape.type === "group") return null;
-  const rings = shapeToProfileRings(shape);
-  if (!rings?.length) return null;
-  return [rings];
+  if (!multipoly) return null;
+  // rotation / flipH / flipV は描画上の見た目だけの変換だが、ブール演算は
+  // 実ジオメトリ（未変換の輪郭）で行うため、回転した図形を結合すると結果が
+  // 0°（未回転）に戻ってしまう。見た目どおりの結果にするため、描画と同じ
+  // ピボット・順序（rotate → flip）で変換を輪郭へ焼き込む。元配列は壊さない。
+  if (!hasVisualTransform(shape)) return multipoly;
+  return multipoly.map((polygon) =>
+    polygon.map((ring) =>
+      ring.map(([x, y]) => applyShapeTransformReal(x, y, shape)),
+    ),
+  );
 }
 
 function _booleanStyleFromShape(refShape) {
