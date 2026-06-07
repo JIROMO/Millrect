@@ -44,6 +44,24 @@ function _disposeMesh(mesh) {
   else mat?.dispose();
 }
 
+// axisVolumes の各エントリ（{ any, byColor } | null）を破棄する。
+function _disposeAxisEntry(entry) {
+  if (!entry) return;
+  _disposeMesh(entry.any);
+  if (entry.byColor) for (const m of entry.byColor.values()) _disposeMesh(m);
+}
+
+// mesh のワールド bbox を指定軸（'x'|'y'|'z'）に投影した [min,max] を返す。
+function _worldRangeAlongAxis(mesh, axis) {
+  if (!mesh?.geometry) return null;
+  mesh.updateMatrixWorld(true);
+  const g = mesh.geometry;
+  g.computeBoundingBox();
+  if (!g.boundingBox) return null;
+  const bb = g.boundingBox.clone().applyMatrix4(mesh.matrixWorld);
+  return [bb.min[axis], bb.max[axis]];
+}
+
 // 三角形が 1 枚も無い（縮退した）メッシュは csg.js の BSP で plane=null と
 // なり、union/intersect の invert() が null.flip() でクラッシュする。
 // そのようなメッシュは CSG に渡さず、空でない側をそのまま返す。
@@ -527,7 +545,9 @@ function _profileToThreeShapesForView(profile, page, viewType, frame) {
     const y = m(rawY - bbox.y);
     switch (viewType) {
       case "top":
-        return [x, y];
+        // rotation.x = -π/2 が入るため、他ビューと同じく y を反転しないと
+        // 真上から見たとき鏡像になる（drawing 上端=モデル奥の CAD 平面図準拠）。
+        return [x, frameH - y];
       case "bottom":
         return [x, frameH - y];
       case "front":
@@ -660,18 +680,75 @@ function _build3DSceneFromViews() {
     return _csgUnion(a, b, a?.material?.clone());
   }
 
+  // 色別の clamp volume を構築する。多ビューで「色＝積層レイヤー」を表現するため、
+  // 各 top パーツを同色の secondary-view volume と交差させる。色が一致しない場合は
+  // any（全色 union）にフォールバックし、従来の色無視の挙動を維持する。
+  function buildColorVolumes(specs) {
+    const byColor = new Map();
+    for (const { pages, viewType } of specs) {
+      if (!pages?.length) continue;
+      for (const page of pages) {
+        for (const { shape, ancestorGroups } of iterProfileSourcesFromPage(
+          page,
+        )) {
+          if (shape.type === "line" || shape.type === "text") continue;
+          const color = _colorForShape(shape);
+          const mesh = _buildSingleShapeMesh(
+            page,
+            shape,
+            ancestorGroups,
+            viewType,
+            dims,
+            _makeMaterial(color),
+            pageFrames,
+          );
+          if (!mesh) continue;
+          const prev = byColor.get(color);
+          byColor.set(
+            color,
+            prev ? _csgUnion(prev, mesh, _makeMaterial(color)) : mesh,
+          );
+        }
+      }
+    }
+    return byColor;
+  }
+
+  function makeAxisEntry(unionAny, specs) {
+    if (!unionAny) return null;
+    return { any: unionAny, byColor: buildColorVolumes(specs) };
+  }
+
   const axisVolumes = {
-    y: axisVolume(
-      buildUnion(byType.top, "top"),
-      buildUnion(byType.bottom, "bottom"),
+    y: makeAxisEntry(
+      axisVolume(
+        buildUnion(byType.top, "top"),
+        buildUnion(byType.bottom, "bottom"),
+      ),
+      [
+        { pages: byType.top, viewType: "top" },
+        { pages: byType.bottom, viewType: "bottom" },
+      ],
     ),
-    z: axisVolume(
-      buildUnion(byType.front, "front"),
-      buildUnion(byType.back, "back"),
+    z: makeAxisEntry(
+      axisVolume(
+        buildUnion(byType.front, "front"),
+        buildUnion(byType.back, "back"),
+      ),
+      [
+        { pages: byType.front, viewType: "front" },
+        { pages: byType.back, viewType: "back" },
+      ],
     ),
-    x: axisVolume(
-      buildUnion(byType.right, "right"),
-      buildUnion(byType.left, "left"),
+    x: makeAxisEntry(
+      axisVolume(
+        buildUnion(byType.right, "right"),
+        buildUnion(byType.left, "left"),
+      ),
+      [
+        { pages: byType.right, viewType: "right" },
+        { pages: byType.left, viewType: "left" },
+      ],
     ),
   };
 
@@ -680,7 +757,7 @@ function _build3DSceneFromViews() {
   ).length;
   if (activeAxisCount < 2) {
     for (const vol of [axisVolumes.y, axisVolumes.z, axisVolumes.x]) {
-      _disposeMesh(vol);
+      _disposeAxisEntry(vol);
     }
     return _buildSingleViewExtrusionScene(byType, dims, pageFrames);
   }
@@ -688,7 +765,7 @@ function _build3DSceneFromViews() {
   const primary = _getPrimaryPartAxis(byType);
   if (!primary) {
     for (const vol of [axisVolumes.y, axisVolumes.z, axisVolumes.x]) {
-      _disposeMesh(vol);
+      _disposeAxisEntry(vol);
     }
     return {
       ok: false,
@@ -716,7 +793,7 @@ function _build3DSceneFromViews() {
   }
 
   for (const vol of [axisVolumes.y, axisVolumes.z, axisVolumes.x]) {
-    _disposeMesh(vol);
+    _disposeAxisEntry(vol);
   }
 
   if (!parts.length) {
@@ -877,32 +954,54 @@ function _buildPartMesh(
   pageFrames,
 ) {
   const viewType = _normalizeViewType(page.viewDefinition?.type);
-  const axis = _viewAxis(viewType);
+  const axis = _viewAxis(viewType); // パーツの押し出し（スイープ）軸
   const color = _colorForShape(shape);
   const mat = _makeMaterial(color);
-  let mesh = _buildSingleShapeMesh(
+
+  // 直交ビュー（front/right 等）が定めるスイープ軸方向の範囲 [lo,hi] を求める。
+  // 同色の clamp volume を優先（色＝積層レイヤー）、無ければ any にフォールバック。
+  const clampEntries = [];
+  if (axis !== "y" && axisVolumes.y) clampEntries.push(axisVolumes.y);
+  if (axis !== "z" && axisVolumes.z) clampEntries.push(axisVolumes.z);
+  if (axis !== "x" && axisVolumes.x) clampEntries.push(axisVolumes.x);
+
+  let lo = -Infinity;
+  let hi = Infinity;
+  for (const entry of clampEntries) {
+    const vol = entry.byColor?.get(color) || entry.any;
+    const r = _worldRangeAlongAxis(vol, axis);
+    if (!r) continue;
+    lo = Math.max(lo, r[0]);
+    hi = Math.min(hi, r[1]);
+  }
+  const hasBand = Number.isFinite(lo) && Number.isFinite(hi) && hi - lo > 1e-4;
+
+  // フットプリント（このビューの輪郭）を、求めたバンドぶんだけ直接押し出して配置する。
+  // CSG 交差を使わないため、コーム/スロット等の複雑な輪郭でも面落ちしない。
+  // 注: 直交ビューが矩形でない（高さが面内で変化する）場合はバンド bbox 近似になる。
+  const sweepDimKey = { y: "H", z: "D", x: "W" }[axis];
+  const partDims = hasBand ? { ...dims, [sweepDimKey]: hi - lo } : dims;
+  const mesh = _buildSingleShapeMesh(
     page,
     shape,
     ancestorGroups,
     viewType,
-    dims,
+    partDims,
     mat,
     pageFrames,
   );
   if (!mesh) return null;
 
-  const others = [];
-  if (axis !== "y" && axisVolumes.y) others.push(axisVolumes.y);
-  if (axis !== "z" && axisVolumes.z) others.push(axisVolumes.z);
-  if (axis !== "x" && axisVolumes.x) others.push(axisVolumes.x);
-
-  let result = mesh;
-  for (const vol of others) {
-    result = _csgIntersect(result, vol, mat.clone());
-    if (!result) return null;
+  if (hasBand) {
+    // 実際のワールド最小値を lo に合わせ、スイープ軸方向へ平行移動。
+    const cur = _worldRangeAlongAxis(mesh, axis);
+    if (cur) {
+      mesh.position[axis] += lo - cur[0];
+      mesh.updateMatrixWorld(true);
+    }
   }
-  result.material = mat.clone();
-  return { mesh: result, color };
+  mesh.material = mat.clone();
+  return { mesh, color };
 }
 
 function _buildSingleViewExtrusionScene(byType, dims, pageFrames) {
