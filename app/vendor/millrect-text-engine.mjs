@@ -39,13 +39,14 @@ __export(empty_module_exports, {
 var empty_module_default;
 var init_empty_module = __esm({
   "electron/stubs/empty-module.js"() {
+    "use strict";
     empty_module_default = {};
   }
 });
 
-// packages/builtin-fonts.js
+// packages/builtin-fonts.ts
 var require_builtin_fonts = __commonJS({
-  "packages/builtin-fonts.js"(exports2, module) {
+  "packages/builtin-fonts.ts"(exports2, module) {
     "use strict";
     var BUILTIN_FONT_GEN2 = "Gen Interface JP";
     var BUILTIN_FONT_FAMILIES = [BUILTIN_FONT_GEN2];
@@ -62,14 +63,19 @@ var require_builtin_fonts = __commonJS({
       const n = normalizeTextFontFamily2(fontFamily);
       return BUILTIN_FONT_FAMILIES.includes(n);
     }
+    function findProjectFont(family) {
+      if (typeof findProjectFontByFamily !== "function") return null;
+      return findProjectFontByFamily(family) || null;
+    }
     function textEnginePrimaryFontFamily(shape2) {
       const normalized = normalizeTextFontFamily2(shape2?.fontFamily);
-      if (typeof findProjectFontByFamily === "function" && findProjectFontByFamily(normalized)) {
+      if (findProjectFont(normalized)) {
         return normalized;
       }
       if (isBuiltinFontFamily(normalized)) return normalized;
-      if (typeof findProjectFontByFamily === "function" && findProjectFontByFamily(shape2?.fontFamily)) {
-        return findProjectFontByFamily(shape2.fontFamily).family;
+      const projectFont = findProjectFont(shape2?.fontFamily);
+      if (projectFont) {
+        return projectFont.family;
       }
       return normalized || DEFAULT_TEXT_FONT_FAMILY;
     }
@@ -88,9 +94,9 @@ var require_builtin_fonts = __commonJS({
   }
 });
 
-// packages/text-contour-grouping.js
+// packages/text-contour-grouping.ts
 var require_text_contour_grouping = __commonJS({
-  "packages/text-contour-grouping.js"(exports2, module) {
+  "packages/text-contour-grouping.ts"(exports2, module) {
     "use strict";
     function ringSignedArea(ring) {
       let area = 0;
@@ -205,7 +211,8 @@ var require_text_contour_grouping = __commonJS({
       return true;
     }
     function shouldUnionStrokeFragments(prepared) {
-      return prepared?.length > 1 && prepared.every((poly) => poly?.length === 1);
+      if (!prepared || prepared.length <= 1) return false;
+      return prepared.every((poly) => poly?.length === 1);
     }
     var api2 = {
       ringSignedArea,
@@ -223,7 +230,7 @@ var require_text_contour_grouping = __commonJS({
       module.exports = api2;
     }
     if (typeof window !== "undefined") {
-      window.__millrectTextContourGrouping = api2;
+      Object.assign(window, { __millrectTextContourGrouping: api2 });
     }
   }
 });
@@ -776,6 +783,58 @@ var require_text_engine_harfbuzz_core = __commonJS({
       createHarfBuzzTextEngine: createHarfBuzzTextEngine2,
       openHbFont: openHbFont2
     };
+  }
+});
+
+// packages/builtin-fonts.js
+var require_builtin_fonts2 = __commonJS({
+  "packages/builtin-fonts.js"(exports2, module) {
+    "use strict";
+    var BUILTIN_FONT_GEN2 = "Gen Interface JP";
+    var BUILTIN_FONT_FAMILIES = [BUILTIN_FONT_GEN2];
+    var DEFAULT_TEXT_FONT_FAMILY = BUILTIN_FONT_GEN2;
+    function normalizeTextFontFamily2(fontFamily) {
+      const raw = String(fontFamily || DEFAULT_TEXT_FONT_FAMILY).split(",")[0].trim().replace(/^['"]|['"]$/g, "");
+      const k = raw.toLowerCase().replace(/[\s-_]/g, "");
+      if (!k || k === "sansserif" || k === "arial" || k === "inter" || k.includes("helvetica") || k.includes("notosansjp") || k.includes("noto") && k.includes("sans") || k.includes("geninterfacejp") || k === "geninterface") {
+        return BUILTIN_FONT_GEN2;
+      }
+      return raw;
+    }
+    function isBuiltinFontFamily(fontFamily) {
+      const n = normalizeTextFontFamily2(fontFamily);
+      return BUILTIN_FONT_FAMILIES.includes(n);
+    }
+    function findProjectFont(family) {
+      if (typeof findProjectFontByFamily !== "function")
+        return null;
+      return findProjectFontByFamily(family) || null;
+    }
+    function textEnginePrimaryFontFamily(shape2) {
+      const normalized = normalizeTextFontFamily2(shape2?.fontFamily);
+      if (findProjectFont(normalized)) {
+        return normalized;
+      }
+      if (isBuiltinFontFamily(normalized))
+        return normalized;
+      const projectFont = findProjectFont(shape2?.fontFamily);
+      if (projectFont) {
+        return projectFont.family;
+      }
+      return normalized || DEFAULT_TEXT_FONT_FAMILY;
+    }
+    var TEXT_ENGINE_CJK_FALLBACK_FAMILIES = [BUILTIN_FONT_GEN2];
+    if (typeof module !== "undefined" && module.exports) {
+      module.exports = {
+        BUILTIN_FONT_GEN: BUILTIN_FONT_GEN2,
+        BUILTIN_FONT_FAMILIES,
+        DEFAULT_TEXT_FONT_FAMILY,
+        TEXT_ENGINE_CJK_FALLBACK_FAMILIES,
+        normalizeTextFontFamily: normalizeTextFontFamily2,
+        isBuiltinFontFamily,
+        textEnginePrimaryFontFamily
+      };
+    }
   }
 });
 
@@ -2791,7 +2850,7 @@ init(await harfbuzz_default());
 
 // electron/millrect-text-engine-browser.js
 var import_text_engine_harfbuzz_core = __toESM(require_text_engine_harfbuzz_core());
-var import_builtin_fonts = __toESM(require_builtin_fonts());
+var import_builtin_fonts = __toESM(require_builtin_fonts2());
 var WEB_FONT_CATALOG = [
   {
     id: "gen-interface-jp",
