@@ -235,16 +235,11 @@ var require_text_contour_grouping = __commonJS({
   }
 });
 
-// packages/text-engine-utils.js
+// packages/text-engine-utils.ts
 var require_text_engine_utils = __commonJS({
-  "packages/text-engine-utils.js"(exports2, module) {
+  "packages/text-engine-utils.ts"(exports2, module) {
     "use strict";
-    var {
-      BUILTIN_FONT_GEN: BUILTIN_FONT_GEN2,
-      isBuiltinFontFamily,
-      TEXT_ENGINE_CJK_FALLBACK_FAMILIES,
-      textEnginePrimaryFontFamily
-    } = require_builtin_fonts();
+    var builtinFonts = require_builtin_fonts();
     var contourGrouping = require_text_contour_grouping();
     var TEXT_ENGINE_REAL_PER_MM = 10;
     function textEngineNeedsCjk(text) {
@@ -288,13 +283,13 @@ var require_text_engine_utils = __commonJS({
         out.push(name);
       };
       for (const f of explicit || []) add(f);
-      const primary = textEnginePrimaryFontFamily(shape2);
+      const primary = builtinFonts.textEnginePrimaryFontFamily(shape2);
       add(primary);
       if (typeof findProjectFontByFamily === "function" && findProjectFontByFamily(shape2?.fontFamily)) {
         add(findProjectFontByFamily(shape2.fontFamily).family);
       }
-      if (textEngineNeedsCjk(shape2?.text) && !isBuiltinFontFamily(primary)) {
-        add(BUILTIN_FONT_GEN2);
+      if (textEngineNeedsCjk(shape2?.text) && !builtinFonts.isBuiltinFontFamily(primary)) {
+        add(builtinFonts.BUILTIN_FONT_GEN);
       }
       return out;
     }
@@ -430,7 +425,7 @@ var require_text_engine_utils = __commonJS({
     if (typeof module !== "undefined" && module.exports) {
       module.exports = {
         TEXT_ENGINE_REAL_PER_MM,
-        TEXT_ENGINE_CJK_FALLBACK_FAMILIES,
+        TEXT_ENGINE_CJK_FALLBACK_FAMILIES: builtinFonts.TEXT_ENGINE_CJK_FALLBACK_FAMILIES,
         textEngineNeedsCjk,
         textEngineCharNeedsCjk,
         textEngineSplitScriptRuns,
