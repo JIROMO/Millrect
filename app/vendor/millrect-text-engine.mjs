@@ -444,20 +444,13 @@ var require_text_engine_utils = __commonJS({
 
 // electron/text-engine-harfbuzz-core.js
 var require_text_engine_harfbuzz_core = __commonJS({
-  "electron/text-engine-harfbuzz-core.js"(exports2, module) {
+  "electron/text-engine-harfbuzz-core.js"(exports2) {
     "use strict";
-    var {
-      textEngineExpandFontCandidates,
-      textEngineAlignedX,
-      textEngineHbPathToContoursReal,
-      textEngineNeedsCjk,
-      textEngineSplitScriptRuns
-    } = require_text_engine_utils();
-    var {
-      BUILTIN_FONT_GEN: BUILTIN_FONT_GEN2,
-      isBuiltinFontFamily,
-      textEnginePrimaryFontFamily
-    } = require_builtin_fonts();
+    Object.defineProperty(exports2, "__esModule", { value: true });
+    exports2.createHarfBuzzTextEngine = createHarfBuzzTextEngine2;
+    exports2.openHbFont = openHbFont2;
+    var { textEngineExpandFontCandidates, textEngineAlignedX, textEngineHbPathToContoursReal, textEngineNeedsCjk, textEngineSplitScriptRuns } = require_text_engine_utils();
+    var { BUILTIN_FONT_GEN: BUILTIN_FONT_GEN2, isBuiltinFontFamily, textEnginePrimaryFontFamily } = require_builtin_fonts();
     function createFontResolver(loadFontEntry) {
       const cache = /* @__PURE__ */ new Map();
       async function resolveFontEntry(shape2, fontCandidates) {
@@ -465,7 +458,8 @@ var require_text_engine_harfbuzz_core = __commonJS({
         const families = textEngineExpandFontCandidates(shape2, fontCandidates);
         const styles = bold ? ["Bold", "bold", "700"] : ["Regular", "Normal", "Book"];
         const key = `${families.join("|")}|${bold ? "b" : "r"}`;
-        if (cache.has(key)) return cache.get(key);
+        if (cache.has(key))
+          return cache.get(key);
         for (const family of families) {
           for (const style of styles) {
             const loaded = await loadFontEntry(family, style, bold);
@@ -484,16 +478,19 @@ var require_text_engine_harfbuzz_core = __commonJS({
         const seen = /* @__PURE__ */ new Set();
         const add = (name) => {
           const k = name.toLowerCase();
-          if (!name || seen.has(k)) return;
+          if (!name || seen.has(k))
+            return;
           seen.add(k);
           families.push(name);
         };
         for (const f of fontCandidates || []) {
-          if (f === BUILTIN_FONT_GEN2) add(f);
+          if (f === BUILTIN_FONT_GEN2)
+            add(f);
         }
         add(BUILTIN_FONT_GEN2);
         const key = `cjk:${families.join("|")}|${bold ? "b" : "r"}`;
-        if (cache.has(key)) return cache.get(key);
+        if (cache.has(key))
+          return cache.get(key);
         for (const family of families) {
           for (const style of styles) {
             const loaded = await loadFontEntry(family, style, bold);
@@ -523,7 +520,8 @@ var require_text_engine_harfbuzz_core = __commonJS({
       }
       function cjkShapingEntry(primary, fallback, shape2) {
         const family = textEnginePrimaryFontFamily(shape2);
-        if (isBuiltinFontFamily(family)) return primary;
+        if (isBuiltinFontFamily(family))
+          return primary;
         return fallback || primary;
       }
       function shapeLineWithFallback(primary, cjk, text, fontSize, features, shape2) {
@@ -546,7 +544,8 @@ var require_text_engine_harfbuzz_core = __commonJS({
         const out = [];
         for (const run of scriptRuns) {
           const entry = run.cjk ? cjkShapingEntry(primary, fallback, shape2) : primary;
-          if (!entry || !run.text) continue;
+          if (!entry || !run.text)
+            continue;
           const glyphs = shapeLineText(entry, run.text, fontSize, features);
           for (const glyph of glyphs) {
             out.push({ entry, glyph });
@@ -555,15 +554,9 @@ var require_text_engine_harfbuzz_core = __commonJS({
         return out;
       }
       function measureLineWidthPaper(primary, cjk, text, fontSize, features, shape2) {
-        if (!text) return 0;
-        const shaped = shapeLineWithFallback(
-          primary,
-          cjk,
-          text,
-          fontSize,
-          features,
-          shape2
-        );
+        if (!text)
+          return 0;
+        const shaped = shapeLineWithFallback(primary, cjk, text, fontSize, features, shape2);
         let w = 0;
         for (const { entry, glyph } of shaped) {
           w += glyph.xAdvance / entry.upem;
@@ -571,27 +564,23 @@ var require_text_engine_harfbuzz_core = __commonJS({
         return w;
       }
       function wrapParagraph(primary, cjk, text, fontSize, maxWidthPaper, features, shape2) {
-        if (!text) return [""];
-        if (!maxWidthPaper || maxWidthPaper <= 0) return [text];
+        if (!text)
+          return [""];
+        if (!maxWidthPaper || maxWidthPaper <= 0)
+          return [text];
         const lines = [];
         let start = 0;
         while (start < text.length) {
           let end = start + 1;
           while (end <= text.length) {
             const slice = text.slice(start, end);
-            const w = measureLineWidthPaper(
-              primary,
-              cjk,
-              slice,
-              fontSize,
-              features,
-              shape2
-            );
+            const w = measureLineWidthPaper(primary, cjk, slice, fontSize, features, shape2);
             if (w > maxWidthPaper && end > start + 1) {
               end -= 1;
               break;
             }
-            if (end === text.length) break;
+            if (end === text.length)
+              break;
             end += 1;
           }
           lines.push(text.slice(start, end));
@@ -632,15 +621,7 @@ var require_text_engine_harfbuzz_core = __commonJS({
         const visualLines = [];
         let globalIndex = 0;
         for (const para of paragraphs) {
-          const wrapped = wrapParagraph(
-            primary,
-            cjk,
-            para,
-            fontSize,
-            paperWidth,
-            features,
-            shape2
-          );
+          const wrapped = wrapParagraph(primary, cjk, para, fontSize, paperWidth, features, shape2);
           for (const wLine of wrapped) {
             visualLines.push({ text: wLine, lineIndex: globalIndex });
             globalIndex += 1;
@@ -650,14 +631,7 @@ var require_text_engine_harfbuzz_core = __commonJS({
         const lines = [];
         for (let idx = 0; idx < visualLines.length; idx++) {
           const vLine = visualLines[idx];
-          const lw = measureLineWidthPaper(
-            primary,
-            cjk,
-            vLine.text,
-            fontSize,
-            features,
-            shape2
-          );
+          const lw = measureLineWidthPaper(primary, cjk, vLine.text, fontSize, features, shape2);
           maxLineWidth = Math.max(maxLineWidth, lw);
           const fw = paperWidth ?? lw;
           lines.push({
@@ -705,24 +679,20 @@ var require_text_engine_harfbuzz_core = __commonJS({
         const features = hbFeatures(shape2);
         const fillColor = (() => {
           const valid = (c) => typeof c === "string" && c && c !== "none" && c !== "transparent";
-          if (valid(shape2.fill)) return shape2.fill;
-          if (valid(shape2.stroke)) return shape2.stroke;
+          if (valid(shape2.fill))
+            return shape2.fill;
+          if (valid(shape2.stroke))
+            return shape2.stroke;
           return "#1a1a2e";
         })();
         prepareFont(primary, fontSize);
         const ascenderPaper = primary.font.hExtents().ascender / primary.upem;
         const children = [];
         for (const line of layout.lines) {
-          if (!line.text) continue;
+          if (!line.text)
+            continue;
           const yBaseline = line.yTopPaper != null ? line.yTopPaper + ascenderPaper : anchorPaper.y + ascenderPaper + (line.lineIndex || 0) * fontSize * lineHeightMult;
-          const shaped = shapeLineWithFallback(
-            primary,
-            cjk,
-            line.text,
-            fontSize,
-            features,
-            shape2
-          );
+          const shaped = shapeLineWithFallback(primary, cjk, line.text, fontSize, features, shape2);
           let cursorPaper = 0;
           for (const { entry, glyph: g } of shaped) {
             prepareFont(entry, fontSize);
@@ -737,15 +707,10 @@ var require_text_engine_harfbuzz_core = __commonJS({
             }
             const gxPaper = line.xPaper + (cursorPaper + g.xOffset) / entry.upem;
             const gyPaper = yBaseline - g.yOffset / entry.upem;
-            const contours = textEngineHbPathToContoursReal(
-              svgPath,
-              gxPaper,
-              gyPaper,
-              entry.upem,
-              scale
-            );
+            const contours = textEngineHbPathToContoursReal(svgPath, gxPaper, gyPaper, entry.upem, scale);
             cursorPaper += g.xAdvance;
-            if (!contours) continue;
+            if (!contours)
+              continue;
             children.push({
               type: "path",
               contours,
@@ -774,10 +739,6 @@ var require_text_engine_harfbuzz_core = __commonJS({
         buffer
       };
     }
-    module.exports = {
-      createHarfBuzzTextEngine: createHarfBuzzTextEngine2,
-      openHbFont: openHbFont2
-    };
   }
 });
 
