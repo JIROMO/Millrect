@@ -7,5 +7,11 @@
     "skipLibCheck": true,
     "types": ["node"]
   },
-  "include": ["packages/**/*.ts", "electron/**/*.ts", "preload.ts", "main.ts"]
+  "include": [
+    "packages/**/*.ts",
+    "electron/**/*.ts",
+    "scripts/**/*.ts",
+    "preload.ts",
+    "main.ts"
+  ]
 }
