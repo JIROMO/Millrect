@@ -18,14 +18,50 @@
   function factory(schema: any) {
     if (!schema) throw new Error("Millrect schema package is required");
 
-    function round(value: any, digits = 6): number {
+    // IR 生成は number[][]（tuple ではない素の配列）でリングを扱う。
+    type BBox = {
+      x: number;
+      y: number;
+      w: number;
+      h: number;
+      minX: number;
+      minY: number;
+      maxX: number;
+      maxY: number;
+    };
+    // 生成された profile（State 派生 MillrectProfile とは別の、IR 内部表現）。
+    interface GenProfile {
+      id: string;
+      sourceId: string | null;
+      pageId: string;
+      pageIndex: number;
+      profileIndex: number;
+      viewType: string;
+      rings: number[][][];
+      bbox: BBox;
+      bboxMm: { x: number; y: number; w: number; h: number; [k: string]: number };
+      area: number;
+      areaMm2: number;
+      material: MillrectMaterial;
+      holeCount: number;
+      // MillrectIrProfile（index signature 付き）へ代入可能にする。
+      [key: string]: unknown;
+    }
+    interface Dims {
+      width: number;
+      depth: number;
+      height: number;
+      activeAxes: string[];
+    }
+
+    function round(value: number, digits = 6): number {
       const n = Number(value);
       if (!Number.isFinite(n)) return 0;
       const m = 10 ** digits;
       return Math.round(n * m) / m;
     }
 
-    function ringSignedArea(ring: MillrectRing): number {
+    function ringSignedArea(ring: number[][]): number {
       let area = 0;
       for (let i = 0; i < ring.length; i++) {
         const [x0, y0] = ring[i];
@@ -35,7 +71,7 @@
       return area / 2;
     }
 
-    function ringsBBox(rings: any): any {
+    function ringsBBox(rings: number[][][]): BBox | null {
       let minX = Infinity;
       let minY = Infinity;
       let maxX = -Infinity;
@@ -105,7 +141,10 @@
       );
     }
 
-    function hasVisualTransform(shape: any, ancestorGroups: any[] = []): boolean {
+    function hasVisualTransform(
+      shape: MillrectShape,
+      ancestorGroups: MillrectShape[] = [],
+    ): boolean {
       const all = [shape, ...ancestorGroups];
       return all.some(
         (item) =>
@@ -119,11 +158,11 @@
     }
 
     function shapeToProfileRings(
-      shape: any,
+      shape: MillrectShape,
       warnings: string[],
-      ancestorGroups: any[] = [],
-    ): any {
-      let rings = null;
+      ancestorGroups: MillrectShape[] = [],
+    ): number[][][] | null {
+      let rings: number[][][] | null = null;
       switch (shape?.type) {
         case "rect": {
           const x = Number(shape.x) || 0;
@@ -235,13 +274,13 @@
     }
 
     function* iterProfileSourcesFromPage(page: MillrectPage): Generator<{
-      shape: any;
-      ancestorGroups: any[];
+      shape: MillrectShape;
+      ancestorGroups: MillrectShape[];
     }> {
       function* walk(
         shapes: any,
-        ancestors: any[],
-      ): Generator<{ shape: any; ancestorGroups: any[] }> {
+        ancestors: MillrectShape[],
+      ): Generator<{ shape: MillrectShape; ancestorGroups: MillrectShape[] }> {
         for (const shape of shapes || []) {
           if (shape?.ghost) continue;
           if (shape?.type === "group" && Array.isArray(shape.children)) {
@@ -257,7 +296,7 @@
       }
     }
 
-    function materialFromShape(shape: any): { color: string; source: string } {
+    function materialFromShape(shape: MillrectShape): MillrectMaterial {
       return {
         color: shape?.fill && shape.fill !== "none" ? shape.fill : "#5965f9",
         source: shape?.fill && shape.fill !== "none" ? "shape.fill" : "default",
@@ -267,8 +306,8 @@
     function extractProfiles(
       project: MillrectProjectJson,
       warnings: string[],
-    ): any[] {
-      const profiles: any[] = [];
+    ): GenProfile[] {
+      const profiles: GenProfile[] = [];
       for (const [pageIndex, page] of project.pages.entries()) {
         const viewType = schema.normalizeViewType(page.viewDefinition?.type);
         let profileIndex = 0;
@@ -279,7 +318,8 @@
           if (!rings?.length || !rings[0]?.length) continue;
           const area = Math.abs(ringSignedArea(rings[0]));
           if (area < 1e-6) continue;
-          const bbox = ringsBBox(rings);
+          // rings は非空（上の length チェック済み）なので bbox は非 null。
+          const bbox = ringsBBox(rings)!;
           profiles.push({
             id: `profile-${shape.id || `${page.id}-${profileIndex}`}`,
             sourceId: shape.id || null,
@@ -306,12 +346,15 @@
       return profiles;
     }
 
-    function firstProfileByView(profiles: any[], viewTypes: string[]): any {
+    function firstProfileByView(
+      profiles: GenProfile[],
+      viewTypes: string[],
+    ): GenProfile | undefined {
       return profiles.find((profile) => viewTypes.includes(profile.viewType));
     }
 
     function maxProfileSize(
-      profiles: any[],
+      profiles: GenProfile[],
       viewTypes: string[],
       axis: string,
     ): number | null {
@@ -322,7 +365,7 @@
       return values.length ? Math.max(...values) : null;
     }
 
-    function inferDimensions(profiles: any[], warnings: string[]): any {
+    function inferDimensions(profiles: GenProfile[], warnings: string[]): Dims {
       const top = firstProfileByView(profiles, ["top", "bottom"]);
       const front = firstProfileByView(profiles, ["front", "back"]);
       const side = firstProfileByView(profiles, ["right", "left"]);
@@ -371,7 +414,7 @@
       }
     }
 
-    function extrusionHeight(viewType: string, dimensions: any): number {
+    function extrusionHeight(viewType: string, dimensions: Dims): number {
       switch (viewType) {
         case "front":
         case "back":
@@ -387,11 +430,11 @@
     }
 
     function holeOperationFromRing(
-      profile: any,
-      ring: any,
+      profile: GenProfile,
+      ring: number[][],
       holeIndex: number,
-    ): any {
-      const bbox = ringsBBox([ring]);
+    ): MillrectModelOperation {
+      const bbox = ringsBBox([ring])!;
       const cx = schema.realToMm(bbox.x + bbox.w / 2);
       const cy = schema.realToMm(bbox.y + bbox.h / 2);
       const diameter = schema.realToMm((bbox.w + bbox.h) / 2);
@@ -407,8 +450,10 @@
       };
     }
 
-    function featureOperationsFromProfiles(profiles: any[]): any[] {
-      const operations: any[] = [];
+    function featureOperationsFromProfiles(
+      profiles: GenProfile[],
+    ): MillrectModelOperation[] {
+      const operations: MillrectModelOperation[] = [];
       for (const profile of profiles) {
         for (let i = 1; i < profile.rings.length; i++) {
           operations.push(holeOperationFromRing(profile, profile.rings[i], i));
@@ -417,10 +462,13 @@
       return operations;
     }
 
-    function featureOperationsFromPartIntent(project: any): any[] {
+    // project.partIntent.dsl は動的な Part DSL なので any のまま掘る。
+    function featureOperationsFromPartIntent(
+      project: any,
+    ): MillrectModelOperation[] {
       const dsl = project.partIntent?.dsl;
       const features = Array.isArray(dsl?.features) ? dsl.features : [];
-      const operations: any[] = [];
+      const operations: MillrectModelOperation[] = [];
       for (const [index, feature] of features.entries()) {
         const base = {
           id: `op-feature-${index}-${feature.type}`,
@@ -503,11 +551,11 @@
     }
 
     function buildOperations(
-      profiles: any[],
-      dimensions: any,
-      project: any,
-    ): any[] {
-      const operations: any[] = [];
+      profiles: GenProfile[],
+      dimensions: Dims,
+      project: MillrectProjectJson,
+    ): MillrectModelOperation[] {
+      const operations: MillrectModelOperation[] = [];
       for (const profile of profiles) {
         operations.push({
           id: `op-profile-${profile.id}`,
@@ -549,11 +597,11 @@
 
     function generateModelIrFromProject(
       project: MillrectProjectJson,
-      options: any = {},
-    ): any {
+      options: { mode?: string } = {},
+    ): MillrectModelIrResult {
       const validation = schema.validateProjectJson(project);
-      const warnings = [...validation.warnings];
-      const logs: any[] = [];
+      const warnings: string[] = [...validation.warnings];
+      const logs: unknown[] = [];
       if (!validation.ok) {
         return {
           ok: false,

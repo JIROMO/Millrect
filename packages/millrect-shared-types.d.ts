@@ -114,7 +114,8 @@ interface MillrectIrProfile {
   sourceId?: string | null;
   pageId?: string;
   viewType?: string;
-  rings: MillrectRing[];
+  // IR 内部は number[][]（tuple ではない素の配列）でリングを保持する。
+  rings: number[][][];
   bbox?: { x: number; y: number; w: number; h: number; [key: string]: number };
   area?: number;
   material?: MillrectMaterial;
