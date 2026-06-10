@@ -85,7 +85,8 @@ async function resolveFontsourceFileUrl(
   if (!metaRes.ok) {
     throw new Error(`Fontsource に「${family}」が見つかりません`);
   }
-  const meta: any = await metaRes.json();
+  // FontsourceMeta は fontsource-api.ts が global script スコープに定義。
+  const meta: FontsourceMeta = await metaRes.json();
   const ver = meta.npmVersion || "5.0.0";
   const subsets: string[] = meta.subsets || ["latin"];
   const subset = subsets.includes("japanese")

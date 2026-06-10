@@ -124,10 +124,11 @@ function normalizePartParams(part: string, params: PartDslRecord = {}) {
   }
 }
 
-function normalizeFeature(feature: any): FeatureNormalizeResult {
-  if (!feature || typeof feature !== "object") {
+function normalizeFeature(featureInput: unknown): FeatureNormalizeResult {
+  if (!featureInput || typeof featureInput !== "object") {
     return { ok: false, error: "Feature must be an object" };
   }
+  const feature = featureInput as PartDslRecord;
   const type = feature.type;
   if (!SUPPORTED_FEATURES.has(type)) {
     return { ok: false, error: `Unsupported feature type: ${type}` };
