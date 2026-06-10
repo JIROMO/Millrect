@@ -94,3 +94,83 @@ interface MillrectValidationResult {
   errors: string[];
   warnings: string[];
 }
+
+// ── Model IR / Geometry data（3D 派生パイプライン）──────────────
+// operation / IR profile は種類ごとにフィールドが異なるため、既知の必須キー
+// だけ固定し残りは index signature で許容する（厳密 union は将来）。
+interface MillrectMaterial {
+  color: string;
+  source?: string;
+}
+
+interface MillrectModelOperation {
+  id: string;
+  type: string;
+  [key: string]: unknown;
+}
+
+interface MillrectIrProfile {
+  id: string;
+  sourceId?: string | null;
+  pageId?: string;
+  viewType?: string;
+  rings: MillrectRing[];
+  bbox?: { x: number; y: number; w: number; h: number; [key: string]: number };
+  area?: number;
+  material?: MillrectMaterial;
+  [key: string]: unknown;
+}
+
+interface MillrectModelDimensions {
+  width: number;
+  depth: number;
+  height: number;
+}
+
+interface MillrectModelIr {
+  kind?: string;
+  schemaVersion?: number;
+  units?: string;
+  source?: Record<string, unknown>;
+  dimensions?: Partial<MillrectModelDimensions>;
+  axes?: string[];
+  profiles?: MillrectIrProfile[];
+  operations?: MillrectModelOperation[];
+  warnings?: string[];
+  logs?: unknown[];
+  meta?: Record<string, unknown>;
+  [key: string]: unknown;
+}
+
+interface MillrectMesh {
+  id: string;
+  role?: string;
+  vertices: number[][];
+  faces: number[][];
+  material?: MillrectMaterial;
+}
+
+interface MillrectGeometryData {
+  kind: string;
+  schemaVersion: number;
+  units: string;
+  meshes: MillrectMesh[];
+  [key: string]: unknown;
+}
+
+// バリデータ呼び出し + 派生データを返す共通パイプライン結果。
+interface MillrectGeometryResult {
+  ok: boolean;
+  errors: string[];
+  warnings: string[];
+  logs: unknown[];
+  data: MillrectGeometryData | null;
+}
+
+interface MillrectModelIrResult {
+  ok: boolean;
+  errors: string[];
+  warnings: string[];
+  logs: unknown[];
+  ir: MillrectModelIr | null;
+}

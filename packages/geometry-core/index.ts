@@ -15,21 +15,25 @@
   }
 })(
   typeof globalThis !== "undefined" ? globalThis : null,
+  // schema: 注入される MillrectSchema モジュール（動的依存のため any）。
   function factory(schema: any) {
     if (!schema) throw new Error("Millrect schema package is required");
 
-    function round(value: any, digits = 6): number {
+    function round(value: number, digits = 6): number {
       const n = Number(value);
       if (!Number.isFinite(n)) return 0;
       const m = 10 ** digits;
       return Math.round(n * m) / m;
     }
 
-    function positive(value: any): number {
+    function positive(value: unknown): number {
       return Number(value) > 0 ? Number(value) : 0;
     }
 
-    function buildBoxMesh(dimensions: any, material: any): any {
+    function buildBoxMesh(
+      dimensions: Partial<MillrectModelDimensions>,
+      material?: MillrectMaterial,
+    ): MillrectMesh | null {
       const width = positive(dimensions.width);
       const depth = positive(dimensions.depth);
       const height = positive(dimensions.height);
@@ -67,7 +71,7 @@
       };
     }
 
-    function dominantMaterial(ir: any): { color: string } {
+    function dominantMaterial(ir: MillrectModelIr): MillrectMaterial {
       const counts = new Map<string, number>();
       for (const profile of ir.profiles || []) {
         const color = profile.material?.color || "#5965f9";
@@ -77,9 +81,9 @@
       return { color: first?.[0] || "#5965f9" };
     }
 
-    function featureAnnotations(ir: any): any[] {
+    function featureAnnotations(ir: MillrectModelIr): MillrectModelOperation[] {
       return (ir.operations || [])
-        .filter((operation: any) =>
+        .filter((operation) =>
           [
             "hole",
             "hole_pattern",
@@ -94,10 +98,12 @@
             "pattern_linear",
           ].includes(operation.type),
         )
-        .map((operation: any) => schema.stableClone(operation));
+        .map((operation) => schema.stableClone(operation));
     }
 
-    function boundsForDimensions(dimensions: any = {}): any {
+    function boundsForDimensions(
+      dimensions: Partial<MillrectModelDimensions>,
+    ): { min: number[]; max: number[]; size: number[] } {
       const width = positive(dimensions.width);
       const depth = positive(dimensions.depth);
       const height = positive(dimensions.height);
@@ -108,10 +114,13 @@
       };
     }
 
-    function generateGeometryFromModelIr(ir: any, options: any = {}): any {
+    function generateGeometryFromModelIr(
+      ir: MillrectModelIr,
+      options: { mode?: string } = {},
+    ): MillrectGeometryResult {
       const validation = schema.validateModelIr(ir);
-      const warnings = [...validation.warnings];
-      const logs: any[] = [];
+      const warnings: string[] = [...validation.warnings];
+      const logs: unknown[] = [];
       if (!validation.ok) {
         return {
           ok: false,
@@ -123,7 +132,7 @@
       }
 
       const material = dominantMaterial(ir);
-      const meshes: any[] = [];
+      const meshes: MillrectMesh[] = [];
       const boundsMesh = buildBoxMesh(ir.dimensions || {}, material);
       if (boundsMesh) {
         meshes.push(boundsMesh);
@@ -131,7 +140,7 @@
         warnings.push("Geometry core could not derive a non-zero preview mesh");
       }
 
-      const data = {
+      const data: MillrectGeometryData = {
         kind: "millrect.geometry-data",
         schemaVersion: schema.GEOMETRY_DATA_VERSION,
         units: "mm",
@@ -141,20 +150,14 @@
         },
         meshes,
         features: featureAnnotations(ir),
-        operations: (ir.operations || []).map((operation: any) =>
+        operations: (ir.operations || []).map((operation) =>
           schema.stableClone(operation),
         ),
         metrics: {
           meshCount: meshes.length,
-          vertexCount: meshes.reduce(
-            (sum: number, mesh: any) => sum + mesh.vertices.length,
-            0,
-          ),
-          faceCount: meshes.reduce(
-            (sum: number, mesh: any) => sum + mesh.faces.length,
-            0,
-          ),
-          bounds: boundsForDimensions(ir.dimensions),
+          vertexCount: meshes.reduce((sum, mesh) => sum + mesh.vertices.length, 0),
+          faceCount: meshes.reduce((sum, mesh) => sum + mesh.faces.length, 0),
+          bounds: boundsForDimensions(ir.dimensions || {}),
         },
         warnings,
         logs,
