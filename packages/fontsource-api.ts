@@ -22,6 +22,20 @@ interface FontCatalogFilterOpts {
   category?: string;
 }
 
+// Fontsource API のフォントメタ。既知キーのみ固定し、variants（重み×スタイル×
+// subset のネスト）と未知フィールドは緩く扱う。
+interface FontsourceMeta {
+  id?: string;
+  family: string;
+  npmVersion?: string;
+  subsets?: string[];
+  weights?: number[];
+  styles?: string[];
+  category?: string;
+  variants?: Record<string, any>;
+  [key: string]: unknown;
+}
+
 const FONTSOURCE_API_BASE = "https://api.fontsource.org/v1/fonts";
 const FONT_CATALOG_TTL_MS = 7 * 24 * 60 * 60 * 1000;
 
@@ -47,7 +61,7 @@ function fontsourceSlug(familyOrId: unknown): string {
     .replace(/\s+/g, "-");
 }
 
-function pickFontsourceTtfUrl(meta: any, opts: FontsourceTtfOpts = {}): string {
+function pickFontsourceTtfUrl(meta: FontsourceMeta, opts: FontsourceTtfOpts = {}): string {
   const weight = opts.weight ?? 400;
   const style = opts.style ?? "normal";
   const preferJapanese = opts.preferJapanese !== false;
@@ -87,7 +101,7 @@ function pickFontsourceTtfUrl(meta: any, opts: FontsourceTtfOpts = {}): string {
   return `https://cdn.jsdelivr.net/fontsource/fonts/${slug}@${ver}/${subset}-${w}-${st}.ttf`;
 }
 
-function projectFontUrlsFromFontsourceMeta(meta: any): ProjectFontUrls {
+function projectFontUrlsFromFontsourceMeta(meta: FontsourceMeta): ProjectFontUrls {
   const weights: number[] = meta?.weights || [400];
   const fileUrl = pickFontsourceTtfUrl(meta, { weight: 400 });
   const fileUrlBold = weights.includes(700)
@@ -101,7 +115,7 @@ function projectFontUrlsFromFontsourceMeta(meta: any): ProjectFontUrls {
   };
 }
 
-function libraryEntryFromFontsourceMeta(meta: any, existingId?: string): any {
+function libraryEntryFromFontsourceMeta(meta: FontsourceMeta, existingId?: string): any {
   const family = meta.family;
   const urls = projectFontUrlsFromFontsourceMeta(meta);
   return {
@@ -124,7 +138,7 @@ function libraryEntryFromFontsourceMeta(meta: any, existingId?: string): any {
 async function resolveProjectFontUrls(
   family: string,
   cssUrl: string,
-): Promise<ProjectFontUrls & { meta: any }> {
+): Promise<ProjectFontUrls & { meta: FontsourceMeta | null }> {
   try {
     const meta = await fetchFontsourceFontMeta(family);
     return { ...projectFontUrlsFromFontsourceMeta(meta), meta };
@@ -150,7 +164,9 @@ async function fetchFontsourceCatalog(query = ""): Promise<any[]> {
   return data;
 }
 
-async function fetchFontsourceFontMeta(idOrFamily: unknown): Promise<any> {
+async function fetchFontsourceFontMeta(
+  idOrFamily: unknown,
+): Promise<FontsourceMeta> {
   const slug = fontsourceSlug(idOrFamily);
   const res = await fetch(`${FONTSOURCE_API_BASE}/${encodeURIComponent(slug)}`);
   if (!res.ok) {
