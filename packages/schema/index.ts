@@ -72,11 +72,11 @@
       return value;
     }
 
-    function stableStringify(value: any, space?: number): string {
+    function stableStringify(value: unknown, space?: number): string {
       return JSON.stringify(stableClone(value), null, space);
     }
 
-    function stableHash(value: any): string {
+    function stableHash(value: unknown): string {
       const text = typeof value === "string" ? value : stableStringify(value);
       let hash = 0x811c9dc5;
       for (let i = 0; i < text.length; i++) {
@@ -86,16 +86,16 @@
       return hash.toString(16).padStart(8, "0");
     }
 
-    function normalizeViewType(type: any): string {
+    function normalizeViewType(type?: string | null): string {
       if (type === "section" || type === "detail") return "top";
       return type || "top";
     }
 
-    function realToMm(value: any): number {
+    function realToMm(value: unknown): number {
       return Number(value) / REAL_PER_MM;
     }
 
-    function mmToReal(value: any): number {
+    function mmToReal(value: unknown): number {
       return Number(value) * REAL_PER_MM;
     }
 
@@ -123,7 +123,7 @@
       };
     }
 
-    function validateProjectJson(data: any): MillrectValidationResult {
+    function validateProjectJson(data: unknown): MillrectValidationResult {
       const errors: string[] = [];
       const warnings: string[] = [];
       if (!isPlainObject(data)) {
@@ -164,11 +164,14 @@
       return makeResult(errors, warnings);
     }
 
-    function isMillrectProjectJson(data: any): boolean {
+    function isMillrectProjectJson(data: unknown): boolean {
       return validateProjectJson(data).ok;
     }
 
-    function validateModelOperation(operation: any, index: number): string[] {
+    function validateModelOperation(
+      operation: unknown,
+      index: number,
+    ): string[] {
       const errors: string[] = [];
       const path = `operations[${index}]`;
       if (!isPlainObject(operation)) {
@@ -207,7 +210,7 @@
       return errors;
     }
 
-    function validateModelIr(ir: any): MillrectValidationResult {
+    function validateModelIr(ir: unknown): MillrectValidationResult {
       const errors: string[] = [];
       const warnings: string[] = [];
       if (!isPlainObject(ir)) {
@@ -237,7 +240,7 @@
       return makeResult(errors, warnings);
     }
 
-    function validateGeometryData(data: any): MillrectValidationResult {
+    function validateGeometryData(data: unknown): MillrectValidationResult {
       const errors: string[] = [];
       const warnings: string[] = [];
       if (!isPlainObject(data)) {
