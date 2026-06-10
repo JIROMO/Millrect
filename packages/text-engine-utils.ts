@@ -11,13 +11,30 @@ const contourGrouping = require("./text-contour-grouping");
 /** Must match js/state.js REAL_PER_MM (1 mm on paper = 10 real drawing units). */
 const TEXT_ENGINE_REAL_PER_MM = 10;
 
-function textEngineNeedsCjk(text: any): boolean {
-  return /[\u3040-\u30ff\u4e00-\u9fff\u3400-\u4dbf]/.test(text || "");
+// ring/contour \u306f polygon-clipping \u540c\u69d8\u306e\u7d20\u306e\u914d\u5217\uff08point=number[]\uff09\u3067\u6271\u3046\u3002
+type TERing = number[][];
+type TEPolygon = TERing[];
+
+interface TEScale {
+  numerator: number;
+  denominator: number;
 }
 
-function textEngineCharNeedsCjk(ch: any): boolean {
+// \u30c6\u30ad\u30b9\u30c8\u5f62\u72b6\u306f dynamic\uff08\u90e8\u5206\u30aa\u30d6\u30b8\u30a7\u30af\u30c8\u3082\u6e21\u308b\uff09\u305f\u3081\u6700\u5c0f\u30ad\u30fc\u306e\u307f\u898f\u5b9a\u3002
+interface TETextShapeLike {
+  text?: unknown;
+  fontFamily?: unknown;
+  fontWeight?: unknown;
+  [key: string]: unknown;
+}
+
+function textEngineNeedsCjk(text: unknown): boolean {
+  return /[\u3040-\u30ff\u4e00-\u9fff\u3400-\u4dbf]/.test((text as string) || "");
+}
+
+function textEngineCharNeedsCjk(ch: string): boolean {
   if (!ch) return false;
-  const cp = ch.codePointAt(0);
+  const cp = ch.codePointAt(0)!;
   return (
     (cp >= 0x3040 && cp <= 0x30ff) ||
     (cp >= 0x4e00 && cp <= 0x9fff) ||
@@ -28,7 +45,7 @@ function textEngineCharNeedsCjk(ch: any): boolean {
 
 /** Latin / CJK などスクリプト境界でテキストを分割（混在時のフォント fallback 用） */
 function textEngineSplitScriptRuns(
-  text: any,
+  text: string | null | undefined,
 ): { text: string; cjk: boolean | null }[] {
   if (!text) return [];
   const runs: { text: string; cjk: boolean | null }[] = [];
@@ -53,7 +70,10 @@ function textEngineSplitScriptRuns(
   return runs;
 }
 
-function textEngineExpandFontCandidates(shape: any, explicit: any): string[] {
+function textEngineExpandFontCandidates(
+  shape: TETextShapeLike | null | undefined,
+  explicit?: string[] | null,
+): string[] {
   const out: string[] = [];
   const seen = new Set<string>();
   const add = (name: string) => {
@@ -72,7 +92,7 @@ function textEngineExpandFontCandidates(shape: any, explicit: any): string[] {
     typeof findProjectFontByFamily === "function" &&
     findProjectFontByFamily(shape?.fontFamily)
   ) {
-    add(findProjectFontByFamily(shape.fontFamily)!.family);
+    add(findProjectFontByFamily(shape!.fontFamily)!.family);
   }
 
   if (textEngineNeedsCjk(shape?.text) && !builtinFonts.isBuiltinFontFamily(primary)) {
@@ -86,7 +106,7 @@ function textEngineAlignedX(
   lineWidth: number,
   frameWidth: number,
   anchorX: number,
-  align: any,
+  align?: string,
 ): number {
   switch (align) {
     case "center":
@@ -101,20 +121,20 @@ function textEngineAlignedX(
 function textEnginePaperToReal(
   x: number,
   y: number,
-  scale: any,
+  scale?: TEScale | null,
 ): [number, number] {
   scale = scale || { numerator: 1, denominator: 1 };
   const f = TEXT_ENGINE_REAL_PER_MM * (scale.denominator / scale.numerator);
   return [x * f, y * f];
 }
 
-function textEngineRingSignedArea(ring: any): number {
+function textEngineRingSignedArea(ring: TERing): number {
   return contourGrouping.ringSignedArea(ring);
 }
 
-function textEngineNormalizeContours(contours: any): any {
-  return contours.map((polygon: any) =>
-    polygon.map((ring: any, ringIndex: number) => {
+function textEngineNormalizeContours(contours: TEPolygon[]): TEPolygon[] {
+  return contours.map((polygon) =>
+    polygon.map((ring, ringIndex) => {
       const ccw = textEngineRingSignedArea(ring) > 0;
       if (ringIndex === 0) {
         return ccw ? ring : ring.slice().reverse();
@@ -125,20 +145,20 @@ function textEngineNormalizeContours(contours: any): any {
   );
 }
 
-function textEnginePointInRing(x: number, y: number, ring: any): any {
+function textEnginePointInRing(x: number, y: number, ring: TERing): boolean {
   return contourGrouping.pointInRing(x, y, ring);
 }
 
-function textEngineRingCenter(ring: any): any {
+function textEngineRingCenter(ring: TERing): number[] {
   return contourGrouping.ringCenter(ring);
 }
 
-function textEngineNormalizeRingByDepth(ring: any, depth: any): any {
+function textEngineNormalizeRingByDepth(ring: TERing, depth: number): TERing {
   return contourGrouping.normalizeRingByDepth(ring, depth);
 }
 
 /** @see packages/text-contour-grouping.js */
-function textEngineGroupRingsIntoPolygons(rings: any): any {
+function textEngineGroupRingsIntoPolygons(rings: TERing[]): TEPolygon[] {
   return contourGrouping.groupRingsIntoPolygons(rings);
 }
 
@@ -230,8 +250,8 @@ function textEngineHbPathToContoursReal(
   originPaperX: number,
   baselinePaperY: number,
   upem: number,
-  scale: any,
-): any {
+  scale?: TEScale | null,
+): TEPolygon[] | null {
   if (!svgPath) return null;
   const rings = textEngineParseSvgPath(svgPath);
   if (!rings.length) return null;
