@@ -158,7 +158,7 @@ function moduleJoint1SlotRects(): MJPolygon[] {
   });
 }
 
-function moduleJoint1PathShape(id = "module-joint-1-outline"): any {
+function moduleJoint1PathShape(id = "module-joint-1-outline"): MillrectShape {
   const holeR = moduleJoint1R(MODULE_JOINT_1_MM.holeDiameter / 2);
   const base: MJRing[] = [
     moduleJoint1OutlineRing(),
@@ -168,7 +168,7 @@ function moduleJoint1PathShape(id = "module-joint-1-outline"): any {
   ];
   // 切り込み（キーホール）を 2D ジオメトリそのものに焼き込む。3D はこの輪郭を
   // そのまま押し出すだけ（暗黙の cut 処理は持たない）。
-  let contours: any = [base];
+  let contours: MJRing[][] = [base];
   const pc = moduleJoint1PolyClip();
   const slots = moduleJoint1SlotRects();
   if (pc && slots.length) {
@@ -252,7 +252,7 @@ function moduleJoint1DimensionShapes(): any[] {
   ];
 }
 
-function moduleJoint1NoteShapes(): any[] {
+function moduleJoint1NoteShapes(): MillrectShape[] {
   const { ox, oy, w, h } = moduleJoint1Layout();
   return [
     {
@@ -281,7 +281,9 @@ function moduleJoint1NoteShapes(): any[] {
   ];
 }
 
-function buildModuleJoint1ProjectState(projectName = "Module Joint 1"): any {
+function buildModuleJoint1ProjectState(
+  projectName = "Module Joint 1",
+): MillrectProjectJson {
   const { ox, oy, w, h } = moduleJoint1Layout();
   const sectionY = moduleJoint1R((297 - 2) / 2);
   const sectionX = moduleJoint1R((210 - 24) / 2);
