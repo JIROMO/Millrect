@@ -5,7 +5,21 @@
  * 幾何 Solver (constraints.js) とは別レイヤー。解決後に applyConstraints を呼ぶ。
  */
 
+// state / partIntent / dsl は DSL 駆動で本質的に動的なため Record で扱う。
 type PartSolverRecord = Record<string, any>;
+
+// 明確に数値が確定する部分はローカルの具体型で締める。
+interface PartRect {
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+  [key: string]: unknown;
+}
+interface ViewSize {
+  width: number;
+  height: number;
+}
 
 declare function getPaperDimensions(page: PartSolverRecord): {
   width: number;
@@ -38,7 +52,7 @@ function _partMmToReal(mm: number): number {
 
 /** 矩形を中心固定でリサイズ */
 function resizeRectCentered(
-  rect: PartSolverRecord,
+  rect: PartRect,
   newWidth: number,
   newHeight: number,
 ): void {
@@ -139,7 +153,10 @@ function buildProfileBindings(
 /**
  * params から各ビューの target real サイズ
  */
-function targetSizesReal(partKind: string, params: PartSolverRecord) {
+function targetSizesReal(
+  partKind: string,
+  params: PartSolverRecord,
+): Record<string, ViewSize> {
   if (partKind === "panel") {
     return {
       top: {
@@ -154,7 +171,7 @@ function targetSizesReal(partKind: string, params: PartSolverRecord) {
     depth: params.D,
     height: params.H,
   });
-  const out: PartSolverRecord = {};
+  const out: Record<string, ViewSize> = {};
   for (const [view, s] of Object.entries(mm)) {
     out[view] = {
       width: _partMmToReal((s as PartSolverRecord).w),
@@ -231,10 +248,10 @@ function _psFindShapeOnPage(id: string, page: PartSolverRecord) {
  * path → rect へ戻す（穴 feature 再適用のため）
  */
 function profileShapeToRect(
-  shape: PartSolverRecord,
+  shape: PartRect,
   newWidth: number,
   newHeight: number,
-  bbox?: PartSolverRecord,
+  bbox?: { x: number; y: number; w: number; h: number },
 ) {
   const cx = bbox ? bbox.x + bbox.w / 2 : shape.x + shape.width / 2;
   const cy = bbox ? bbox.y + bbox.h / 2 : shape.y + shape.height / 2;
