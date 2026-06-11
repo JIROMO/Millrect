@@ -389,3 +389,22 @@ function getCaptureRectForTarget(target) {
     },
   };
 }
+
+// バンドル時の global 面。script タグ時代のトップレベル宣言による
+// グローバル公開と同等の面を明示的に維持する（ADR 0002 フェーズ 3）。
+if (typeof window !== "undefined") {
+  Object.assign(window, {
+    _docLocalized,
+    listDocsScenarios,
+    _applyDrawingRectScenario,
+    _applyDrawingFeaturesScenario,
+    _applyEditingDemoScenario,
+    _applySketchDigitizeDemoScenario,
+    runDocsScenario,
+    prepareDocsCaptureView,
+    focusShapeInView,
+    focusDrawingFeaturesView,
+    getCaptureRectForTarget,
+    _DOC_REF_IMAGE_DATA_URL,
+  });
+}

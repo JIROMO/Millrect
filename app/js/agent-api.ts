@@ -390,3 +390,26 @@ function layoutRectOnPageMm(mmW, mmH, style = {}) {
     },
   };
 }
+
+// バンドル時の global 面。script タグ時代のトップレベル宣言による
+// グローバル公開と同等の面を明示的に維持する（ADR 0002 フェーズ 3）。
+if (typeof window !== "undefined") {
+  Object.assign(window, {
+    _collectPageSummaries,
+    validate3DReadiness,
+    _addDimensionsToPage,
+    _findPageByView,
+    _getProfileShapeOnPage,
+    _rectProxyFromShape,
+    _applyFilletFeature,
+    _applySlotFeature,
+    _applyPatternLinearFeature,
+    _applyHoleGridFeature,
+    _applyPartFeatures,
+    _buildMultiviewBoxState,
+    _commitAgentState,
+    createMultiviewBox,
+    createPart,
+    layoutRectOnPageMm,
+  });
+}

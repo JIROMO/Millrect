@@ -158,3 +158,29 @@ function initPanelSplit() {
     savePanelSplitRatio(PANEL_SPLIT_DEFAULT);
   });
 }
+
+// バンドル時の global 面。script タグ時代のトップレベル宣言による
+// グローバル公開と同等の面を明示的に維持する（ADR 0002 フェーズ 3）。
+if (typeof window !== "undefined") {
+  Object.assign(window, {
+    _loadPanelSections,
+    isPanelSectionOpen,
+    setPanelSectionOpen,
+    panelSectionHTML,
+    applyPanelSectionStates,
+    bindPanelSections,
+    _clampSplitRatio,
+    loadPanelSplitRatio,
+    savePanelSplitRatio,
+    applyPanelSplitRatio,
+    getPanelSplitRatio,
+    initPanelSplit,
+    PANEL_SECTIONS_STORAGE_KEY,
+    PANEL_SECTION_CHEVRON,
+    PANEL_SPLIT_STORAGE_KEY,
+    PANEL_SPLIT_DEFAULT,
+    PANEL_SPLIT_MIN,
+    PANEL_SPLIT_MAX,
+    PANEL_SPLIT_MIN_PX,
+  });
+}

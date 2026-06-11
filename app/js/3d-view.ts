@@ -14,11 +14,22 @@ function _realToThreeMM(v) {
   return v / _REAL_PER_MM;
 }
 
-let _3scene = null;
-let _3camera = null;
-let _3renderer = null;
-let _3controls = null;
-let _3meshes = [];
+// agent-api / docs-api / main.ts(MCP) / e2e が bare 参照する共有 mutable。
+// global プロパティとして保持する（ADR 0002）。
+declare var _3scene: any;
+(window as any)._3scene = null;
+// scripts/docs-multiview-scenario.js(e2e) が bare 参照（global 保持）。
+declare var _3camera: any;
+(window as any)._3camera = null;
+// scripts/docs-multiview-scenario.js(e2e) が bare 参照（global 保持）。
+declare var _3renderer: any;
+(window as any)._3renderer = null;
+// scripts/docs-multiview-scenario.js(e2e) が bare 参照（global 保持）。
+declare var _3controls: any;
+(window as any)._3controls = null;
+// e2e が参照（同上の理由で global 保持）。
+declare var _3meshes: any;
+(window as any)._3meshes = [];
 let _3animId = null;
 let _3canvas = null;
 let _3dStatus = { meshCount: 0, message: null };
@@ -70,6 +81,55 @@ function _meshHasGeometry(mesh) {
   return !!pos && pos.count >= 3;
 }
 
+// ワールド変換を焼き込んだ非インデックスジオメトリを返す（連結用）
+function _bakedWorldGeometry(mesh) {
+  mesh.updateMatrixWorld(true);
+  const g = mesh.geometry.index
+    ? mesh.geometry.toNonIndexed()
+    : mesh.geometry.clone();
+  g.applyMatrix4(mesh.matrixWorld);
+  return g;
+}
+
+// bbox が交差しない（=体積を共有しない）2 メッシュをジオメトリ連結で合成する。
+// 非交差の union は BSP と結果が同一で、逐次 BSP union の膨張を避けられる。
+function _concatDisjointMeshes(meshA, meshB, material) {
+  const ga = _bakedWorldGeometry(meshA);
+  const gb = _bakedWorldGeometry(meshB);
+  const pa = ga.attributes.position.array;
+  const pb = gb.attributes.position.array;
+  const pos = new Float32Array(pa.length + pb.length);
+  pos.set(pa, 0);
+  pos.set(pb, pa.length);
+  const geo = new THREE.BufferGeometry();
+  geo.setAttribute("position", new THREE.BufferAttribute(pos, 3));
+  const na = ga.attributes.normal;
+  const nb = gb.attributes.normal;
+  if (na && nb) {
+    const nrm = new Float32Array(na.array.length + nb.array.length);
+    nrm.set(na.array, 0);
+    nrm.set(nb.array, na.array.length);
+    geo.setAttribute("normal", new THREE.BufferAttribute(nrm, 3));
+  } else {
+    geo.computeVertexNormals();
+  }
+  geo.computeBoundingBox();
+  ga.dispose();
+  gb.dispose();
+  const mesh = new THREE.Mesh(geo, material || meshA.material?.clone());
+  _disposeMesh(meshA);
+  _disposeMesh(meshB);
+  mesh.updateMatrixWorld(true);
+  return mesh;
+}
+
+function _worldBox(mesh) {
+  mesh.updateMatrixWorld(true);
+  const g = mesh.geometry;
+  if (!g.boundingBox) g.computeBoundingBox();
+  return g.boundingBox.clone().applyMatrix4(mesh.matrixWorld);
+}
+
 function _csgUnion(meshA, meshB, material) {
   if (!meshA) return meshB || null;
   if (!meshB) return meshA;
@@ -80,6 +140,14 @@ function _csgUnion(meshA, meshB, material) {
   if (!_meshHasGeometry(meshB)) {
     _disposeMesh(meshB);
     return meshA;
+  }
+  // 体積を共有しない場合は BSP を使わず連結（同一結果・大幅に高速）
+  try {
+    if (!_worldBox(meshA).intersectsBox(_worldBox(meshB))) {
+      return _concatDisjointMeshes(meshA, meshB, material);
+    }
+  } catch (e) {
+    console.warn("[3D] disjoint-union fast path failed:", e);
   }
   try {
     const result = CSGAdapter.union(
@@ -489,9 +557,11 @@ function _applyViewPosition(mesh, viewType, dims) {
 
 function _profileFrameForPage(page) {
   const profiles =
-    typeof extractProfilesFromPage === "function"
-      ? extractProfilesFromPage(page)
-      : [];
+    typeof getProfileEntriesFromPage === "function"
+      ? getProfileEntriesFromPage(page).map((entry) => entry.profile)
+      : typeof extractProfilesFromPage === "function"
+        ? extractProfilesFromPage(page)
+        : [];
   const boxes = profiles.map((p) => p.bbox).filter(Boolean);
   if (!boxes.length) return null;
   const minX = Math.min(...boxes.map((b) => b.minX ?? b.x));
@@ -688,19 +758,26 @@ function _build3DSceneFromViews() {
     for (const { pages, viewType } of specs) {
       if (!pages?.length) continue;
       for (const page of pages) {
-        for (const { shape, ancestorGroups } of iterProfileSourcesFromPage(
-          page,
-        )) {
+        const entries =
+          typeof getProfileEntriesFromPage === "function"
+            ? getProfileEntriesFromPage(page)
+            : [...iterProfileSourcesFromPage(page)]
+                .map(({ shape, ancestorGroups }) => ({
+                  shape,
+                  ancestorGroups,
+                  profile: shapeToProfile(shape, page.id, ancestorGroups),
+                }))
+                .filter((entry) => entry.profile);
+        for (const { shape, profile } of entries) {
           if (shape.type === "line" || shape.type === "text") continue;
           const color = _colorForShape(shape);
-          const mesh = _buildSingleShapeMesh(
+          const mesh = _buildMeshFromProfile(
+            profile,
             page,
-            shape,
-            ancestorGroups,
             viewType,
             dims,
             _makeMaterial(color),
-            pageFrames,
+            pageFrames?.get(page.id),
           );
           if (!mesh) continue;
           const prev = byColor.get(color);
@@ -716,7 +793,8 @@ function _build3DSceneFromViews() {
 
   function makeAxisEntry(unionAny, specs) {
     if (!unionAny) return null;
-    return { any: unionAny, byColor: buildColorVolumes(specs) };
+    // specs（元ページ情報）は revolve の 2D 母線サンプリングが参照する
+    return { any: unionAny, byColor: buildColorVolumes(specs), specs };
   }
 
   const axisVolumes = {
@@ -945,6 +1023,254 @@ function _buildSingleShapeMesh(
   );
 }
 
+// 共有 clamp volume を CSG 入力用に複製する。_csgIntersect は入力を dispose する
+// ため、axisVolumes 内の volume 本体を渡すと後続パーツで使えなくなる。
+// ワールド変換をジオメトリに焼き込み、変換なしの Mesh として返す。
+function _cloneMeshForCsg(mesh, material) {
+  if (!mesh?.geometry) return null;
+  mesh.updateMatrixWorld(true);
+  const geo = mesh.geometry.clone();
+  geo.applyMatrix4(mesh.matrixWorld);
+  const clone = new THREE.Mesh(geo, material);
+  clone.updateMatrixWorld(true);
+  return clone;
+}
+
+// 垂直線 x=rx と輪郭リング群の交点のうち最小の drawing y（=最上面）を返す。
+function _ringTopAtX(rings, rx) {
+  let minY = Infinity;
+  for (const ring of rings || []) {
+    for (let i = 0; i < ring.length - 1; i++) {
+      const [x1, y1] = ring[i];
+      const [x2, y2] = ring[i + 1];
+      if (rx < Math.min(x1, x2) || rx > Math.max(x1, x2)) continue;
+      if (x1 === x2) {
+        minY = Math.min(minY, y1, y2);
+      } else {
+        const t = (rx - x1) / (x2 - x1);
+        minY = Math.min(minY, y1 + t * (y2 - y1));
+      }
+    }
+  }
+  return Number.isFinite(minY) ? minY : null;
+}
+
+// 円 + solidIntersect: 直交ビューの輪郭を「回転体の母線」として解釈する。
+// 直交ビューの交差ヴォールトは斜め方向の拘束が無く先端に耳が残るため、
+// 回転対称な部品（丸頭ピン等）は revolve（LatheGeometry）で滑らかに生成する。
+// 半径 u における上面高さ f(u) を直交ビューの 2D プロファイルから直接サンプリングし
+// （_profileToThreeShapesForView の tx() と同じ座標対応）、その包絡線を軸まわりに
+// 回転させる（正面図の丸キャップなら真の半球になる）。
+// 現状はスイープ軸が Y（top/bottom 主ビュー）の場合のみ。失敗時は null を返し
+// CSG 交差 → バンド近似へ順にフォールバックする。
+function _buildPartMeshByRevolve(
+  page,
+  shape,
+  ancestorGroups,
+  viewType,
+  color,
+  mat,
+  clampEntries,
+  dims,
+  pageFrames,
+) {
+  if (_viewAxis(viewType) !== "y") return null;
+
+  // 円柱のワールド配置（中心・半径）は既存の押し出しパスで実測する
+  const probe = _buildSingleShapeMesh(
+    page,
+    shape,
+    ancestorGroups,
+    viewType,
+    dims,
+    mat,
+    pageFrames,
+  );
+  if (!probe) return null;
+  const bb = new THREE.Box3().setFromObject(probe);
+  _disposeMesh(probe);
+  const cx = (bb.min.x + bb.max.x) / 2;
+  const cz = (bb.min.z + bb.max.z) / 2;
+  const r = Math.max(bb.max.x - bb.min.x, bb.max.z - bb.min.z) / 2;
+  if (!(r > 0)) return null;
+
+  // バンド下端 lo はバンド近似と同じ規則（同色 volume 優先の bbox 範囲）
+  let lo = -Infinity;
+  let hi = Infinity;
+  for (const entry of clampEntries) {
+    const vol = entry.byColor?.get(color) || entry.any;
+    const range = _worldRangeAlongAxis(vol, "y");
+    if (!range) continue;
+    lo = Math.max(lo, range[0]);
+    hi = Math.min(hi, range[1]);
+  }
+  if (!Number.isFinite(lo) || !Number.isFinite(hi) || hi - lo <= 1e-4) {
+    return null;
+  }
+
+  // ビュー内ローカル mm（tx() の正規化と同じ向き）とワールド水平座標の相互変換。
+  // front/back は world X、right/left は world Z が水平軸に対応する。
+  function _viewHorizMaps(vt, fw) {
+    switch (vt) {
+      case "front":
+        return { toLx: (h) => h, toWorld: (lx) => lx };
+      case "back":
+        return { toLx: (h) => fw - h, toWorld: (lx) => fw - lx };
+      case "right":
+        return { toLx: (h) => -h, toWorld: (lx) => -lx };
+      case "left":
+        return { toLx: (h) => fw + h, toWorld: (lx) => lx - fw };
+      default:
+        return null;
+    }
+  }
+
+  // 1 軸ぶんの上面高さ（world Y）。同色プロファイルの union（max）。
+  function axisTopAt(specs, horizWorld) {
+    let best = null;
+    for (const spec of specs || []) {
+      for (const pg of spec.pages || []) {
+        const frame = pageFrames?.get(pg.id);
+        if (!frame) continue;
+        const fw = _realToThreeMM(frame.bbox.w);
+        const fh = _realToThreeMM(frame.bbox.h);
+        const maps = _viewHorizMaps(spec.viewType, fw);
+        if (!maps) continue;
+        const lx = maps.toLx(horizWorld);
+        if (lx < 0 || lx > fw) continue;
+        const rawX = frame.bbox.x + lx * _REAL_PER_MM;
+        for (const prof of frame.profiles || []) {
+          const found = findShapeById(prof.sourceId);
+          if (!found?.shape) continue;
+          if (_colorForShape(found.shape) !== color) continue;
+          const rawTop = _ringTopAtX(prof.rings, rawX);
+          if (rawTop == null) continue;
+          const yw = fh - _realToThreeMM(rawTop - frame.bbox.y);
+          best = best == null ? yw : Math.max(best, yw);
+        }
+      }
+    }
+    return best;
+  }
+
+  // ピン直上にある同色プロファイル（=このピンの側面シルエット）の中心と半幅。
+  // 手描き図面ではバーと円の中心が数百 µm ずれるため、母線はピン中心ではなく
+  // バー自身の中心を基準にサンプリングする（ズレで母線が欠けて段差が出るのを防ぐ）。
+  function axisBarCenter(specs, pinHoriz) {
+    let best = null;
+    for (const spec of specs || []) {
+      for (const pg of spec.pages || []) {
+        const frame = pageFrames?.get(pg.id);
+        if (!frame) continue;
+        const fw = _realToThreeMM(frame.bbox.w);
+        const maps = _viewHorizMaps(spec.viewType, fw);
+        if (!maps) continue;
+        const lx = maps.toLx(pinHoriz);
+        if (lx < 0 || lx > fw) continue;
+        const rawX = frame.bbox.x + lx * _REAL_PER_MM;
+        for (const prof of frame.profiles || []) {
+          const found = findShapeById(prof.sourceId);
+          if (!found?.shape) continue;
+          if (_colorForShape(found.shape) !== color) continue;
+          const bbMinX = prof.bbox.minX ?? prof.bbox.x;
+          const bbMaxX = prof.bbox.maxX ?? prof.bbox.x + prof.bbox.w;
+          if (rawX < bbMinX || rawX > bbMaxX) continue;
+          const halfW = _realToThreeMM(bbMaxX - bbMinX) / 2;
+          const centerLx = _realToThreeMM(
+            (bbMinX + bbMaxX) / 2 - frame.bbox.x,
+          );
+          const center = maps.toWorld(centerLx);
+          if (!best || halfW < best.halfW) best = { center, halfW };
+        }
+      }
+    }
+    return best;
+  }
+
+  const axisInfos = [];
+  for (const entry of clampEntries) {
+    const isZAxisEntry = entry.specs?.some(
+      (s) => s.viewType === "front" || s.viewType === "back",
+    );
+    const bar = axisBarCenter(entry.specs, isZAxisEntry ? cx : cz);
+    if (!bar) return null; // ピン直上に同色材料の無い軸がある → fallback
+    axisInfos.push({ specs: entry.specs, bar });
+  }
+  if (!axisInfos.length) return null;
+
+  // 母線: 底面 → 外周側壁 → 先端キャップ（u: r → 0）。
+  // 各軸で ±u の min（非対称輪郭でも内側に収める）、軸間は min（ビュー交差）。
+  // u はバー半幅にクランプ（円よりバーが僅かに細くても母線を欠けさせない）。
+  const STEPS = 24;
+  const points = [new THREE.Vector2(0, lo), new THREE.Vector2(r, lo)];
+  let added = 0;
+  for (let i = 0; i <= STEPS; i++) {
+    const u = (r * (STEPS - i)) / STEPS;
+    let f = Infinity;
+    for (const { specs, bar } of axisInfos) {
+      const uu = Math.min(u, Math.max(bar.halfW - 1e-3, 0));
+      const probes = [
+        axisTopAt(specs, bar.center + uu),
+        axisTopAt(specs, bar.center - uu),
+      ].filter((v) => v != null);
+      if (!probes.length) {
+        f = null;
+        break;
+      }
+      f = Math.min(f, ...probes);
+    }
+    if (f == null) continue;
+    points.push(new THREE.Vector2(u, Math.max(lo, Math.min(f, hi))));
+    added++;
+  }
+  if (!added) return null;
+
+  const geo = new THREE.LatheGeometry(points, 48);
+  geo.computeVertexNormals();
+  const mesh = new THREE.Mesh(geo, mat.clone());
+  mesh.position.set(cx, 0, cz);
+  mesh.updateMatrixWorld(true);
+  return { mesh, color };
+}
+
+// 案A（opt-in）: フットプリント押し出しを直交ビューの volume と実際に CSG 交差し、
+// 丸頭など「高さが面内で変化する」輪郭を 3D に反映する。
+// 交差が空・失敗時は null を返し、呼び出し側がバンド近似へフォールバックする。
+function _buildPartMeshBySolidIntersect(
+  page,
+  shape,
+  ancestorGroups,
+  viewType,
+  color,
+  mat,
+  clampEntries,
+  dims,
+  pageFrames,
+) {
+  let mesh = _buildSingleShapeMesh(
+    page,
+    shape,
+    ancestorGroups,
+    viewType,
+    dims,
+    mat,
+    pageFrames,
+  );
+  if (!mesh) return null;
+  for (const entry of clampEntries) {
+    const vol = entry.byColor?.get(color) || entry.any;
+    const clamp = _cloneMeshForCsg(vol, mat.clone());
+    if (!clamp) continue;
+    mesh = _csgIntersect(mesh, clamp, mat.clone());
+    if (!mesh || !_meshHasGeometry(mesh)) {
+      _disposeMesh(mesh);
+      return null;
+    }
+  }
+  mesh.material = mat.clone();
+  return { mesh, color };
+}
+
 function _buildPartMesh(
   page,
   shape,
@@ -964,6 +1290,39 @@ function _buildPartMesh(
   if (axis !== "y" && axisVolumes.y) clampEntries.push(axisVolumes.y);
   if (axis !== "z" && axisVolumes.z) clampEntries.push(axisVolumes.z);
   if (axis !== "x" && axisVolumes.x) clampEntries.push(axisVolumes.x);
+
+  // 案A: shape.solidIntersect === true の部品だけ、直交ビューの輪郭（丸頭など）を
+  // 3D に反映する。円は回転体（滑らかなドーム）、それ以外は真の CSG 交差。
+  // 既定はバンド bbox 近似（後段）のままで挙動を変えない。
+  if (shape.solidIntersect) {
+    if (shape.type === "circle") {
+      const revolved = _buildPartMeshByRevolve(
+        page,
+        shape,
+        ancestorGroups,
+        viewType,
+        color,
+        mat,
+        clampEntries,
+        dims,
+        pageFrames,
+      );
+      if (revolved) return revolved;
+    }
+    const solid = _buildPartMeshBySolidIntersect(
+      page,
+      shape,
+      ancestorGroups,
+      viewType,
+      color,
+      mat,
+      clampEntries,
+      dims,
+      pageFrames,
+    );
+    if (solid) return solid;
+    // 交差が空 / 失敗した場合はバンド近似へフォールバック。
+  }
 
   let lo = -Infinity;
   let hi = Infinity;
@@ -1023,10 +1382,18 @@ function _buildSingleViewExtrusionScene(byType, dims, pageFrames) {
 
   const byColor = new Map();
   for (const page of pages) {
-    for (const { shape, ancestorGroups } of iterProfileSourcesFromPage(page)) {
+    const entries =
+      typeof getProfileEntriesFromPage === "function"
+        ? getProfileEntriesFromPage(page)
+        : [...iterProfileSourcesFromPage(page)]
+            .map(({ shape, ancestorGroups }) => ({
+              shape,
+              ancestorGroups,
+              profile: shapeToProfile(shape, page.id, ancestorGroups),
+            }))
+            .filter((entry) => entry.profile);
+    for (const { shape, profile } of entries) {
       if (shape.type === "line" || shape.type === "text") continue;
-      const profile = shapeToProfile(shape, page.id, ancestorGroups);
-      if (!profile) continue;
       const color = _colorForShape(shape);
       const mat = _makeMaterial(color);
       const mesh = _buildMeshFromProfile(
@@ -1070,16 +1437,25 @@ function _buildPageUnionMesh(page, sweepDepth, viewType, dims, pageFrames) {
   const mat = _makeMaterial("#5965f9");
 
   let unionMesh = null;
-  for (const { shape, ancestorGroups } of iterProfileSourcesFromPage(page)) {
+  const entries =
+    typeof getProfileEntriesFromPage === "function"
+      ? getProfileEntriesFromPage(page)
+      : [...iterProfileSourcesFromPage(page)]
+          .map(({ shape, ancestorGroups }) => ({
+            shape,
+            ancestorGroups,
+            profile: shapeToProfile(shape, page.id, ancestorGroups),
+          }))
+          .filter((entry) => entry.profile);
+  for (const { shape, profile } of entries) {
     if (shape.type === "line" || shape.type === "text") continue;
-    const mesh = _buildSingleShapeMesh(
+    const mesh = _buildMeshFromProfile(
+      profile,
       page,
-      shape,
-      ancestorGroups,
       viewType,
       dims,
       mat,
-      pageFrames,
+      pageFrames?.get(page.id),
     );
     if (!mesh) continue;
 
@@ -1199,4 +1575,63 @@ function exportSTL() {
   a.click();
   a.remove();
   URL.revokeObjectURL(a.href);
+}
+
+// バンドル時の global 面。script タグ時代のトップレベル宣言による
+// グローバル公開と同等の面を明示的に維持する（ADR 0002 フェーズ 3）。
+if (typeof window !== "undefined") {
+  Object.assign(window, {
+    _realToThreeMM,
+    _disposeMesh,
+    _disposeAxisEntry,
+    _worldRangeAlongAxis,
+    _meshHasGeometry,
+    _bakedWorldGeometry,
+    _concatDisjointMeshes,
+    _worldBox,
+    _csgUnion,
+    _csgIntersect,
+    _disposeSceneObject,
+    init3DView,
+    resize3DView,
+    reset3DViewCamera,
+    destroy3DView,
+    get3DSceneStatus,
+    get3DModelPipelineState,
+    _projectJsonForModelPipeline,
+    _refreshModelPipelineState,
+    _edgeKey,
+    _validateMeshGeometry,
+    validateMeshesForExport,
+    _normalizeViewType,
+    _sync3DEmptyOverlay,
+    _applyViewTransform,
+    _applyViewPosition,
+    _profileFrameForPage,
+    _frameSizeMM,
+    _maxFrameSizeMM,
+    _profileToThreeShapesForView,
+    _build3DSceneFromViews,
+    _viewAxis,
+    _getPrimaryPartAxis,
+    _inferSingleViewDepthMM,
+    _colorForShape,
+    _makeMaterial,
+    _buildMeshFromProfile,
+    _buildSingleShapeMesh,
+    _cloneMeshForCsg,
+    _ringTopAtX,
+    _buildPartMeshByRevolve,
+    _buildPartMeshBySolidIntersect,
+    _buildPartMesh,
+    _buildSingleViewExtrusionScene,
+    _buildPageUnionMesh,
+    _resolve3DColor,
+    cancelScheduledUpdate3DScene,
+    scheduleUpdate3DScene,
+    update3DScene,
+    exportSTL,
+    _REAL_PER_MM,
+    UPDATE3D_DEBOUNCE_MS,
+  });
 }

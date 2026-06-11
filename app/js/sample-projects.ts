@@ -64,3 +64,13 @@ function shouldFitMultiviewSampleView(template) {
   const entry = getSampleCatalogEntry(sampleId);
   return entry?.fitView === "multiview";
 }
+
+// バンドル時の global 面。script タグ時代のトップレベル宣言による
+// グローバル公開と同等の面を明示的に維持する（ADR 0002 フェーズ 3）。
+if (typeof window !== "undefined") {
+  Object.assign(window, {
+    buildSampleProjectState,
+    resolveSampleIdFromTemplate,
+    shouldFitMultiviewSampleView,
+  });
+}

@@ -3,10 +3,15 @@
 // ── Bezier draw state ─────────────────────────────────────────
 // nodes: [{x, y, h1:{x,y}|null, h2:{x,y}|null}]
 // h1 = incoming handle, h2 = outgoing handle
-let _bezierDraw = null;
+// interaction が bare 参照する共有 mutable。バンドル時はモジュール変数だと
+// 再代入が外に見えないため global プロパティとして保持する（ADR 0002）。
+declare var _bezierDraw: any;
+(window as any)._bezierDraw = null;
 // { nodes, isDragging, cursorRP }
 
-let _bezierEditId = null; // shape ID in edit mode
+// interaction / renderer / ui が bare 参照（同上の理由で global 保持）。
+declare var _bezierEditId: any;
+(window as any)._bezierEditId = null; // shape ID in edit mode
 let _bezierDragH = null; // { nodeIdx, type:'anchor'|'h1'|'h2', origNodes }
 
 // ── SVG path string ───────────────────────────────────────────
@@ -570,4 +575,27 @@ function handleBezierEditUp() {
 function exitBezierEditMode() {
   _bezierEditId = null;
   _bezierDragH = null;
+}
+
+// バンドル時の global 面。script タグ時代のトップレベル宣言による
+// グローバル公開と同等の面を明示的に維持する（ADR 0002 フェーズ 3）。
+if (typeof window !== "undefined") {
+  Object.assign(window, {
+    bezierPathToD,
+    bezierBBox,
+    startBezierDraw,
+    handleBezierDown,
+    handleBezierMove,
+    handleBezierUp,
+    handleBezierDblClick,
+    handleBezierKey,
+    cancelBezierDraw,
+    commitBezierPath,
+    renderBezierOverlay,
+    renderBezierEditHandles,
+    handleBezierEditDown,
+    handleBezierEditMove,
+    handleBezierEditUp,
+    exitBezierEditMode,
+  });
 }

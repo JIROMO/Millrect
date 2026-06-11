@@ -50,6 +50,98 @@ function initUI() {
   updateAll();
 }
 
+const _uiPanelCache = Object.create(null);
+
+function _uiLocaleKey() {
+  return typeof getLocale === "function" ? getLocale() : "";
+}
+
+function _uiCacheChanged(key, signature) {
+  if (_uiPanelCache[key] === signature) return false;
+  _uiPanelCache[key] = signature;
+  return true;
+}
+
+function _pageListSignature(state) {
+  return JSON.stringify({
+    locale: _uiLocaleKey(),
+    currentPageId: state.currentPageId,
+    pages: (state.pages || []).map((page) => ({
+      id: page.id,
+      name: page.name,
+      paper: page.paper,
+      orientation: page.orientation,
+      scale: page.scale,
+      viewType: page.viewDefinition?.type || "top",
+    })),
+  });
+}
+
+function _layerListSignature(state, page) {
+  return JSON.stringify({
+    locale: _uiLocaleKey(),
+    currentPageId: state.currentPageId,
+    currentLayerId: state.currentLayerId,
+    selectedShapeIds: state.selectedShapeIds || [],
+    layers: (page?.layers || []).map((layer) => ({
+      id: layer.id,
+      name: layer.name,
+      visible: layer.visible,
+      locked: layer.locked,
+      shapes: (layer.shapes || []).map((shape) => ({
+        id: shape.id,
+        type: shape.type,
+        text: shape.type === "text" ? shape.text || "" : "",
+      })),
+    })),
+  });
+}
+
+function _pageSettingsSignature(state, page) {
+  return JSON.stringify({
+    locale: _uiLocaleKey(),
+    currentPageId: state.currentPageId,
+    paper: page?.paper,
+    orientation: page?.orientation,
+    scale: page?.scale,
+    pages: (state.pages || []).map((pageItem) => ({
+      id: pageItem.id,
+      name: pageItem.name,
+      viewType: pageItem.viewDefinition?.type || "top",
+    })),
+  });
+}
+
+function _historyPanelSignature() {
+  return JSON.stringify({
+    locale: _uiLocaleKey(),
+    index: typeof getHistoryIndex === "function" ? getHistoryIndex() : -1,
+    labels: typeof getHistoryLabels === "function" ? getHistoryLabels() : [],
+  });
+}
+
+function _projectFontsSignature(state) {
+  const projectFonts = state.fonts || [];
+  const libraryFonts =
+    typeof getFontLibraryFonts === "function" ? getFontLibraryFonts() : [];
+  return JSON.stringify({
+    locale: _uiLocaleKey(),
+    projectFonts,
+    libraryFonts,
+  });
+}
+
+function _tasteBriefSignature(state) {
+  return JSON.stringify({
+    locale: _uiLocaleKey(),
+    brief: state.projectBrief || null,
+    requireBrief:
+      typeof getRequireBriefBeforeMake === "function"
+        ? getRequireBriefBeforeMake()
+        : false,
+  });
+}
+
 async function applyOpenedProject({
   projectId,
   json,
@@ -122,16 +214,37 @@ async function applyOpenedProject({
 }
 
 function updateAll() {
-  updateToolbar();
-  updatePagesList();
-  updateProjectFontsPanel();
-  updateLayersList();
-  updateTasteBriefPanel();
-  updatePropertiesPanel();
-  updatePageSettings();
-  updateReferenceImagePanel();
-  updateHistoryPanel();
+  const state = getState();
   const page = getCurrentPage();
+  updateToolbar();
+  const pagesEl = document.getElementById("pages-list");
+  const pagesSig = _pageListSignature(state);
+  if (_uiCacheChanged("pages", pagesSig) || !pagesEl?.childElementCount) {
+    updatePagesList();
+  }
+  const projectFontsSig = _projectFontsSignature(state);
+  if (_uiCacheChanged("projectFonts", projectFontsSig)) {
+    updateProjectFontsPanel();
+  }
+  const layersEl = document.getElementById("layers-list");
+  const layersSig = _layerListSignature(state, page);
+  if (_uiCacheChanged("layers", layersSig) || !layersEl?.childElementCount) {
+    updateLayersList();
+  }
+  const tasteSig = _tasteBriefSignature(state);
+  if (_uiCacheChanged("tasteBrief", tasteSig)) {
+    updateTasteBriefPanel();
+  }
+  updatePropertiesPanel();
+  const pageSettingsSig = _pageSettingsSignature(state, page);
+  if (_uiCacheChanged("pageSettings", pageSettingsSig)) {
+    updatePageSettings();
+  }
+  updateReferenceImagePanel();
+  const historySig = _historyPanelSignature();
+  if (_uiCacheChanged("history", historySig)) {
+    updateHistoryPanel();
+  }
   const el = document.getElementById("status-scale");
   if (el) el.textContent = `1/${page.scale.denominator}`;
   const ez = document.getElementById("status-zoom");
@@ -365,7 +478,7 @@ function updatePagesList() {
   const state = getState(),
     c = document.getElementById("pages-list");
   if (!c) return;
-  c.innerHTML = "";
+  const frag = document.createDocumentFragment();
   for (const page of state.pages) {
     const div = document.createElement("div");
     div.className = `list-item${page.id === state.currentPageId ? " active" : ""}`;
@@ -407,8 +520,9 @@ function updatePagesList() {
     div.addEventListener("click", () => {
       activatePage(page.id);
     });
-    c.appendChild(div);
+    frag.appendChild(div);
   }
+  c.replaceChildren(frag);
 }
 
 function activatePage(pageId) {
@@ -484,7 +598,7 @@ function updateLayersList() {
     page = getCurrentPage(),
     c = document.getElementById("layers-list");
   if (!c) return;
-  c.innerHTML = "";
+  const frag = document.createDocumentFragment();
   for (const layer of [...page.layers].reverse()) {
     const div = document.createElement("div");
     div.className = `list-item layer-item${layer.id === state.currentLayerId ? " active" : ""}`;
@@ -543,7 +657,7 @@ function updateLayersList() {
       state.currentLayerId = layer.id;
       updateLayersList();
     });
-    c.appendChild(div);
+    frag.appendChild(div);
   }
   const ab = document.createElement("button");
   ab.className = "add-btn";
@@ -555,7 +669,7 @@ function updateLayersList() {
     );
     updateAll();
   });
-  c.appendChild(ab);
+  frag.appendChild(ab);
 
   // ── Shape list (current layer) ──────────────────────
   const state2 = getState();
@@ -636,9 +750,10 @@ function updateLayersList() {
       });
       body.appendChild(row);
     });
-    c.appendChild(sec);
-    bindPanelSections(c);
+    frag.appendChild(sec);
   }
+  c.replaceChildren(frag);
+  bindPanelSections(c);
 }
 
 function startLayerNameEdit(page, layer, nameEl) {
@@ -3389,3 +3504,105 @@ document.addEventListener("DOMContentLoaded", () => {
     "color:#2563eb;font-weight:bold",
   );
 });
+
+// バンドル時の global 面。script タグ時代のトップレベル宣言による
+// グローバル公開と同等の面を明示的に維持する（ADR 0002 フェーズ 3）。
+if (typeof window !== "undefined") {
+  Object.assign(window, {
+    loadSystemFonts,
+    buildFontFamilySelect,
+    initUI,
+    _uiLocaleKey,
+    _uiCacheChanged,
+    _pageListSignature,
+    _layerListSignature,
+    _pageSettingsSignature,
+    _historyPanelSignature,
+    _projectFontsSignature,
+    _tasteBriefSignature,
+    applyOpenedProject,
+    updateAll,
+    bindToolbar,
+    updateToolbar,
+    updatePagesList,
+    activatePage,
+    addViewPage,
+    pageViewTypeExists,
+    viewPageBaseName,
+    uniquePageName,
+    updateLayersList,
+    startLayerNameEdit,
+    buildBooleanMenuHTML,
+    bindBooleanMenuEvents,
+    runBooleanShortcut,
+    _buildTransformSectionBodyHTML,
+    buildAlignPositionHTML,
+    bindAlignPositionEvents,
+    initSidebarTabs,
+    _tasteEscHtml,
+    updateTasteBriefPanel,
+    updateTasteBriefPanelAsync,
+    bindTasteBriefPanelEvents,
+    updatePropertiesPanel,
+    pRow,
+    stripUnitLabel,
+    pRowUnit,
+    pRowUnitById,
+    pRowMm,
+    pSel,
+    pRO,
+    formatFileSize,
+    shapeSupportsFill,
+    textInkAppearanceValues,
+    applyTextInkColor,
+    colorForInput,
+    buildSwatchesHTML,
+    buildAppearanceHTML,
+    buildMultiAppearanceHTML,
+    _rememberDrawColors,
+    applyAppearanceToSelection,
+    bindAppearanceEvents,
+    buildPropsHTML,
+    setCustomSelect,
+    bindCustomSelect,
+    updateHistoryPanel,
+    _buildArrayDuplicateHTML,
+    _bindArrayDuplicateEvents,
+    updatePageSettings,
+    updateProjectFontsPanel,
+    bindProjectFonts,
+    bindPageSettings,
+    bindReferenceImageSettings,
+    updateReferenceImagePanel,
+    bindKeyShortcuts,
+    _canvasSize,
+    _leftOffset,
+    _rightOffset,
+    fitPage,
+    centerPaper,
+    _fmtDate,
+    bindLocaleSettings,
+    updatePageSettingsLabels,
+    updatePageCurrentOptions,
+    pageCurrentLabel,
+    resetAddViewSelect,
+    syncLocaleSelectLabels,
+    updateAddViewOptionLabels,
+    updateOrientationOptionLabels,
+    showProjectList,
+    TOOL_INFO,
+    _uiPanelCache,
+    EYE_ON,
+    EYE_OFF,
+    LOCK_ON,
+    LOCK_OFF,
+    BOOLEAN_ICONS,
+    BOOLEAN_ACTIONS,
+    BOOLEAN_KEY_MAP,
+    TASTE_PHASE_LABELS,
+    FILL_PRESETS,
+    DEFAULT_FILL_COLOR,
+    DEFAULT_STROKE_COLOR,
+    VIEW_DEFINITION_PRESETS,
+  });
+}

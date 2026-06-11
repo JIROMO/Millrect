@@ -571,3 +571,40 @@ function cancelReferenceScaleAnchor() {
   render();
   return { ok: true };
 }
+
+// バンドル時の global 面。script タグ時代のトップレベル宣言による
+// グローバル公開と同等の面を明示的に維持する（ADR 0002 フェーズ 3）。
+if (typeof window !== "undefined") {
+  Object.assign(window, {
+    _pageById,
+    setReferenceImage,
+    isReferenceImageSelected,
+    selectReferenceImageForEdit,
+    endReferenceImageTransformEdit,
+    deselectReferenceImage,
+    onActiveToolChanged,
+    isReferenceImageEditActive,
+    _refImageHandleLayout,
+    hitTestReferenceImage,
+    getReferenceImageHoverCursor,
+    _clampRefSize,
+    _applyReferenceImageGeometry,
+    handleReferenceImagePointerDown,
+    _computeRefBboxAfterResize,
+    _clampRefSizeWithAspect,
+    _resizeReferenceFromHandle,
+    handleReferenceImagePointerMove,
+    handleReferenceImagePointerUp,
+    clearReferenceImage,
+    setReferenceImageScaleAnchor,
+    getReferenceImage,
+    isReferenceScaleAnchorActive,
+    getReferenceScaleAnchorState,
+    setReferenceScaleAnchorCursor,
+    beginReferenceScaleAnchor,
+    handleReferenceScaleAnchorClick,
+    completeReferenceScaleAnchor,
+    cancelReferenceScaleAnchor,
+    REF_IMAGE_MIN_REAL,
+  });
+}

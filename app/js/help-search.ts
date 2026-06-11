@@ -165,3 +165,5 @@
   window.openHelpSearch = openHelpSearch;
   window.closeHelpSearch = closeHelpSearch;
 })();
+
+// IIFE 形式（必要なグローバルは内部で明示公開）。バンドル公開ブロック不要。

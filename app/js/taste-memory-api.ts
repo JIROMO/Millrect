@@ -229,3 +229,28 @@ function appendArtifactLogEntry(entry, options) {
     },
   );
 }
+
+// バンドル時の global 面。script タグ時代のトップレベル宣言による
+// グローバル公開と同等の面を明示的に維持する（ADR 0002 フェーズ 3）。
+if (typeof window !== "undefined") {
+  Object.assign(window, {
+    getRequireBriefBeforeMake,
+    setRequireBriefBeforeMake,
+    checkBriefBeforeMake,
+    ensureGlobalTasteLoaded,
+    initTasteMemory,
+    _applyProjectBrief,
+    updateProjectBrief,
+    recordDecision,
+    setProjectPhase,
+    getTasteContext,
+    listGlobalPrinciples,
+    promotePrinciple,
+    reinforceGlobalFromCurrentProject,
+    appendSessionLearnings,
+    seedProjectBriefFromGlobal,
+    recordCaptureArtifactLog,
+    appendArtifactLogEntry,
+    REQUIRE_BRIEF_STORAGE_KEY,
+  });
+}
