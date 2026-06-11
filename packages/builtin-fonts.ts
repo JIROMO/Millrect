@@ -75,3 +75,17 @@ if (typeof module !== "undefined" && module.exports) {
     textEnginePrimaryFontFamily,
   };
 }
+
+// バンドル時の global 面（module.exports と同一）。script タグ時代の
+// トップレベル宣言によるグローバル公開と同等の面を明示的に維持する。
+if (typeof window !== "undefined") {
+  Object.assign(window, {
+    BUILTIN_FONT_GEN,
+    BUILTIN_FONT_FAMILIES,
+    DEFAULT_TEXT_FONT_FAMILY,
+    TEXT_ENGINE_CJK_FALLBACK_FAMILIES,
+    normalizeTextFontFamily,
+    isBuiltinFontFamily,
+    textEnginePrimaryFontFamily,
+  });
+}

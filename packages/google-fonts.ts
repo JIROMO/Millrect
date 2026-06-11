@@ -129,3 +129,15 @@ async function resolveOutlineFontFileUrl(
     return resolveGoogleFontFileUrl(cssUrl, family);
   }
 }
+
+// バンドル時の global 面。script タグ時代のトップレベル宣言によるグローバル
+// 公開と同等の面を明示的に維持する（ブラウザ専用モジュール・module.exports なし）。
+if (typeof window !== "undefined") {
+  Object.assign(window, {
+    parseGoogleFontsCssUrlFamilies,
+    parseGoogleFontsCssUrl,
+    resolveFontsourceFileUrl,
+    resolveGoogleFontFileUrl,
+    resolveOutlineFontFileUrl,
+  });
+}

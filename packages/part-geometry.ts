@@ -174,8 +174,10 @@ if (typeof module !== "undefined" && module.exports) {
 
 if (typeof window !== "undefined") {
   Object.assign(window, {
+    mmToReal,
     rectHoleRing,
     lBracketTopOuterRing,
+    ringBBox,
     centerRingsOnPaper,
     linearPatternCentersMm,
     partViewSizesMm,

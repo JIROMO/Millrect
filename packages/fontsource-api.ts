@@ -221,3 +221,21 @@ if (typeof module !== "undefined" && module.exports) {
     filterFontCatalog,
   };
 }
+
+// バンドル時の global 面（module.exports と同一）。script タグ時代の
+// トップレベル宣言によるグローバル公開と同等の面を明示的に維持する。
+if (typeof window !== "undefined") {
+  Object.assign(window, {
+    FONTSOURCE_API_BASE,
+    FONT_CATALOG_TTL_MS,
+    buildGoogleFontsCssUrl,
+    fontsourceSlug,
+    pickFontsourceTtfUrl,
+    projectFontUrlsFromFontsourceMeta,
+    libraryEntryFromFontsourceMeta,
+    resolveProjectFontUrls,
+    fetchFontsourceCatalog,
+    fetchFontsourceFontMeta,
+    filterFontCatalog,
+  });
+}

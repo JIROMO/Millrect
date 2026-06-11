@@ -338,12 +338,16 @@ if (typeof module !== "undefined" && module.exports) {
 
 if (typeof window !== "undefined") {
   Object.assign(window, {
+    REAL_PER_MM: AGENT_REAL_PER_MM,
     layoutCenteredRectMm,
     boxViewSizesMm,
-    analyzeMultiviewReadiness,
+    VIEW_AXIS,
     normalizeViewType,
-    REAL_PER_MM: AGENT_REAL_PER_MM,
+    analyzeMultiviewReadiness,
     buildRectDimensionSpecs,
+    rectRingFromShape,
+    mmToAgentReal,
+    circleRing,
     buildHoleGridHoleRings,
     buildRectWithHolesPathShape,
     applyReferenceScaleAnchor,

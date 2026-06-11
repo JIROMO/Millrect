@@ -215,5 +215,9 @@ if (typeof module !== "undefined" && module.exports) {
 }
 
 if (typeof window !== "undefined") {
-  Object.assign(window, { normalizeDigitizeProposals, proposalToShape });
+  Object.assign(window, {
+    DIGITIZE_TYPES,
+    proposalToShape,
+    normalizeDigitizeProposals,
+  });
 }

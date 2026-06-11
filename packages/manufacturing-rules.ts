@@ -255,5 +255,10 @@ if (typeof module !== "undefined" && module.exports) {
 }
 
 if (typeof window !== "undefined") {
-  Object.assign(window, { normalizeManufacturing, validateManufacturingRules });
+  Object.assign(window, {
+    DEFAULT_MANUFACTURING,
+    normalizeManufacturing,
+    collectFeatureSpecs,
+    validateManufacturingRules,
+  });
 }

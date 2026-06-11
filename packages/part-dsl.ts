@@ -450,8 +450,13 @@ if (typeof module !== "undefined" && module.exports) {
 if (typeof window !== "undefined") {
   Object.assign(window, {
     PART_DSL_VERSION,
+    DEFAULT_BOX_PARAMS,
+    DEFAULT_PANEL_PARAMS,
+    DEFAULT_L_BRACKET_PARAMS,
     SUPPORTED_PARTS,
+    SUPPORTED_FEATURES,
     legacyOptionsToPartDsl,
+    normalizePartParams,
     normalizePartDsl,
     compilePartDsl,
   });

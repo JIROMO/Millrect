@@ -272,7 +272,11 @@ if (typeof module !== "undefined" && module.exports) {
     promoteStatementToGlobal,
     copyGlobalPrinciplesForProject,
   };
-} else if (typeof window !== "undefined") {
+}
+
+// バンドル時は module も window も定義されるため独立 if（else-if だと
+// CJS 分岐に入り window 公開がスキップされる）。
+if (typeof window !== "undefined") {
   Object.assign(window, {
     PROMOTE_PROJECT_THRESHOLD,
     statementKey,

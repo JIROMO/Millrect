@@ -437,11 +437,16 @@ if (typeof module !== "undefined" && module.exports) {
 
 if (typeof window !== "undefined") {
   Object.assign(window, {
+    partMmToReal: _partMmToReal,
     resizeRectCentered,
-    buildProfileBindings,
+    BOX_VIEW_PARAM_MAP,
+    PANEL_VIEW_PARAM_MAP,
     syncParamBindConstraints,
+    buildProfileBindings,
+    targetSizesReal,
     applyParamBindSolver,
     installDslConstraints,
     buildPartIntentRecord,
+    profileShapeToRect,
   });
 }

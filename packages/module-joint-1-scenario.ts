@@ -428,6 +428,11 @@ if (typeof window !== "undefined") {
     MODULE_JOINT_1_MM,
     MODULE_JOINT_1_SCALE,
     buildModuleJoint1ProjectState,
+    moduleJoint1Layout,
+    moduleJoint1PathShape,
+    moduleJoint1SlotRects,
+    moduleJoint1DimensionShapes,
+    // ブラウザ専用（replaceState を呼ぶ UI 関数。module.exports には含めない）
     applyModuleJoint1Scenario,
   });
 }

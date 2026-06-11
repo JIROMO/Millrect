@@ -1414,3 +1414,18 @@ if (typeof module !== "undefined" && module.exports) {
     helpTopicHref,
   };
 }
+
+// バンドル時の global 面（module.exports と同一）。script タグ時代の
+// トップレベル宣言によるグローバル公開と同等の面を明示的に維持する。
+if (typeof window !== "undefined") {
+  Object.assign(window, {
+    HELP_INDEX,
+    HELP_INDEX_EN,
+    helpEntryKey,
+    normalizeHelpLocale,
+    getHelpSearchLocale,
+    localizeHelpEntry,
+    searchHelpIndex,
+    helpTopicHref,
+  });
+}
