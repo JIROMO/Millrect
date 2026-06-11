@@ -34,9 +34,8 @@
     <script src="vendor/three-stl-exporter.js"></script>
     <script src="vendor/csg.js"></script>
     <script src="vendor/csg-three-adapter.js"></script>
-    <script src="../packages/schema/index.js"></script>
-    <script src="../packages/model-generator/index.js"></script>
-    <script src="../packages/geometry-core/index.js"></script>
+    <!-- esbuild バンドル（ADR 0002）: schema / model-generator / geometry-core / project-json -->
+    <script src="vendor/millrect-packages.bundle.js"></script>
     <script src="js/text-engine-browser.js"></script>
   </head>
   <body>
@@ -75,7 +74,6 @@
     <script src="../packages/manufacturing-rules.js"></script>
     <script src="../packages/part-dsl.js"></script>
     <script src="../packages/part-solver.js"></script>
-    <script src="../packages/project-json.js"></script>
     <script src="../packages/taste-memory.js"></script>
     <script src="../packages/taste-memory-promotion.js"></script>
     <script src="../packages/builtin-fonts.js"></script>

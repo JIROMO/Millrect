@@ -25,3 +25,9 @@ function isMillrectProjectJson(data: unknown): data is MillrectProjectJson {
 if (typeof module !== "undefined" && module.exports) {
   module.exports = { isMillrectProjectJson };
 }
+
+// バンドル時はトップレベル関数宣言がモジュールスコープになるため明示的に公開する
+// （script タグ読み込み時は既に global なので同値の再代入で無害）。
+if (typeof window !== "undefined") {
+  Object.assign(window, { isMillrectProjectJson });
+}
