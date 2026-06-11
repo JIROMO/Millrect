@@ -357,3 +357,31 @@ function _handleConstraintCommand(cmd) {
       return null;
   }
 }
+
+// バンドル時の global 面。script タグ時代のトップレベル宣言による
+// グローバル公開と同等の面を明示的に維持する（ADR 0002 フェーズ 3）。
+if (typeof window !== "undefined") {
+  Object.assign(window, {
+    addConstraint,
+    removeConstraint,
+    getConstraintsForShape,
+    getAllConstraints,
+    applyConstraints,
+    _applyOneConstraint,
+    _findShapeOnPage,
+    _cstHorizontal,
+    _cstVertical,
+    _cstParallel,
+    _cstEqualLength,
+    _setLineLength,
+    _cstFixed,
+    _cstCoincident,
+    _cstSymmetric,
+    _getEndpoint,
+    _setEndpoint,
+    validateConstraints,
+    _handleConstraintCommand,
+    MAX_CONSTRAINT_ITERS,
+    CONSTRAINT_TOL,
+  });
+}

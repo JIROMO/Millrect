@@ -265,3 +265,25 @@ function getFontFamilyOptions() {
   }
   return out;
 }
+
+// バンドル時の global 面。script タグ時代のトップレベル宣言による
+// グローバル公開と同等の面を明示的に維持する（ADR 0002 フェーズ 3）。
+if (typeof window !== "undefined") {
+  Object.assign(window, {
+    _projectFontCacheKey,
+    ensureProjectFonts,
+    getProjectFonts,
+    findProjectFontByFamily,
+    syncProjectFontStylesheets,
+    clearProjectFontBytesCache,
+    _clearProjectFontCacheForEntry,
+    fetchProjectFontBytes,
+    registerProjectFontEntry,
+    addProjectFontFromLibrary,
+    registerGoogleFontCssUrl,
+    removeProjectFont,
+    hydrateProjectFontsFromState,
+    getFontFamilyOptions,
+    _projectFontBytesCache,
+  });
+}

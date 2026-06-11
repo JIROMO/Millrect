@@ -89,7 +89,7 @@ function pushHistory(label) {
   _history = _history.slice(0, _histIdx + 1);
   _historyLabels = _historyLabels.slice(0, _histIdx + 1);
   _history.push(snapStr);
-  _historyLabels.push(label || _inferHistoryLabel());
+  _historyLabels.push(label || _inferHistoryLabel(snap));
   if (_history.length > MAX_HISTORY) {
     _history.shift();
     _historyLabels.shift();
@@ -99,11 +99,10 @@ function pushHistory(label) {
 }
 
 // 直前の操作からラベルを自動推定
-function _inferHistoryLabel() {
+function _inferHistoryLabel(cur) {
   // state のページ・シェイプ数の変化で大まかに推定
   if (!_history.length) return "操作";
   const prev = JSON.parse(_history[_histIdx]);
-  const cur = _snapshotDoc();
   const prevShapes =
     prev.pages?.flatMap(
       (p) => p.layers?.flatMap((l) => l.shapes || []) || [],
@@ -603,4 +602,60 @@ function _perpendicularFoot(pt, seg) {
   const t = ((pt.x - seg.x1) * dx + (pt.y - seg.y1) * dy) / len2;
   if (t <= 0 || t >= 1) return null; // 端点は endpoint で拾う
   return { x: seg.x1 + t * dx, y: seg.y1 + t * dy };
+}
+
+// バンドル時の global 面。script タグ時代のトップレベル宣言による
+// グローバル公開と同等の面を明示的に維持する（ADR 0002 フェーズ 3）。
+if (typeof window !== "undefined") {
+  Object.assign(window, {
+    genId,
+    deepClone,
+    initState,
+    getState,
+    _snapshotDoc,
+    _restoreDoc,
+    pushHistory,
+    _inferHistoryLabel,
+    getHistoryLabels,
+    getHistoryIndex,
+    jumpToHistory,
+    undo,
+    redo,
+    canUndo,
+    canRedo,
+    replaceState,
+    getCurrentPage,
+    getCurrentLayer,
+    getAllShapesOnPage,
+    getAllDimensionsOnPage,
+    findShapeById,
+    resolveToTopLevelId,
+    findAncestorGroups,
+    defaultState,
+    realToMM,
+    mmToReal,
+    getPaperSizeMm,
+    realToPaperDist,
+    paperToRealDist,
+    paperDeltaToReal,
+    getPaperDimensions,
+    getPageCanvasMM,
+    createPage,
+    createLayer,
+    paperDistToReal,
+    paperDistToMM,
+    shapeBBoxMM,
+    dimensionRealDistance,
+    dimensionValueMM,
+    snapPoint,
+    snapToShapes,
+    _segmentIntersection,
+    _perpendicularFoot,
+    PAPER_SIZES,
+    SCALES,
+    LINE_WIDTHS,
+    MAX_HISTORY,
+    DOC_KEYS,
+    REAL_PER_MM,
+  });
 }

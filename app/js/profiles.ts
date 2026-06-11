@@ -257,6 +257,20 @@ function canBeProfile(shape) {
 
 // ── Profile 生成 ──────────────────────────────────────────────
 
+const _profileEntriesCache = new Map();
+
+function _profilePageSignature(page) {
+  return JSON.stringify(
+    (page.layers || []).map((layer) => ({
+      id: layer.id,
+      visible: layer.visible,
+      locked: layer.locked,
+      shapes: layer.shapes || [],
+    })),
+    (key, value) => (key === "dataUrl" ? undefined : value),
+  );
+}
+
 /**
  * DrawingObject から Profile を生成する。
  * 変換できない場合は null を返す。
@@ -282,6 +296,20 @@ function shapeToProfile(shape, pageId, ancestorGroups = []) {
   };
 }
 
+function getProfileEntriesFromPage(page) {
+  const sig = _profilePageSignature(page);
+  const cached = _profileEntriesCache.get(page.id);
+  if (cached?.sig === sig) return cached.entries;
+
+  const entries = [];
+  for (const { shape, ancestorGroups } of iterProfileSourcesFromPage(page)) {
+    const profile = shapeToProfile(shape, page.id, ancestorGroups);
+    if (profile) entries.push({ shape, ancestorGroups, profile });
+  }
+  _profileEntriesCache.set(page.id, { sig, entries });
+  return entries;
+}
+
 /**
  * ページ上の全 DrawingObject から Profile を抽出して返す。
  *
@@ -293,12 +321,7 @@ function shapeToProfile(shape, pageId, ancestorGroups = []) {
  * @returns {object[]}  Profile[]
  */
 function extractProfilesFromPage(page) {
-  const profiles = [];
-  for (const { shape, ancestorGroups } of iterProfileSourcesFromPage(page)) {
-    const prof = shapeToProfile(shape, page.id, ancestorGroups);
-    if (prof) profiles.push(prof);
-  }
-  return profiles;
+  return getProfileEntriesFromPage(page).map((entry) => entry.profile);
 }
 
 /**
@@ -360,4 +383,25 @@ function profileToThreeShapes(profile, scaleFactor) {
 
   result.push(s);
   return result;
+}
+
+// バンドル時の global 面。script タグ時代のトップレベル宣言による
+// グローバル公開と同等の面を明示的に維持する（ADR 0002 フェーズ 3）。
+if (typeof window !== "undefined") {
+  Object.assign(window, {
+    _signedArea,
+    _ringBBox,
+    _ringsBBox,
+    _roundedRectRing,
+    iterProfileSourceShapes,
+    shapeToProfileRings,
+    canBeProfile,
+    _profilePageSignature,
+    shapeToProfile,
+    getProfileEntriesFromPage,
+    extractProfilesFromPage,
+    getProfileForShape,
+    profileToThreeShapes,
+    _profileEntriesCache,
+  });
 }
