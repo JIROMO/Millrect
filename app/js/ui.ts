@@ -2373,7 +2373,7 @@ function _bindArrayDuplicateEvents(container) {
     .querySelector("#btn-array-duplicate")
     ?.addEventListener("click", () => {
       const mode = modeSelect?.value || "linear";
-      let opts = { mode };
+      const opts = { mode };
 
       if (mode === "linear") {
         opts.count =

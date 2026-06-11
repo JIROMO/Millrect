@@ -31,6 +31,8 @@
     "samples:generate": "node scripts/generate-samples.js",
     "build": "npm run build:ts && npm run build:app && npm run build:native && npm run build:text-engine && electron-builder",
     "release": "bash scripts/release-build.sh",
+    "lint": "eslint .",
+    "lint:fix": "eslint . --fix",
     "format": "npx prettier --write \"**/*.{js,ts}\"",
     "docs:screenshots": "node scripts/capture-docs-screenshots.js",
     "seo:sitemap": "npm run build:ts && node scripts/generate-sitemap.js"
@@ -41,8 +43,11 @@
     "electron": "^42.0.1",
     "electron-builder": "^26.8.1",
     "esbuild": "^0.28.0",
+    "eslint": "^9.39.4",
+    "globals": "^17.6.0",
     "harfbuzzjs": "^1.2.0",
-    "typescript": "^6.0.3"
+    "typescript": "^6.0.3",
+    "typescript-eslint": "^8.61.0"
   },
   "build": {
     "appId": "com.jiromo.millrect",

@@ -68,7 +68,7 @@ interface PathShapeOptions {
   id?: string;
 }
 
-interface ReferenceImageShape extends AgentRect {}
+type ReferenceImageShape = AgentRect;
 
 interface DimensionSpecOptions {
   suffix?: string;
