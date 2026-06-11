@@ -1,0 +1,22 @@
+"use strict";
+
+// アプリ本体バンドルのエントリ（ADR 0002 フェーズ 3）。
+// 旧 <body> の <script> タグ位置（svg.min.js の直後）で実行される第 2 バンドル。
+// packages バンドル（head）とは別に、app/js を旧タグ順で段階的に取り込む。
+//
+// 実行タイミング互換: バンドルタグは旧 i18n.js の位置に置くため、
+// customElements.define 時には #app の要素が DOM に存在し（旧来どおり即
+// upgrade）、connectedCallback 時点で i18n / locales は定義済み。
+//
+// ここに import を足したら、app/index.html から対応する <script> タグを
+// 同一コミットで除去すること。
+
+import "../js/i18n.ts";
+import "../js/locales/ja.ts";
+import "../js/locales/en.ts";
+import "../js/components/millrect-toolbar.ts";
+import "../js/components/millrect-left-sidebar.ts";
+import "../js/components/millrect-canvas.ts";
+import "../js/components/millrect-right-sidebar.ts";
+import "../js/components/millrect-3d-panel.ts";
+import "../js/db.ts";

@@ -100,3 +100,16 @@ async function dbSaveTasteGlobal(data) {
     tx.onerror = () => reject(tx.error);
   });
 }
+
+// バンドル時の global 面。script タグ時代のトップレベル宣言によるグローバル
+// 公開と同等の面を明示的に維持する（autosave / ui / taste-memory-api が参照）。
+if (typeof window !== "undefined") {
+  Object.assign(window, {
+    dbSaveProject,
+    dbLoadProject,
+    dbListProjects,
+    dbDeleteProject,
+    dbLoadTasteGlobal,
+    dbSaveTasteGlobal,
+  });
+}
