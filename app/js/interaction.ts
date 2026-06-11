@@ -5,7 +5,10 @@ let _ds = null,
   _panStart = null,
   _dimState = null,
   _lastPP = null;
-let _vertexEditId = null;
+// renderer / ui が bare 参照する共有 mutable。バンドル時はモジュール変数だと
+// 再代入が外に見えないため global プロパティとして保持する（ADR 0002）。
+declare var _vertexEditId: any;
+(window as any)._vertexEditId = null;
 let _textClickState = null;
 
 function _drawStyle() {
@@ -1548,7 +1551,9 @@ function handleText(rp) {
   });
 }
 
-let _textEditorActive = false;
+// ui が bare 参照する共有 mutable（上の _vertexEditId と同じ理由で global 保持）。
+declare var _textEditorActive: any;
+(window as any)._textEditorActive = false;
 let _textEditModalEl = null;
 
 function openTextEditModal(shape, onCommit) {
@@ -2558,4 +2563,76 @@ function handleCanvasContextMenu(e, svgEl) {
     ? _buildShapeContextItems(ids)
     : _buildCanvasContextItems();
   showContextMenu(e.clientX, e.clientY, items);
+}
+
+// バンドル時の global 面。script タグ時代のトップレベル宣言による
+// グローバル公開と同等の面を明示的に維持する（ADR 0002 フェーズ 3）。
+if (typeof window !== "undefined") {
+  Object.assign(window, {
+    _drawStyle,
+    svgClosest,
+    screenToSVG,
+    svgToPaper,
+    paperToReal,
+    getSnapped,
+    onMouseDown,
+    _getSelectSnapOpts,
+    onMouseMove,
+    onMouseUp,
+    wheelBypassesCanvasPan,
+    onWheel,
+    onKeyDown,
+    cancelDim,
+    commitMarquee,
+    handleSelDown,
+    _computeBboxAfterResize,
+    _resizeRoundShape,
+    handleMultiResize,
+    handleResize,
+    _updatePathSizeDisplay,
+    handleSelMove,
+    handleVertexDrag,
+    _textShapeUpdates,
+    _textEditStrokeValue,
+    _textEditFontOptions,
+    _readTextEditModalValues,
+    _applyTextEditPreview,
+    _mergeTextEditResult,
+    _resetTextClickState,
+    _isTextShapeDblClick,
+    _beginTextShapeEdit,
+    realPointInPaperBBox,
+    findTopShapeAtRealPoint,
+    findTextShapeAtRealPoint,
+    findTextShapeForEdit,
+    _tryBeginTextShapeDblClick,
+    editTextShape,
+    handleTextToolDown,
+    handleTextShapeDblClick,
+    handleText,
+    openTextEditModal,
+    handleDimDown,
+    applyAngleSnap,
+    buildPreview,
+    commitShape,
+    showSizePopover,
+    beginAltDuplicate,
+    _beginDuplicate,
+    cancelAltDuplicate,
+    updateStatusCoords,
+    uiUpdate,
+    dismissContextMenu,
+    _contextMenuOutside,
+    _contextMenuKey,
+    _ctxMod,
+    _ctxLocked,
+    _ctxHasDim,
+    _ctxRun,
+    enterVertexEditMode,
+    _buildCanvasContextItems,
+    _buildShapeContextItems,
+    _renderContextMenuItems,
+    showContextMenu,
+    handleCanvasContextMenu,
+  });
 }

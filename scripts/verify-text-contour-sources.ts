@@ -43,7 +43,7 @@ function fail(msg: string): void {
 }
 
 for (const rel of [
-  "app/js/text-outline.js",
+  "app/js/text-outline.ts",
   "electron/text-outline-native.js",
   "packages/text-engine-utils.js",
   "packages/text-contour-grouping.js",

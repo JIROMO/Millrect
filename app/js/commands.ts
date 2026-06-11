@@ -10,7 +10,7 @@ function moveShapeZOrder(id, direction) {
   const newIdx = direction === "up" ? idx + 1 : idx - 1;
   if (newIdx < 0 || newIdx >= shapes.length) return;
   [shapes[idx], shapes[newIdx]] = [shapes[newIdx], shapes[idx]];
-  pushHistory();
+  pushHistory("図形の重なり順変更");
 }
 
 function reorderSelectionZ(ids, mode) {
@@ -57,7 +57,7 @@ function reorderSelectionZ(ids, mode) {
       }
     }
   }
-  if (changed) pushHistory();
+  if (changed) pushHistory("図形の重なり順変更");
   return changed;
 }
 
@@ -68,14 +68,14 @@ function addShape(shape) {
     const page = getCurrentPage();
     if (!page.dimensions) page.dimensions = [];
     page.dimensions.push(shape);
-    pushHistory();
+    pushHistory("寸法線追加");
     return true;
   }
   const layer = getCurrentLayer();
   if (layer.locked) return false;
   layer.shapes.push(shape);
   if (shape.type === "text") onTextShapeDocumentChanged(shape.id);
-  pushHistory();
+  pushHistory(`図形追加 (${shape.type})`);
   return true;
 }
 function updateShape(id, values) {
@@ -101,7 +101,7 @@ function updateShape(id, values) {
   if (trackTextPreview) {
     onTextShapeDocumentChanged(id, Object.keys(values));
   }
-  pushHistory();
+  pushHistory("図形更新");
   return true;
 }
 function deleteShape(id) {
@@ -116,7 +116,7 @@ function deleteShape(id) {
     const idx = res.layer.shapes.indexOf(res.shape);
     if (idx !== -1) res.layer.shapes.splice(idx, 1);
   }
-  pushHistory();
+  pushHistory(res.isDimension ? "寸法線削除" : "図形削除");
   return true;
 }
 function deleteSelectedShapes() {
@@ -769,7 +769,7 @@ function addPage(page = createPage()) {
   state.currentPageId = page.id;
   state.currentLayerId = page.layers[0]?.id || "";
   state.selectedShapeIds = [];
-  pushHistory();
+  pushHistory(`ページ追加: ${page.name || page.id}`);
 }
 function switchPage(id) {
   const state = getState();
@@ -792,14 +792,14 @@ function deletePage(id) {
   if (state.currentPageId === id)
     state.currentPageId = state.pages[Math.max(0, idx - 1)].id;
   state.selectedShapeIds = [];
-  pushHistory();
+  pushHistory("ページ削除");
   return true;
 }
 function updatePage(id, values) {
   const page = getState().pages.find((p) => p.id === id);
   if (!page) return false;
   Object.assign(page, values);
-  pushHistory();
+  pushHistory("ページ設定更新");
   return true;
 }
 function addLayer(pageId = getState().currentPageId, layer = createLayer()) {
@@ -807,7 +807,7 @@ function addLayer(pageId = getState().currentPageId, layer = createLayer()) {
   if (!page) return false;
   page.layers.push(layer);
   getState().currentLayerId = layer.id;
-  pushHistory();
+  pushHistory(`レイヤー追加: ${layer.name || layer.id}`);
   return true;
 }
 function deleteLayer(pageId, layerId) {
@@ -819,7 +819,7 @@ function deleteLayer(pageId, layerId) {
   page.layers.splice(idx, 1);
   if (state.currentLayerId === layerId)
     state.currentLayerId = page.layers[0].id;
-  pushHistory();
+  pushHistory("レイヤー削除");
   return true;
 }
 function updateLayer(pageId, layerId, values) {
@@ -828,7 +828,7 @@ function updateLayer(pageId, layerId, values) {
   const layer = page.layers.find((l) => l.id === layerId);
   if (!layer) return false;
   Object.assign(layer, values);
-  pushHistory();
+  pushHistory("レイヤー更新");
   return true;
 }
 function applyDrawingCommands(commands) {
@@ -919,7 +919,7 @@ function applyDrawingCommands(commands) {
       if (cmd.state) replaceState(cmd.state);
     }
   }
-  pushHistory();
+  pushHistory("コマンド適用");
 }
 
 function groupSelectedShapes() {
@@ -949,7 +949,7 @@ function groupSelectedShapes() {
   const group = { id: genId("group"), type: "group", children };
   getCurrentLayer().shapes.push(group);
   state.selectedShapeIds = [group.id];
-  pushHistory();
+  pushHistory("グループ化");
 }
 
 function ungroupSelectedShapes() {
@@ -962,7 +962,7 @@ function ungroupSelectedShapes() {
   const newIds = shape.children.map((c) => c.id);
   layer.shapes.splice(idx, 1, ...shape.children);
   state.selectedShapeIds = newIds;
-  pushHistory();
+  pushHistory("グループ解除");
 }
 
 // identity scale for align/distribute — bbox in real units (same as shape coordinates)
@@ -1107,4 +1107,66 @@ function rotateShapesBy(deltaDeg) {
     );
   }
   pushHistory();
+}
+
+// バンドル時の global 面。script タグ時代のトップレベル宣言による
+// グローバル公開と同等の面を明示的に維持する（ADR 0002 フェーズ 3）。
+if (typeof window !== "undefined") {
+  Object.assign(window, {
+    moveShapeZOrder,
+    reorderSelectionZ,
+    addShape,
+    updateShape,
+    deleteShape,
+    deleteSelectedShapes,
+    hasClipboard,
+    cutShapes,
+    shiftShape,
+    cloneSelectedShapes,
+    duplicateShapes,
+    arrayDuplicate,
+    _rotateShapeAround,
+    copyShapes,
+    pasteShapes,
+    arcPoints,
+    roundedRectToRing,
+    shapeToPolygon,
+    shapeToClipPolygon,
+    _booleanStyleFromShape,
+    _ringSignedArea,
+    _normalizePolygonRings,
+    _normalizeContours,
+    _expandBooleanEntries,
+    _unionEntryPolys,
+    _runBooleanClip,
+    _findSelectedShapeEntries,
+    _lowestZOrderEntry,
+    _replaceSelectedWithPath,
+    booleanSelectedShapes,
+    mergeSelectedShapes,
+    unionSelectedShapes,
+    subtractSelectedShapes,
+    intersectSelectedShapes,
+    excludeSelectedShapes,
+    flattenSelectedShapes,
+    addPage,
+    switchPage,
+    deletePage,
+    updatePage,
+    addLayer,
+    deleteLayer,
+    updateLayer,
+    applyDrawingCommands,
+    groupSelectedShapes,
+    ungroupSelectedShapes,
+    _selectedBBoxes,
+    alignShapes,
+    distributeShapes,
+    moveShapeToPosition,
+    flipShapes,
+    normalizeRotationDeg,
+    rotateShapes,
+    rotateShapesBy,
+    _ID_SCALE,
+  });
 }

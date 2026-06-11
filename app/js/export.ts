@@ -772,3 +772,34 @@ async function dl(content, filename, mime) {
   a.click();
   setTimeout(() => URL.revokeObjectURL(url), 10000);
 }
+
+// バンドル時の global 面。script タグ時代のトップレベル宣言による
+// グローバル公開と同等の面を明示的に維持する（ADR 0002 フェーズ 3）。
+if (typeof window !== "undefined") {
+  Object.assign(window, {
+    _stripLegacyFeature,
+    _migrateImportedShape,
+    _migrateImportedDimension,
+    _migrateImportedPage,
+    _migrateImportedProject,
+    _pagesForExport,
+    _projectDataFromState,
+    exportProjectJson,
+    exportProjectJsonString,
+    projectJsonFromState,
+    importProjectFromJsonString,
+    importProjectJsonFromFile,
+    importSvgFromFile,
+    importImageFromFile,
+    parseSvgToShapes,
+    parseMmAttr,
+    tokenizeSvgPath,
+    parseSvgPathToCompound,
+    buildPageSVG,
+    exportCurrentPageSvg,
+    exportAllPagesPdf,
+    svgToPdfFallback,
+    dl,
+    _LEGACY_STROKE_WIDTH_MM,
+  });
+}
