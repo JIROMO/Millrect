@@ -39,14 +39,13 @@ __export(empty_module_exports, {
 var empty_module_default;
 var init_empty_module = __esm({
   "electron/stubs/empty-module.js"() {
-    "use strict";
     empty_module_default = {};
   }
 });
 
-// packages/builtin-fonts.ts
+// packages/builtin-fonts.js
 var require_builtin_fonts = __commonJS({
-  "packages/builtin-fonts.ts"(exports2, module) {
+  "packages/builtin-fonts.js"(exports2, module) {
     "use strict";
     var BUILTIN_FONT_GEN2 = "Gen Interface JP";
     var BUILTIN_FONT_FAMILIES = [BUILTIN_FONT_GEN2];
@@ -63,19 +62,14 @@ var require_builtin_fonts = __commonJS({
       const n = normalizeTextFontFamily2(fontFamily);
       return BUILTIN_FONT_FAMILIES.includes(n);
     }
-    function findProjectFont(family) {
-      if (typeof findProjectFontByFamily !== "function") return null;
-      return findProjectFontByFamily(family) || null;
-    }
     function textEnginePrimaryFontFamily(shape2) {
       const normalized = normalizeTextFontFamily2(shape2?.fontFamily);
-      if (findProjectFont(normalized)) {
+      if (typeof findProjectFontByFamily === "function" && findProjectFontByFamily(normalized)) {
         return normalized;
       }
       if (isBuiltinFontFamily(normalized)) return normalized;
-      const projectFont = findProjectFont(shape2?.fontFamily);
-      if (projectFont) {
-        return projectFont.family;
+      if (typeof findProjectFontByFamily === "function" && findProjectFontByFamily(shape2?.fontFamily)) {
+        return findProjectFontByFamily(shape2.fontFamily).family;
       }
       return normalized || DEFAULT_TEXT_FONT_FAMILY;
     }
@@ -94,9 +88,9 @@ var require_builtin_fonts = __commonJS({
   }
 });
 
-// packages/text-contour-grouping.ts
+// packages/text-contour-grouping.js
 var require_text_contour_grouping = __commonJS({
-  "packages/text-contour-grouping.ts"(exports2, module) {
+  "packages/text-contour-grouping.js"(exports2, module) {
     "use strict";
     function ringSignedArea(ring) {
       let area = 0;
@@ -211,8 +205,7 @@ var require_text_contour_grouping = __commonJS({
       return true;
     }
     function shouldUnionStrokeFragments(prepared) {
-      if (!prepared || prepared.length <= 1) return false;
-      return prepared.every((poly) => poly?.length === 1);
+      return prepared?.length > 1 && prepared.every((poly) => poly?.length === 1);
     }
     var api2 = {
       ringSignedArea,
@@ -230,16 +223,21 @@ var require_text_contour_grouping = __commonJS({
       module.exports = api2;
     }
     if (typeof window !== "undefined") {
-      Object.assign(window, { __millrectTextContourGrouping: api2 });
+      window.__millrectTextContourGrouping = api2;
     }
   }
 });
 
-// packages/text-engine-utils.ts
+// packages/text-engine-utils.js
 var require_text_engine_utils = __commonJS({
-  "packages/text-engine-utils.ts"(exports2, module) {
+  "packages/text-engine-utils.js"(exports2, module) {
     "use strict";
-    var builtinFonts = require_builtin_fonts();
+    var {
+      BUILTIN_FONT_GEN: BUILTIN_FONT_GEN2,
+      isBuiltinFontFamily,
+      TEXT_ENGINE_CJK_FALLBACK_FAMILIES,
+      textEnginePrimaryFontFamily
+    } = require_builtin_fonts();
     var contourGrouping = require_text_contour_grouping();
     var TEXT_ENGINE_REAL_PER_MM = 10;
     function textEngineNeedsCjk(text) {
@@ -283,13 +281,13 @@ var require_text_engine_utils = __commonJS({
         out.push(name);
       };
       for (const f of explicit || []) add(f);
-      const primary = builtinFonts.textEnginePrimaryFontFamily(shape2);
+      const primary = textEnginePrimaryFontFamily(shape2);
       add(primary);
       if (typeof findProjectFontByFamily === "function" && findProjectFontByFamily(shape2?.fontFamily)) {
         add(findProjectFontByFamily(shape2.fontFamily).family);
       }
-      if (textEngineNeedsCjk(shape2?.text) && !builtinFonts.isBuiltinFontFamily(primary)) {
-        add(builtinFonts.BUILTIN_FONT_GEN);
+      if (textEngineNeedsCjk(shape2?.text) && !isBuiltinFontFamily(primary)) {
+        add(BUILTIN_FONT_GEN2);
       }
       return out;
     }
@@ -425,7 +423,7 @@ var require_text_engine_utils = __commonJS({
     if (typeof module !== "undefined" && module.exports) {
       module.exports = {
         TEXT_ENGINE_REAL_PER_MM,
-        TEXT_ENGINE_CJK_FALLBACK_FAMILIES: builtinFonts.TEXT_ENGINE_CJK_FALLBACK_FAMILIES,
+        TEXT_ENGINE_CJK_FALLBACK_FAMILIES,
         textEngineNeedsCjk,
         textEngineCharNeedsCjk,
         textEngineSplitScriptRuns,
@@ -444,13 +442,20 @@ var require_text_engine_utils = __commonJS({
 
 // electron/text-engine-harfbuzz-core.js
 var require_text_engine_harfbuzz_core = __commonJS({
-  "electron/text-engine-harfbuzz-core.js"(exports2) {
+  "electron/text-engine-harfbuzz-core.js"(exports2, module) {
     "use strict";
-    Object.defineProperty(exports2, "__esModule", { value: true });
-    exports2.createHarfBuzzTextEngine = createHarfBuzzTextEngine2;
-    exports2.openHbFont = openHbFont2;
-    var { textEngineExpandFontCandidates, textEngineAlignedX, textEngineHbPathToContoursReal, textEngineNeedsCjk, textEngineSplitScriptRuns } = require_text_engine_utils();
-    var { BUILTIN_FONT_GEN: BUILTIN_FONT_GEN2, isBuiltinFontFamily, textEnginePrimaryFontFamily } = require_builtin_fonts();
+    var {
+      textEngineExpandFontCandidates,
+      textEngineAlignedX,
+      textEngineHbPathToContoursReal,
+      textEngineNeedsCjk,
+      textEngineSplitScriptRuns
+    } = require_text_engine_utils();
+    var {
+      BUILTIN_FONT_GEN: BUILTIN_FONT_GEN2,
+      isBuiltinFontFamily,
+      textEnginePrimaryFontFamily
+    } = require_builtin_fonts();
     function createFontResolver(loadFontEntry) {
       const cache = /* @__PURE__ */ new Map();
       async function resolveFontEntry(shape2, fontCandidates) {
@@ -458,8 +463,7 @@ var require_text_engine_harfbuzz_core = __commonJS({
         const families = textEngineExpandFontCandidates(shape2, fontCandidates);
         const styles = bold ? ["Bold", "bold", "700"] : ["Regular", "Normal", "Book"];
         const key = `${families.join("|")}|${bold ? "b" : "r"}`;
-        if (cache.has(key))
-          return cache.get(key);
+        if (cache.has(key)) return cache.get(key);
         for (const family of families) {
           for (const style of styles) {
             const loaded = await loadFontEntry(family, style, bold);
@@ -478,19 +482,16 @@ var require_text_engine_harfbuzz_core = __commonJS({
         const seen = /* @__PURE__ */ new Set();
         const add = (name) => {
           const k = name.toLowerCase();
-          if (!name || seen.has(k))
-            return;
+          if (!name || seen.has(k)) return;
           seen.add(k);
           families.push(name);
         };
         for (const f of fontCandidates || []) {
-          if (f === BUILTIN_FONT_GEN2)
-            add(f);
+          if (f === BUILTIN_FONT_GEN2) add(f);
         }
         add(BUILTIN_FONT_GEN2);
         const key = `cjk:${families.join("|")}|${bold ? "b" : "r"}`;
-        if (cache.has(key))
-          return cache.get(key);
+        if (cache.has(key)) return cache.get(key);
         for (const family of families) {
           for (const style of styles) {
             const loaded = await loadFontEntry(family, style, bold);
@@ -520,8 +521,7 @@ var require_text_engine_harfbuzz_core = __commonJS({
       }
       function cjkShapingEntry(primary, fallback, shape2) {
         const family = textEnginePrimaryFontFamily(shape2);
-        if (isBuiltinFontFamily(family))
-          return primary;
+        if (isBuiltinFontFamily(family)) return primary;
         return fallback || primary;
       }
       function shapeLineWithFallback(primary, cjk, text, fontSize, features, shape2) {
@@ -544,8 +544,7 @@ var require_text_engine_harfbuzz_core = __commonJS({
         const out = [];
         for (const run of scriptRuns) {
           const entry = run.cjk ? cjkShapingEntry(primary, fallback, shape2) : primary;
-          if (!entry || !run.text)
-            continue;
+          if (!entry || !run.text) continue;
           const glyphs = shapeLineText(entry, run.text, fontSize, features);
           for (const glyph of glyphs) {
             out.push({ entry, glyph });
@@ -554,9 +553,15 @@ var require_text_engine_harfbuzz_core = __commonJS({
         return out;
       }
       function measureLineWidthPaper(primary, cjk, text, fontSize, features, shape2) {
-        if (!text)
-          return 0;
-        const shaped = shapeLineWithFallback(primary, cjk, text, fontSize, features, shape2);
+        if (!text) return 0;
+        const shaped = shapeLineWithFallback(
+          primary,
+          cjk,
+          text,
+          fontSize,
+          features,
+          shape2
+        );
         let w = 0;
         for (const { entry, glyph } of shaped) {
           w += glyph.xAdvance / entry.upem;
@@ -564,23 +569,27 @@ var require_text_engine_harfbuzz_core = __commonJS({
         return w;
       }
       function wrapParagraph(primary, cjk, text, fontSize, maxWidthPaper, features, shape2) {
-        if (!text)
-          return [""];
-        if (!maxWidthPaper || maxWidthPaper <= 0)
-          return [text];
+        if (!text) return [""];
+        if (!maxWidthPaper || maxWidthPaper <= 0) return [text];
         const lines = [];
         let start = 0;
         while (start < text.length) {
           let end = start + 1;
           while (end <= text.length) {
             const slice = text.slice(start, end);
-            const w = measureLineWidthPaper(primary, cjk, slice, fontSize, features, shape2);
+            const w = measureLineWidthPaper(
+              primary,
+              cjk,
+              slice,
+              fontSize,
+              features,
+              shape2
+            );
             if (w > maxWidthPaper && end > start + 1) {
               end -= 1;
               break;
             }
-            if (end === text.length)
-              break;
+            if (end === text.length) break;
             end += 1;
           }
           lines.push(text.slice(start, end));
@@ -621,7 +630,15 @@ var require_text_engine_harfbuzz_core = __commonJS({
         const visualLines = [];
         let globalIndex = 0;
         for (const para of paragraphs) {
-          const wrapped = wrapParagraph(primary, cjk, para, fontSize, paperWidth, features, shape2);
+          const wrapped = wrapParagraph(
+            primary,
+            cjk,
+            para,
+            fontSize,
+            paperWidth,
+            features,
+            shape2
+          );
           for (const wLine of wrapped) {
             visualLines.push({ text: wLine, lineIndex: globalIndex });
             globalIndex += 1;
@@ -631,7 +648,14 @@ var require_text_engine_harfbuzz_core = __commonJS({
         const lines = [];
         for (let idx = 0; idx < visualLines.length; idx++) {
           const vLine = visualLines[idx];
-          const lw = measureLineWidthPaper(primary, cjk, vLine.text, fontSize, features, shape2);
+          const lw = measureLineWidthPaper(
+            primary,
+            cjk,
+            vLine.text,
+            fontSize,
+            features,
+            shape2
+          );
           maxLineWidth = Math.max(maxLineWidth, lw);
           const fw = paperWidth ?? lw;
           lines.push({
@@ -679,20 +703,24 @@ var require_text_engine_harfbuzz_core = __commonJS({
         const features = hbFeatures(shape2);
         const fillColor = (() => {
           const valid = (c) => typeof c === "string" && c && c !== "none" && c !== "transparent";
-          if (valid(shape2.fill))
-            return shape2.fill;
-          if (valid(shape2.stroke))
-            return shape2.stroke;
+          if (valid(shape2.fill)) return shape2.fill;
+          if (valid(shape2.stroke)) return shape2.stroke;
           return "#1a1a2e";
         })();
         prepareFont(primary, fontSize);
         const ascenderPaper = primary.font.hExtents().ascender / primary.upem;
         const children = [];
         for (const line of layout.lines) {
-          if (!line.text)
-            continue;
+          if (!line.text) continue;
           const yBaseline = line.yTopPaper != null ? line.yTopPaper + ascenderPaper : anchorPaper.y + ascenderPaper + (line.lineIndex || 0) * fontSize * lineHeightMult;
-          const shaped = shapeLineWithFallback(primary, cjk, line.text, fontSize, features, shape2);
+          const shaped = shapeLineWithFallback(
+            primary,
+            cjk,
+            line.text,
+            fontSize,
+            features,
+            shape2
+          );
           let cursorPaper = 0;
           for (const { entry, glyph: g } of shaped) {
             prepareFont(entry, fontSize);
@@ -707,10 +735,15 @@ var require_text_engine_harfbuzz_core = __commonJS({
             }
             const gxPaper = line.xPaper + (cursorPaper + g.xOffset) / entry.upem;
             const gyPaper = yBaseline - g.yOffset / entry.upem;
-            const contours = textEngineHbPathToContoursReal(svgPath, gxPaper, gyPaper, entry.upem, scale);
+            const contours = textEngineHbPathToContoursReal(
+              svgPath,
+              gxPaper,
+              gyPaper,
+              entry.upem,
+              scale
+            );
             cursorPaper += g.xAdvance;
-            if (!contours)
-              continue;
+            if (!contours) continue;
             children.push({
               type: "path",
               contours,
@@ -739,58 +772,10 @@ var require_text_engine_harfbuzz_core = __commonJS({
         buffer
       };
     }
-  }
-});
-
-// packages/builtin-fonts.js
-var require_builtin_fonts2 = __commonJS({
-  "packages/builtin-fonts.js"(exports2, module) {
-    "use strict";
-    var BUILTIN_FONT_GEN2 = "Gen Interface JP";
-    var BUILTIN_FONT_FAMILIES = [BUILTIN_FONT_GEN2];
-    var DEFAULT_TEXT_FONT_FAMILY = BUILTIN_FONT_GEN2;
-    function normalizeTextFontFamily2(fontFamily) {
-      const raw = String(fontFamily || DEFAULT_TEXT_FONT_FAMILY).split(",")[0].trim().replace(/^['"]|['"]$/g, "");
-      const k = raw.toLowerCase().replace(/[\s-_]/g, "");
-      if (!k || k === "sansserif" || k === "arial" || k === "inter" || k.includes("helvetica") || k.includes("notosansjp") || k.includes("noto") && k.includes("sans") || k.includes("geninterfacejp") || k === "geninterface") {
-        return BUILTIN_FONT_GEN2;
-      }
-      return raw;
-    }
-    function isBuiltinFontFamily(fontFamily) {
-      const n = normalizeTextFontFamily2(fontFamily);
-      return BUILTIN_FONT_FAMILIES.includes(n);
-    }
-    function findProjectFont(family) {
-      if (typeof findProjectFontByFamily !== "function")
-        return null;
-      return findProjectFontByFamily(family) || null;
-    }
-    function textEnginePrimaryFontFamily(shape2) {
-      const normalized = normalizeTextFontFamily2(shape2?.fontFamily);
-      if (findProjectFont(normalized)) {
-        return normalized;
-      }
-      if (isBuiltinFontFamily(normalized))
-        return normalized;
-      const projectFont = findProjectFont(shape2?.fontFamily);
-      if (projectFont) {
-        return projectFont.family;
-      }
-      return normalized || DEFAULT_TEXT_FONT_FAMILY;
-    }
-    var TEXT_ENGINE_CJK_FALLBACK_FAMILIES = [BUILTIN_FONT_GEN2];
-    if (typeof module !== "undefined" && module.exports) {
-      module.exports = {
-        BUILTIN_FONT_GEN: BUILTIN_FONT_GEN2,
-        BUILTIN_FONT_FAMILIES,
-        DEFAULT_TEXT_FONT_FAMILY,
-        TEXT_ENGINE_CJK_FALLBACK_FAMILIES,
-        normalizeTextFontFamily: normalizeTextFontFamily2,
-        isBuiltinFontFamily,
-        textEnginePrimaryFontFamily
-      };
-    }
+    module.exports = {
+      createHarfBuzzTextEngine: createHarfBuzzTextEngine2,
+      openHbFont: openHbFont2
+    };
   }
 });
 
@@ -2806,7 +2791,7 @@ init(await harfbuzz_default());
 
 // electron/millrect-text-engine-browser.js
 var import_text_engine_harfbuzz_core = __toESM(require_text_engine_harfbuzz_core());
-var import_builtin_fonts = __toESM(require_builtin_fonts2());
+var import_builtin_fonts = __toESM(require_builtin_fonts());
 var WEB_FONT_CATALOG = [
   {
     id: "gen-interface-jp",

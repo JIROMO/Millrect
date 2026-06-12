@@ -34,8 +34,9 @@
     <script src="vendor/three-stl-exporter.js"></script>
     <script src="vendor/csg.js"></script>
     <script src="vendor/csg-three-adapter.js"></script>
-    <!-- esbuild バンドル（ADR 0002）: packages/ 全モジュール（vendor を除く） -->
-    <script src="vendor/millrect-packages.bundle.js"></script>
+    <script src="../packages/schema/index.js"></script>
+    <script src="../packages/model-generator/index.js"></script>
+    <script src="../packages/geometry-core/index.js"></script>
     <script src="js/text-engine-browser.js"></script>
   </head>
   <body>
@@ -55,7 +56,63 @@
       </div>
     </div>
     <script src="vendor/svg.min.js"></script>
-    <!-- esbuild バンドル（ADR 0002 フェーズ 3）: i18n / locales / components / db -->
-    <script src="vendor/millrect-app.bundle.js"></script>
+    <script src="js/i18n.js"></script>
+    <script src="js/locales/ja.js"></script>
+    <script src="js/locales/en.js"></script>
+    <script src="js/components/millrect-toolbar.js"></script>
+    <script src="js/components/millrect-left-sidebar.js"></script>
+    <script src="js/components/millrect-canvas.js"></script>
+    <script src="js/components/millrect-right-sidebar.js"></script>
+    <script src="js/components/millrect-3d-panel.js"></script>
+    <script src="js/db.js"></script>
+    <script src="../packages/sample-catalog.js"></script>
+    <script src="../packages/multiview-starter-box.js"></script>
+    <script src="../packages/docs-box-scenario.js"></script>
+    <script src="../packages/module-joint-1-scenario.js"></script>
+    <script src="../packages/agent-intent.js"></script>
+    <script src="../packages/digitize-sketch.js"></script>
+    <script src="../packages/part-geometry.js"></script>
+    <script src="../packages/manufacturing-rules.js"></script>
+    <script src="../packages/part-dsl.js"></script>
+    <script src="../packages/part-solver.js"></script>
+    <script src="../packages/project-json.js"></script>
+    <script src="../packages/taste-memory.js"></script>
+    <script src="../packages/taste-memory-promotion.js"></script>
+    <script src="../packages/builtin-fonts.js"></script>
+    <script src="../packages/google-fonts.js"></script>
+    <script src="../packages/fontsource-api.js"></script>
+    <script src="../packages/docs-scenarios-registry.js"></script>
+    <script src="js/state.js"></script>
+    <script src="js/font-library.js"></script>
+    <script src="js/project-fonts.js"></script>
+    <script src="js/font-browser.js"></script>
+    <script src="js/transform.js"></script>
+    <script src="js/profiles.js"></script>
+    <script src="js/constraints.js"></script>
+    <script src="js/renderer.js"></script>
+    <script src="js/commands.js"></script>
+    <script src="js/export.js"></script>
+    <script src="js/interaction.js"></script>
+    <script src="../packages/text-contour-grouping.js"></script>
+    <script src="js/text-outline.js"></script>
+    <script src="js/multiview-template.js"></script>
+    <script src="js/part-builders.js"></script>
+    <script src="../packages/help-index.js"></script>
+    <script src="js/docs-viewer.js"></script>
+    <script src="js/help-search.js"></script>
+    <script src="js/panel-sections.js"></script>
+    <script src="js/ui.js"></script>
+    <script src="js/path-editor.js"></script>
+    <script src="js/3d-view.js"></script>
+    <script src="../packages/model-viewer/index.js"></script>
+    <script src="js/agent-api.js"></script>
+    <script src="js/taste-memory-api.js"></script>
+    <script src="js/part-compiler.js"></script>
+    <script src="js/sample-projects.js"></script>
+    <script src="js/reference-image.js"></script>
+    <script src="js/digitize-sketch.js"></script>
+    <script src="js/docs-api.js"></script>
+    <script src="js/autosave.js"></script>
+    <script src="js/app-mode.js"></script>
   </body>
 </html>
