@@ -3,7 +3,6 @@
 [![License: MIT](https://img.shields.io/github/license/JIROMO/Millrect)](LICENSE)
 [![Release](https://img.shields.io/github/v/release/JIROMO/Millrect)](https://github.com/JIROMO/Millrect/releases/latest)
 [![Downloads](https://img.shields.io/github/downloads/JIROMO/Millrect/total)](https://github.com/JIROMO/Millrect/releases)
-[![E2E](https://img.shields.io/github/actions/workflow/status/JIROMO/Millrect/e2e.yml?branch=main)](https://github.com/JIROMO/Millrect/actions/workflows/e2e.yml)
 [![Website](https://img.shields.io/badge/website-millrect.com-5965f9)](https://millrect.com/)
 [![Docs](https://img.shields.io/badge/docs-user%20guide-71717a)](docs/en/index.html)
 
