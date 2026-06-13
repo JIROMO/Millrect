@@ -460,6 +460,13 @@ async function captureHistoryPanel(page, config) {
   await page.locator('.panel-tab[data-tab="history"]').click();
   await flushRender(page);
   await captureSidebarScreenshot(page, OUT, "history-panel.png");
+  // 履歴用に足した図形を残すと後続の 3D キャプチャに混入する（色不一致警告も出る）
+  await page.evaluate(() => {
+    deleteShape("hist-a");
+    deleteShape("hist-b");
+    render();
+    uiUpdate();
+  });
 }
 
 async function captureEditingDemo(page, config) {

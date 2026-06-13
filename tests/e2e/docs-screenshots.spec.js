@@ -414,7 +414,7 @@ test.describe("ドキュメント記載寸法", () => {
     expect(DOC_BOX_MM.depth * 10).toBe(800);
     expect(DOC_BOX_MM.height * 10).toBe(500);
     expect(DOC_BOX.top.fill).toBe("#8fb7ff");
-    expect(DOC_BOX.front.fill).toBe("#ffb347");
+    expect(DOC_BOX.front.fill).toBe("#8fb7ff");
   });
 
   test("DOC_DOCS_BOX が 120×80×50 mm に対応", () => {
@@ -422,6 +422,6 @@ test.describe("ドキュメント記載寸法", () => {
     expect(DOC_DOCS_MM.depth).toBe(80);
     expect(DOC_DOCS_MM.height).toBe(50);
     expect(DOC_DOCS_BOX.top.fill).toBe("#8fb7ff");
-    expect(DOC_DOCS_BOX.front.fill).toBe("#ffb347");
+    expect(DOC_DOCS_BOX.front.fill).toBe("#8fb7ff");
   });
 });

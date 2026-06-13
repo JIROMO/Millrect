@@ -334,7 +334,8 @@ function buildModuleJoint1ProjectState(projectName = "Module Joint 1") {
                 y: sectionY,
                 width: w,
                 height: moduleJoint1R(2),
-                fill: "#f8fafc",
+                // 上面図の輪郭（#eef6ff）と同じ塗り色にして高さを板厚から取る
+                fill: "#eef6ff",
                 stroke: "#14213d",
                 strokeWidth: "medium",
               },

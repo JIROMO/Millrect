@@ -8,16 +8,18 @@ const MULTIVIEW_STARTER_BOX = {
   topShapeId: "starter-top-rect",
   frontShapeId: "starter-front-rect",
   sideShapeId: "starter-side-rect",
+  // 3D の高さは直交ビューの「同じ fill 色」の輪郭から決まるため、
+  // 全ビューで同じ塗り色を使う（色を変えると全高近似 + 警告になる）
   top: {
     fill: "#8fb7ff",
     stroke: "#14213d",
   },
   front: {
-    fill: "#ffb347",
+    fill: "#8fb7ff",
     stroke: "#14213d",
   },
   side: {
-    fill: "#7bc896",
+    fill: "#8fb7ff",
     stroke: "#14213d",
   },
 };
