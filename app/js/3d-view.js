@@ -119,6 +119,61 @@ function _worldBox(mesh) {
   return g.boundingBox.clone().applyMatrix4(mesh.matrixWorld);
 }
 
+// solidIntersect 部品が無いシーンでは volume の union を連結に置き換えてよい
+// （bbox 範囲・グルーピング用途では結果が同等で、多フィーチャーでも O(n)）。
+// _build3DSceneFromViews が各生成の冒頭で設定する。
+let _3dConcatVolumes = false;
+
+// _3dConcatVolumes が true のときは BSP の代わりに連結で 2 メッシュを合成する。
+function _combineVolumeMeshes(a, b, material) {
+  if (!a) return b || null;
+  if (!b) return a;
+  if (!_3dConcatVolumes) return _csgUnion(a, b, material);
+  if (!_meshHasGeometry(a)) {
+    _disposeMesh(a);
+    return b;
+  }
+  if (!_meshHasGeometry(b)) {
+    _disposeMesh(b);
+    return a;
+  }
+  try {
+    return _concatDisjointMeshes(a, b, material);
+  } catch (e) {
+    console.warn("[3D] concat volume failed, falling back to BSP:", e);
+    return _csgUnion(a, b, material);
+  }
+}
+
+// メッシュ列を非ブール連結で 1 つにまとめる（O(n)）。BSP union と違い形状複雑度で
+// 膨張しないため、多フィーチャー（穴抜き型など）でもハングしない。volume を bbox 範囲・
+// 表示グルーピングにしか使わない用途では union と実質同等。
+function _concatMeshList(meshes, material) {
+  let out = null;
+  for (const m of meshes) {
+    if (!m) continue;
+    if (!out) {
+      out = m;
+      continue;
+    }
+    if (!_meshHasGeometry(out)) {
+      _disposeMesh(out);
+      out = m;
+      continue;
+    }
+    if (!_meshHasGeometry(m)) {
+      _disposeMesh(m);
+      continue;
+    }
+    out = _concatDisjointMeshes(
+      out,
+      m,
+      material?.clone ? material.clone() : material,
+    );
+  }
+  return out;
+}
+
 function _csgUnion(meshA, meshB, material) {
   if (!meshA) return meshB || null;
   if (!meshB) return meshA;
@@ -729,6 +784,19 @@ function _build3DSceneFromViews() {
     left: W,
   };
 
+  // solidIntersect の部品は直交ビュー volume と実 CSG 交差するため、その場合のみ
+  // BSP union で正しい多様体ボリュームを作る必要がある。非 solidIntersect（既定）は
+  // volume を bbox 範囲・グルーピングにしか使わないので、連結で十分かつ大幅に高速。
+  const anySolid = state.pages.some((pg) =>
+    [...iterProfileSourcesFromPage(pg)].some(
+      ({ shape }) =>
+        shape?.solidIntersect &&
+        shape.type !== "line" &&
+        shape.type !== "text",
+    ),
+  );
+  _3dConcatVolumes = !anySolid;
+
   function buildUnion(pages, viewType) {
     if (!pages?.length) return null;
     let mesh = null;
@@ -745,13 +813,13 @@ function _build3DSceneFromViews() {
         mesh = m;
         continue;
       }
-      mesh = _csgUnion(mesh, m, mesh.material?.clone());
+      mesh = _combineVolumeMeshes(mesh, m, mesh.material?.clone());
     }
     return mesh;
   }
 
   function axisVolume(a, b) {
-    return _csgUnion(a, b, a?.material?.clone());
+    return _combineVolumeMeshes(a, b, a?.material?.clone());
   }
 
   // 色別の clamp volume を構築する。多ビューで「色＝積層レイヤー」を表現するため、
@@ -787,7 +855,7 @@ function _build3DSceneFromViews() {
           const prev = byColor.get(color);
           byColor.set(
             color,
-            prev ? _csgUnion(prev, mesh, _makeMaterial(color)) : mesh,
+            prev ? _combineVolumeMeshes(prev, mesh, _makeMaterial(color)) : mesh,
           );
         }
       }
@@ -801,59 +869,40 @@ function _build3DSceneFromViews() {
     return { any: unionAny, byColor: buildColorVolumes(specs), specs };
   }
 
-  const axisVolumes = {
-    y: makeAxisEntry(
-      axisVolume(
-        buildUnion(byType.top, "top"),
-        buildUnion(byType.bottom, "bottom"),
-      ),
-      [
-        { pages: byType.top, viewType: "top" },
-        { pages: byType.bottom, viewType: "bottom" },
-      ],
-    ),
-    z: makeAxisEntry(
-      axisVolume(
-        buildUnion(byType.front, "front"),
-        buildUnion(byType.back, "back"),
-      ),
-      [
-        { pages: byType.front, viewType: "front" },
-        { pages: byType.back, viewType: "back" },
-      ],
-    ),
-    x: makeAxisEntry(
-      axisVolume(
-        buildUnion(byType.right, "right"),
-        buildUnion(byType.left, "left"),
-      ),
-      [
-        { pages: byType.right, viewType: "right" },
-        { pages: byType.left, viewType: "left" },
-      ],
-    ),
+  const primary = _getPrimaryPartAxis(byType);
+  const axisHasViews = {
+    y: !!(byType.top || byType.bottom),
+    z: !!(byType.front || byType.back),
+    x: !!(byType.right || byType.left),
   };
-
-  const activeAxisCount = [axisVolumes.y, axisVolumes.z, axisVolumes.x].filter(
-    Boolean,
-  ).length;
-  if (activeAxisCount < 2) {
-    for (const vol of [axisVolumes.y, axisVolumes.z, axisVolumes.x]) {
-      _disposeAxisEntry(vol);
-    }
+  const viewAxisCount =
+    (axisHasViews.y ? 1 : 0) +
+    (axisHasViews.z ? 1 : 0) +
+    (axisHasViews.x ? 1 : 0);
+  if (!primary || viewAxisCount < 2) {
     return _buildSingleViewExtrusionScene(byType, dims, pageFrames);
   }
 
-  const primary = _getPrimaryPartAxis(byType);
-  if (!primary) {
-    for (const vol of [axisVolumes.y, axisVolumes.z, axisVolumes.x]) {
-      _disposeAxisEntry(vol);
-    }
-    return {
-      ok: false,
-      message: t("view3d.needViews"),
-    };
-  }
+  // primary 軸の volume はどの部品の clamp 対象にもならない（部品は直交軸方向の
+  // bbox 範囲しか参照しない / _buildPartMesh の clampEntries は自軸を除外する）。
+  // 多フィーチャー図面（穴抜き型など）で primary を union すると BSP が指数的に
+  // 膨張してハングするため、primary 軸の volume は構築しない。
+  const buildAxisVolume = (axisKey, viewA, viewB) => {
+    if (axisKey === primary.axis) return null;
+    const specs = [
+      { pages: byType[viewA], viewType: viewA },
+      { pages: byType[viewB], viewType: viewB },
+    ];
+    return makeAxisEntry(
+      axisVolume(buildUnion(byType[viewA], viewA), buildUnion(byType[viewB], viewB)),
+      specs,
+    );
+  };
+  const axisVolumes = {
+    y: buildAxisVolume("y", "top", "bottom"),
+    z: buildAxisVolume("z", "front", "back"),
+    x: buildAxisVolume("x", "right", "left"),
+  };
 
   const parts = [];
   const colorMismatches = new Map();
@@ -903,11 +952,11 @@ function _build3DSceneFromViews() {
 
   let added = 0;
   for (const [color, meshes] of byColor) {
-    let merged = meshes[0];
     const mat = _makeMaterial(color);
-    for (let i = 1; i < meshes.length; i++) {
-      merged = _csgUnion(merged, meshes[i], mat.clone());
-    }
+    // 同色パーツの統合は表示・STL のグルーピング目的。BSP union は部品数に対して
+    // 指数的に重くなる（穴抜き型のような多フィーチャーでハング）ため、非ブール連結で
+    // O(n) に統合する。各パーツは既に個別に成形済みで、連結でも見た目は同等。
+    const merged = _concatMeshList(meshes, mat) || meshes[0];
     // role:"cut" は 2D プロファイル段階で _profileToThreeShapesForView() が
     // 差し引き済み（押し出し前にキーホール輪郭化）。ここでの CSG 差し引きは不要。
     merged.material = mat;
@@ -1441,11 +1490,9 @@ function _buildSingleViewExtrusionScene(byType, dims, pageFrames) {
 
   let added = 0;
   for (const [color, meshes] of byColor) {
-    let merged = meshes[0];
     const mat = _makeMaterial(color);
-    for (let i = 1; i < meshes.length; i++) {
-      merged = _csgUnion(merged, meshes[i], mat.clone());
-    }
+    // 単一ビュー押し出しは CSG 交差を伴わないので、同色統合は常に連結でよい（O(n)）。
+    const merged = _concatMeshList(meshes, mat) || meshes[0];
     merged.material = mat;
     _3scene.add(merged);
     _3meshes.push(merged);
@@ -1491,7 +1538,7 @@ function _buildPageUnionMesh(page, sweepDepth, viewType, dims, pageFrames) {
     if (!unionMesh) {
       unionMesh = mesh;
     } else {
-      unionMesh = _csgUnion(unionMesh, mesh, mat.clone());
+      unionMesh = _combineVolumeMeshes(unionMesh, mesh, mat.clone());
     }
   }
   return unionMesh;
