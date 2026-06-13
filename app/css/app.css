@@ -874,6 +874,51 @@ millrect-3d-panel {
   color: var(--accent-2);
   background: var(--hover-bg);
 }
+.zorder-btn:disabled {
+  opacity: 0;
+  cursor: default;
+  pointer-events: none;
+}
+
+/* 図形単位のロック */
+.shape-lock {
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: var(--text-3);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  border-radius: 3px;
+  padding: 0;
+  opacity: 0;
+  flex-shrink: 0;
+  transition:
+    color 0.1s,
+    background 0.1s,
+    opacity 0.1s;
+}
+.shape-lock svg {
+  width: 12px;
+  height: 12px;
+}
+.list-item:hover .shape-lock {
+  opacity: 1;
+}
+.shape-lock:hover {
+  color: var(--text);
+  background: var(--hover-bg);
+}
+.shape-item.locked .shape-lock {
+  opacity: 1;
+  color: var(--accent-2);
+}
+.shape-item.locked .item-name,
+.shape-item.locked .shape-icon {
+  opacity: 0.5;
+}
 
 .layer-vis,
 .layer-lock {
@@ -1233,6 +1278,14 @@ millrect-3d-panel {
   border-color: var(--accent);
   color: var(--accent-2);
   background: var(--accent-dim);
+}
+.prop-mixed-badge {
+  font-size: 10px;
+  color: var(--text-2);
+  white-space: nowrap;
+}
+input[type="color"].prop-mixed {
+  opacity: 0.4;
 }
 .prop-color-swatches {
   display: flex;
@@ -1826,6 +1879,24 @@ millrect-3d-panel {
   position: relative;
   flex: 1;
   min-height: 0;
+}
+.panel-3d-warning {
+  position: absolute;
+  top: 8px;
+  left: 8px;
+  right: 8px;
+  padding: 6px 10px;
+  background: rgba(146, 102, 18, 0.92);
+  color: #fff;
+  font-size: 11px;
+  line-height: 1.5;
+  border-radius: 6px;
+  white-space: pre-line;
+  pointer-events: none;
+  z-index: 3;
+}
+.panel-3d-warning[hidden] {
+  display: none;
 }
 .panel-3d-empty {
   position: absolute;

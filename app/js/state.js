@@ -272,6 +272,7 @@ function defaultState() {
     panX: 40,
     panY: 40,
     showGrid: true,
+    showViewGuides: true, // 他ビュー輪郭の見通し線（UI 専用・Undo 非対象）
     gridSize: 1,
     snapEnabled: true,
     drawFill: "none",
@@ -431,20 +432,130 @@ function snapPoint(pt, gridMm = 1) {
   };
 }
 
+// ── スナップ候補ジオメトリ収集（snapToShapes / snapDragPoints 共用）──
+// 各 shape のキーポイントとセグメントを paper 座標でコールバックに渡す。
+//   onPoint(x, y, snapType, priority)
+//   onSegment({ x1, y1, x2, y2 })
+// rotation/flipH/flipV は表示変換だが、スナップは表示位置に合わせる必要が
+// あるため renderer と同じ変換（applyWorldTransformReal）を候補点にも適用する
+function _collectSnapGeometry(shapes, scale, excludeIds, onPoint, onSegment) {
+  const rtp = (v) => realToPaperDist(v, scale);
+
+  function makeXf(s, ancestors) {
+    const needsXf =
+      typeof applyWorldTransformReal === "function" &&
+      typeof hasVisualTransform === "function" &&
+      (hasVisualTransform(s) || ancestors.some(hasVisualTransform));
+    if (!needsXf) return (x, y) => [rtp(x), rtp(y)];
+    return (x, y) => {
+      const [wx, wy] = applyWorldTransformReal(x, y, s, ancestors);
+      return [rtp(wx), rtp(wy)];
+    };
+  }
+
+  function collect(s, ancestors) {
+    if (excludeIds && excludeIds.has(s.id)) return;
+    if (s.type === "group") {
+      const stack = [...ancestors, s];
+      for (const child of s.children || []) collect(child, stack);
+      return;
+    }
+    const xf = makeXf(s, ancestors);
+    const addPt = (x, y, snapType, priority) => {
+      const [px, py] = xf(x, y);
+      onPoint(px, py, snapType, priority);
+    };
+    const seg = (ax, ay, bx, by) => {
+      const [x1, y1] = xf(ax, ay);
+      const [x2, y2] = xf(bx, by);
+      onSegment({ x1, y1, x2, y2 });
+    };
+
+    if (s.type === "line") {
+      addPt(s.x1, s.y1, "endpoint", 1);
+      addPt(s.x2, s.y2, "endpoint", 1);
+      addPt((s.x1 + s.x2) / 2, (s.y1 + s.y2) / 2, "midpoint", 3);
+      seg(s.x1, s.y1, s.x2, s.y2);
+    } else if (s.type === "rect") {
+      const x = s.x,
+        y = s.y,
+        w = s.width,
+        h = s.height;
+      // 4コーナー
+      addPt(x, y, "endpoint", 1);
+      addPt(x + w, y, "endpoint", 1);
+      addPt(x, y + h, "endpoint", 1);
+      addPt(x + w, y + h, "endpoint", 1);
+      // 辺の中点
+      addPt(x + w / 2, y, "midpoint", 3);
+      addPt(x + w / 2, y + h, "midpoint", 3);
+      addPt(x, y + h / 2, "midpoint", 3);
+      addPt(x + w, y + h / 2, "midpoint", 3);
+      // 中心
+      addPt(x + w / 2, y + h / 2, "center", 4);
+      // 辺をセグメントとして登録（交点・垂線用）
+      seg(x, y, x + w, y);
+      seg(x + w, y, x + w, y + h);
+      seg(x + w, y + h, x, y + h);
+      seg(x, y + h, x, y);
+    } else if (s.type === "circle") {
+      addPt(s.cx, s.cy, "center", 4);
+      addPt(s.cx + s.r, s.cy, "endpoint", 1);
+      addPt(s.cx - s.r, s.cy, "endpoint", 1);
+      addPt(s.cx, s.cy + s.r, "endpoint", 1);
+      addPt(s.cx, s.cy - s.r, "endpoint", 1);
+    } else if (s.type === "ellipse") {
+      addPt(s.cx, s.cy, "center", 4);
+      addPt(s.cx + s.rx, s.cy, "endpoint", 1);
+      addPt(s.cx - s.rx, s.cy, "endpoint", 1);
+      addPt(s.cx, s.cy + s.ry, "endpoint", 1);
+      addPt(s.cx, s.cy - s.ry, "endpoint", 1);
+    } else if (s.type === "bezier" && s.nodes) {
+      for (const node of s.nodes) {
+        addPt(node.x, node.y, "endpoint", 1);
+      }
+      // open bezier の辺もセグメント化（直線近似）
+      for (let i = 0; i < s.nodes.length - 1; i++) {
+        seg(s.nodes[i].x, s.nodes[i].y, s.nodes[i + 1].x, s.nodes[i + 1].y);
+      }
+      if (s.closed && s.nodes.length > 1) {
+        const last = s.nodes[s.nodes.length - 1];
+        const first = s.nodes[0];
+        seg(last.x, last.y, first.x, first.y);
+      }
+    } else if (s.type === "path" && s.contours) {
+      // path の各リングの頂点
+      for (const contour of s.contours) {
+        for (const ring of contour) {
+          for (let i = 0; i < ring.length; i++) {
+            addPt(ring[i][0], ring[i][1], "endpoint", 1);
+            if (i > 0) {
+              seg(ring[i - 1][0], ring[i - 1][1], ring[i][0], ring[i][1]);
+            }
+          }
+        }
+      }
+    }
+  }
+
+  for (const s of shapes) collect(s, []);
+}
+
 // ── snapToShapes: オブジェクトスナップ ────────────────────────
 // 戻り値: { x, y, snapType } | null
-// snapType: "endpoint" | "midpoint" | "center" | "intersection" | "perpendicular"
+// snapType: "endpoint" | "midpoint" | "center" | "intersection" | "perpendicular" | "guide"
 //
 // 優先順位（同距離の場合は上が優先）:
 //   1. endpoint    — 線・矩形の頂点、bezier ノード
-//   2. intersection— 線分同士の交点
+//   2. intersection— 線分同士の交点 / ガイド×ガイド / ガイド×図形辺
 //   3. midpoint    — 線・辺の中点
 //   4. center      — circle/rect の中心
 //   5. perpendicular — カーソルから線分への垂線足
+//   6. guide       — ビューガイド線上（カーソルの直交射影）
 //
-function snapToShapes(pt, shapes, scale, threshold = 2) {
-  const rtp = (v) => realToPaperDist(v, scale);
-
+// guides: ビューガイド（見通し線）の paper 座標。{ v: [x...], h: [y...] } | null
+// opts.excludeIds: Set<shapeId> — ドラッグ中の図形を候補から除外（自己スナップ防止）
+function snapToShapes(pt, shapes, scale, threshold = 2, guides = null, opts = {}) {
   // 候補リスト: [{ x, y, snapType, priority }]
   const candidates = [];
 
@@ -458,115 +569,63 @@ function snapToShapes(pt, shapes, scale, threshold = 2) {
   // line セグメントリスト（交点・垂線計算用）
   const segments = []; // [{ x1,y1,x2,y2 }] (paper座標)
 
-  for (const s of shapes) {
-    if (s.type === "line") {
-      const x1 = rtp(s.x1),
-        y1 = rtp(s.y1),
-        x2 = rtp(s.x2),
-        y2 = rtp(s.y2);
-      add(x1, y1, "endpoint", 1);
-      add(x2, y2, "endpoint", 1);
-      add((x1 + x2) / 2, (y1 + y2) / 2, "midpoint", 3);
-      segments.push({ x1, y1, x2, y2 });
-    } else if (s.type === "rect") {
-      const x = rtp(s.x),
-        y = rtp(s.y),
-        w = rtp(s.width),
-        h = rtp(s.height);
-      // 4コーナー
-      add(x, y, "endpoint", 1);
-      add(x + w, y, "endpoint", 1);
-      add(x, y + h, "endpoint", 1);
-      add(x + w, y + h, "endpoint", 1);
-      // 辺の中点
-      add(x + w / 2, y, "midpoint", 3);
-      add(x + w / 2, y + h, "midpoint", 3);
-      add(x, y + h / 2, "midpoint", 3);
-      add(x + w, y + h / 2, "midpoint", 3);
-      // 中心
-      add(x + w / 2, y + h / 2, "center", 4);
-      // 辺をセグメントとして登録（交点・垂線用）
-      segments.push({ x1: x, y1: y, x2: x + w, y2: y });
-      segments.push({ x1: x + w, y1: y, x2: x + w, y2: y + h });
-      segments.push({ x1: x + w, y1: y + h, x2: x, y2: y + h });
-      segments.push({ x1: x, y1: y + h, x2: x, y2: y });
-    } else if (s.type === "circle") {
-      const cx = rtp(s.cx),
-        cy = rtp(s.cy),
-        rr = rtp(s.r);
-      add(cx, cy, "center", 4);
-      add(cx + rr, cy, "endpoint", 1);
-      add(cx - rr, cy, "endpoint", 1);
-      add(cx, cy + rr, "endpoint", 1);
-      add(cx, cy - rr, "endpoint", 1);
-    } else if (s.type === "ellipse") {
-      const cx = rtp(s.cx),
-        cy = rtp(s.cy),
-        rx = rtp(s.rx),
-        ry = rtp(s.ry);
-      add(cx, cy, "center", 4);
-      add(cx + rx, cy, "endpoint", 1);
-      add(cx - rx, cy, "endpoint", 1);
-      add(cx, cy + ry, "endpoint", 1);
-      add(cx, cy - ry, "endpoint", 1);
-    } else if (s.type === "bezier" && s.nodes) {
-      for (const node of s.nodes) {
-        add(rtp(node.x), rtp(node.y), "endpoint", 1);
-      }
-      // open bezier の辺もセグメント化（直線近似）
-      for (let i = 0; i < s.nodes.length - 1; i++) {
-        segments.push({
-          x1: rtp(s.nodes[i].x),
-          y1: rtp(s.nodes[i].y),
-          x2: rtp(s.nodes[i + 1].x),
-          y2: rtp(s.nodes[i + 1].y),
-        });
-      }
-      if (s.closed && s.nodes.length > 1) {
-        const last = s.nodes[s.nodes.length - 1];
-        const first = s.nodes[0];
-        segments.push({
-          x1: rtp(last.x),
-          y1: rtp(last.y),
-          x2: rtp(first.x),
-          y2: rtp(first.y),
-        });
-      }
-    } else if (s.type === "path" && s.contours) {
-      // path の各リングの頂点
-      for (const contour of s.contours) {
-        for (const ring of contour) {
-          for (let i = 0; i < ring.length; i++) {
-            const px = rtp(ring[i][0]);
-            const py = rtp(ring[i][1]);
-            add(px, py, "endpoint", 1);
-            if (i > 0) {
-              segments.push({
-                x1: rtp(ring[i - 1][0]),
-                y1: rtp(ring[i - 1][1]),
-                x2: px,
-                y2: py,
-              });
-            }
-          }
-        }
-      }
-    }
-  }
+  _collectSnapGeometry(shapes, scale, opts.excludeIds || null, add, (seg) =>
+    segments.push(seg),
+  );
+
+  // 交点・垂線・ガイド交点の候補はすべてセグメント上の点であり、add() は
+  // threshold 以内しか採用しない。pt から threshold より遠いセグメントは
+  // 候補を生めないため先に除外する。ブーリアン演算後の多頂点 path で
+  // 交点総当たりが O(S²) に爆発するのを防ぐ
+  const nearSegments = segments.filter(
+    (seg) => _pointSegmentDist(pt, seg) < threshold,
+  );
 
   // ── 交点スナップ ─────────────────────────────────────────────
-  // 全セグメントペアの交点を計算
-  for (let i = 0; i < segments.length; i++) {
-    for (let j = i + 1; j < segments.length; j++) {
-      const ix = _segmentIntersection(segments[i], segments[j]);
+  // pt 近傍セグメントペアの交点を計算
+  for (let i = 0; i < nearSegments.length; i++) {
+    for (let j = i + 1; j < nearSegments.length; j++) {
+      const ix = _segmentIntersection(nearSegments[i], nearSegments[j]);
       if (ix) add(ix.x, ix.y, "intersection", 2);
     }
   }
 
   // ── 垂線足スナップ ───────────────────────────────────────────
-  for (const seg of segments) {
+  for (const seg of nearSegments) {
     const foot = _perpendicularFoot(pt, seg);
     if (foot) add(foot.x, foot.y, "perpendicular", 5);
+  }
+
+  // ── ビューガイド（見通し線）スナップ ─────────────────────────
+  // ガイドはページ全幅/全高の無限直線として扱う
+  if (guides) {
+    const GUIDE_EXT = 1e7;
+    const vSegs = (guides.v || []).map((gx) => ({
+      x1: gx,
+      y1: -GUIDE_EXT,
+      x2: gx,
+      y2: GUIDE_EXT,
+    }));
+    const hSegs = (guides.h || []).map((gy) => ({
+      x1: -GUIDE_EXT,
+      y1: gy,
+      x2: GUIDE_EXT,
+      y2: gy,
+    }));
+    for (const gseg of [...vSegs, ...hSegs]) {
+      // ガイド × 図形辺の交点（交点は図形辺上の点なので nearSegments で十分）
+      for (const seg of nearSegments) {
+        const ix = _segmentIntersection(gseg, seg);
+        if (ix) add(ix.x, ix.y, "guide", 2);
+      }
+    }
+    // ガイド × ガイドの交点
+    for (const vs of vSegs) {
+      for (const hs of hSegs) add(vs.x1, hs.y1, "guide", 2);
+    }
+    // ガイド線上への直交射影（最弱: 軸方向だけ拘束）
+    for (const vs of vSegs) add(vs.x1, pt.y, "guide", 6);
+    for (const hs of hSegs) add(pt.x, hs.y1, "guide", 6);
   }
 
   if (candidates.length === 0) return null;
@@ -575,6 +634,90 @@ function snapToShapes(pt, shapes, scale, threshold = 2) {
   candidates.sort((a, b) => a.priority - b.priority || a.d - b.d);
   const { x, y, snapType } = candidates[0];
   return { x, y, snapType };
+}
+
+// ── 点から線分への最短距離（端点へのクランプあり） ────────────
+function _pointSegmentDist(pt, seg) {
+  const dx = seg.x2 - seg.x1,
+    dy = seg.y2 - seg.y1;
+  const len2 = dx * dx + dy * dy;
+  let t = len2 < 1e-10 ? 0 : ((pt.x - seg.x1) * dx + (pt.y - seg.y1) * dy) / len2;
+  t = Math.max(0, Math.min(1, t));
+  return Math.hypot(pt.x - (seg.x1 + t * dx), pt.y - (seg.y1 + t * dy));
+}
+
+// ── snapDragPoints: ドラッグ中図形のキーポイントスナップ ──────
+// dragPoints（paper 座標 [{x,y}]）のいずれかを targetShapes のスナップ点
+// （endpoint/midpoint/center/intersection）へ吸着させる補正量を返す。
+// 優先順位は snapToShapes と同じ（endpoint > intersection > midpoint > center）。
+// 戻り値: { dx, dy, x, y, snapType } | null（paper 座標。x,y は吸着先）
+function snapDragPoints(dragPoints, targetShapes, scale, threshold, opts = {}) {
+  if (!dragPoints.length) return null;
+  const targetPts = [];
+  const segments = [];
+  _collectSnapGeometry(
+    targetShapes,
+    scale,
+    opts.excludeIds || null,
+    (x, y, snapType, priority) => targetPts.push({ x, y, snapType, priority }),
+    (seg) => segments.push(seg),
+  );
+
+  // 交点候補: いずれかの dragPoint の threshold 近傍にあるセグメントのみ対象
+  // （snapToShapes と同様の O(S²) 爆発対策）
+  const nearSegments = segments.filter((seg) =>
+    dragPoints.some((dp) => _pointSegmentDist(dp, seg) < threshold),
+  );
+  for (let i = 0; i < nearSegments.length; i++) {
+    for (let j = i + 1; j < nearSegments.length; j++) {
+      const ix = _segmentIntersection(nearSegments[i], nearSegments[j]);
+      if (ix)
+        targetPts.push({
+          x: ix.x,
+          y: ix.y,
+          snapType: "intersection",
+          priority: 2,
+        });
+    }
+  }
+
+  let best = null;
+  for (const dp of dragPoints) {
+    for (const tp of targetPts) {
+      const d = Math.hypot(tp.x - dp.x, tp.y - dp.y);
+      if (d >= threshold) continue;
+      if (
+        !best ||
+        tp.priority < best.priority ||
+        (tp.priority === best.priority && d < best.d)
+      ) {
+        best = {
+          d,
+          priority: tp.priority,
+          dx: tp.x - dp.x,
+          dy: tp.y - dp.y,
+          x: tp.x,
+          y: tp.y,
+          snapType: tp.snapType,
+        };
+      }
+    }
+  }
+  if (!best) return null;
+  return { dx: best.dx, dy: best.dy, x: best.x, y: best.y, snapType: best.snapType };
+}
+
+// 図形群のスナップキーポイントを paper 座標で列挙（ドラッグ側の基準点用）
+function collectSnapPoints(shapes, scale) {
+  const pts = [];
+  _collectSnapGeometry(
+    shapes,
+    scale,
+    null,
+    (x, y, snapType, priority) => pts.push({ x, y, snapType, priority }),
+    () => {},
+  );
+  return pts;
 }
 
 // ── 線分の交点計算（有限線分） ────────────────────────────────

@@ -41,6 +41,9 @@ function paperToReal(px, py) {
     y: paperToRealDist(py, scale),
   };
 }
+// オブジェクトスナップの吸着半径（画面ピクセル基準・ズーム非依存）
+const SNAP_SCREEN_PX = 8;
+
 function getSnapped(sx, sy, opts = {}) {
   const state = getState(),
     page = getCurrentPage();
@@ -48,7 +51,13 @@ function getSnapped(sx, sy, opts = {}) {
   if (state.snapEnabled) {
     if (!opts.gridOnly) {
       const shapes = getAllShapesOnPage(page);
-      const snap = snapToShapes(pt, shapes, page.scale);
+      const guides =
+        typeof getViewSnapGuides === "function" ? getViewSnapGuides() : null;
+      // threshold は paper 座標系（screen px = paper × zoom）
+      const threshold = SNAP_SCREEN_PX / (state.zoom || 1);
+      const snap = snapToShapes(pt, shapes, page.scale, threshold, guides, {
+        excludeIds: opts.excludeIds,
+      });
       if (snap) return { pt: snap, snapped: true, snapType: snap.snapType };
     }
     pt = snapPoint(pt, state.gridSize, page.scale);
@@ -63,7 +72,8 @@ function onMouseDown(e, svgEl) {
     e.altKey &&
     e.button === 0 &&
     (!!svgClosest(e.target, "[data-id]") ||
-      !!e.target.closest("[data-handle]"));
+      !!e.target.closest("[data-handle]") ||
+      !!e.target.closest("[data-rotate-handle]"));
   if (e.button === 1 || (e.button === 0 && e.altKey && !_altOnShape)) {
     _panning = true;
     _panStart = {
@@ -128,15 +138,26 @@ function _getSelectSnapOpts() {
   if (_ds.action === "resize" && _ds.shapeId) {
     const res = findShapeById(_ds.shapeId);
     if (res?.shape?.type === "dimension") return { gridOnly: true };
+    // 自分自身のキーポイントへの吸着を防ぐ
+    return { excludeIds: new Set([_ds.shapeId]) };
   }
-  if (_ds.action === "move") {
+  if (_ds.action === "vertex" && _ds.shapeId) {
+    return { excludeIds: new Set([_ds.shapeId]) };
+  }
+  if (
+    _ds.action === "move" ||
+    _ds.action === "move-pending" ||
+    _ds.action === "multi-resize"
+  ) {
     const ids = getState().selectedShapeIds;
     if (
+      _ds.action !== "multi-resize" &&
       ids.length > 0 &&
       ids.every((id) => findShapeById(id)?.shape?.type === "dimension")
     ) {
       return { gridOnly: true };
     }
+    return { excludeIds: new Set(ids) };
   }
   return {};
 }
@@ -212,6 +233,14 @@ function onMouseMove(e, svgEl) {
       res.shape.textOffsetY = origOffsetY + (rp.y - startRP.y);
       render();
     }
+    return;
+  }
+  if (tool === "select" && _ds?.action === "rotate") {
+    document.body.classList.add("dragging");
+    removeSnapIndicator();
+    // スナップ済み rp ではなく生ポインタ座標で角度を取る
+    const rawPP = svgToPaper(sv.x, sv.y);
+    handleRotate(paperToReal(rawPP.x, rawPP.y), e.shiftKey);
     return;
   }
   if (tool === "select" && _ds?.action === "multi-resize") {
@@ -324,6 +353,14 @@ function onMouseUp(e, svgEl) {
     document.body.classList.remove("dragging");
     return;
   }
+  if (tool === "select" && _ds?.action === "rotate") {
+    pushHistory();
+    _ds = null;
+    svgEl.style.cursor = "default";
+    document.body.classList.remove("dragging");
+    uiUpdate();
+    return;
+  }
   if (tool === "select" && _ds?.action === "multi-resize") {
     pushHistory();
     _ds = null;
@@ -345,6 +382,10 @@ function onMouseUp(e, svgEl) {
     return;
   }
   if (tool === "select" && _ds?.action === "move") {
+    // Alt+ドラッグ複製の確定時は変位を記録し、⌘D が同じ複製を繰り返せるようにする
+    if (_ds.duplicated && typeof setLastDuplicateOffset === "function") {
+      setLastDuplicateOffset(_ds.lastDxR || 0, _ds.lastDyR || 0);
+    }
     pushHistory();
     _ds = null;
     svgEl.style.cursor = "default";
@@ -513,6 +554,7 @@ function commitMarquee(a, b) {
   for (const layer of page.layers) {
     if (!layer.visible || layer.locked) continue;
     for (const s of layer.shapes) {
+      if (s.locked) continue;
       if (inBox(getShapeBBox(s, page.scale))) hit.push(s.id);
     }
   }
@@ -590,6 +632,31 @@ function handleSelDown(e, svgEl, pp, rp) {
     return;
   }
 
+  // 回転ホットゾーン（コーナー外周）— リサイズハンドルより下層にあるので先に判定
+  const rotEl = e.target.closest("[data-rotate-handle]");
+  if (rotEl && !e.target.closest("[data-handle]")) {
+    const sid = rotEl.getAttribute("data-sid");
+    const res = findShapeById(sid);
+    if (!res) return;
+    state.selectedShapeIds = [sid];
+    // 回転はスナップ無しの生ポインタ座標で角度を取る
+    const sv = screenToSVG(e, svgEl);
+    const rawPP = svgToPaper(sv.x, sv.y);
+    const raw = paperToReal(rawPP.x, rawPP.y);
+    const pivot = getShapePivotReal(res.shape);
+    _ds = {
+      action: "rotate",
+      shapeId: sid,
+      pivot,
+      startAngle: Math.atan2(raw.y - pivot.y, raw.x - pivot.x),
+      origRotation: res.shape.rotation || 0,
+    };
+    svgEl.style.cursor = ROTATE_CURSOR;
+    render();
+    uiUpdate();
+    return;
+  }
+
   const handleEl = e.target.closest("[data-handle]");
   if (handleEl) {
     const hi = parseInt(handleEl.getAttribute("data-handle"));
@@ -633,7 +700,14 @@ function handleSelDown(e, svgEl, pp, rp) {
     const res = findShapeById(sid);
     if (!res) return;
     const origShape = JSON.parse(JSON.stringify(res.shape));
-    _ds = { action: "resize", shapeId: sid, hi, startRP: rp, origShape };
+    _ds = {
+      action: "resize",
+      shapeId: sid,
+      hi,
+      startRP: rp,
+      origShape,
+      origPivot: getShapePivotReal(res.shape),
+    };
     if (
       origShape?.type === "text" &&
       typeof setTextNativeLiveTransform === "function"
@@ -657,8 +731,8 @@ function handleSelDown(e, svgEl, pp, rp) {
       for (const layer of page.layers) {
         if (!layer.visible || layer.locked) continue;
         for (const s of layer.shapes) {
-          const bb = getShapeBBox(s, page.scale);
-          if (bb && realPointInPaperBBox(rp, bb, page.scale)) {
+          if (s.locked) continue;
+          if (realPointInShapeGeometry(rp, s, page.scale)) {
             allShapes.push(s.id);
           }
         }
@@ -938,6 +1012,23 @@ function handleMultiResize(rp, shiftKey) {
   render();
 }
 
+function handleRotate(rp, shiftKey) {
+  if (!_ds || _ds.action !== "rotate") return;
+  const res = findShapeById(_ds.shapeId);
+  if (!res) return;
+  const { pivot, startAngle, origRotation } = _ds;
+  const a = Math.atan2(rp.y - pivot.y, rp.x - pivot.x);
+  // デルタを (-180, 180] に正規化して ±180° 境界での値ジャンプを防ぐ
+  let delta = ((a - startAngle) * 180) / Math.PI;
+  delta = ((delta % 360) + 540) % 360 - 180;
+  let deg = origRotation + delta;
+  if (shiftKey) deg = Math.round(deg / 15) * 15;
+  res.shape.rotation = normalizeRotationDeg(deg);
+  render();
+  const rotInput = document.getElementById("rot-angle");
+  if (rotInput) rotInput.value = `${res.shape.rotation}°`;
+}
+
 function handleResize(rp, shiftKey) {
   if (!_ds || _ds.action !== "resize") return;
   const { shapeId, hi, startRP, origShape } = _ds;
@@ -945,8 +1036,23 @@ function handleResize(rp, shiftKey) {
   if (!res) return;
   const shape = res.shape;
 
-  const dx = rp.x - startRP.x,
+  let dx = rp.x - startRP.x,
     dy = rp.y - startRP.y;
+  // 回転・反転した図形: ポインタ移動量をローカル座標（回転・反転前）へ逆変換し、
+  // 既存のリサイズ計算をローカル座標のまま使う
+  const _xf =
+    origShape.type !== "dimension" &&
+    typeof hasVisualTransform === "function" &&
+    hasVisualTransform(origShape);
+  if (_xf) {
+    const fx = origShape.flipH ? -dx : dx;
+    const fy = origShape.flipV ? -dy : dy;
+    const rad = (-(origShape.rotation || 0) * Math.PI) / 180;
+    const cos = Math.cos(rad),
+      sin = Math.sin(rad);
+    dx = fx * cos - fy * sin;
+    dy = fx * sin + fy * cos;
+  }
   const MIN = 1;
 
   if (shape.type === "line") {
@@ -1183,6 +1289,25 @@ function handleResize(rp, shiftKey) {
     }
   }
 
+  // 回転・反転中はピボット（bbox中心）がリサイズで動くため、アンカー
+  // （ドラッグ反対側）が世界座標で固定されるよう t = M(Δc) − Δc だけ平行移動する
+  if (_xf && _ds.origPivot) {
+    const c0 = _ds.origPivot;
+    const c1 = getShapePivotReal(shape);
+    const ddx = c1.x - c0.x,
+      ddy = c1.y - c0.y;
+    if (ddx || ddy) {
+      const rad = ((origShape.rotation || 0) * Math.PI) / 180;
+      const cos = Math.cos(rad),
+        sin = Math.sin(rad);
+      let mx = ddx * cos - ddy * sin;
+      let my = ddx * sin + ddy * cos;
+      if (origShape.flipH) mx = -mx;
+      if (origShape.flipV) my = -my;
+      shiftShape(shape, mx - ddx, my - ddy);
+    }
+  }
+
   render();
   _updatePathSizeDisplay(shape);
 }
@@ -1225,6 +1350,15 @@ function handleSelMove(pp, shiftKey) {
     if (Math.abs(dxR) >= Math.abs(dyR)) dyR = 0;
     else dxR = 0;
   }
+  // キーポイントスナップ: 選択図形の端点・中心を他図形のスナップ点へ吸着
+  const kp = _moveKeypointSnap(dxR, dyR, state, page, scale, shiftKey);
+  if (kp) {
+    dxR = kp.dxR;
+    dyR = kp.dyR;
+  }
+  // mouseup で複製オフセットとして記録するため保持
+  _ds.lastDxR = dxR;
+  _ds.lastDyR = dyR;
   for (const id of state.selectedShapeIds) {
     const orig = _selOrig[id];
     if (!orig) continue;
@@ -1274,10 +1408,57 @@ function handleSelMove(pp, shiftKey) {
     }
   }
   render();
+  // render() がオーバーレイを再構築するため、インジケーターは後から描く
+  if (kp) renderSnapIndicator(kp.x, kp.y, state.zoom, kp.snapType);
   if (state.selectedShapeIds.length === 1) {
     const r = findShapeById(state.selectedShapeIds[0]);
     if (r) _updatePathSizeDisplay(r.shape);
   }
+}
+
+// 移動ドラッグ中、_selOrig（ドラッグ開始時の図形）のキーポイントを
+// dxR/dyR だけ動かした位置で他図形のスナップ点と比較し、吸着すれば
+// 補正後の移動量を返す。戻り値: { dxR, dyR, x, y, snapType } | null
+// 多頂点 path 等でドラッグ側の点が多すぎる場合は性能優先でスキップ
+const _KEYPOINT_SNAP_MAX_POINTS = 400;
+
+function _moveKeypointSnap(dxR, dyR, state, page, scale, shiftKey) {
+  if (!state.snapEnabled) return null;
+  const ids = state.selectedShapeIds;
+  if (!ids.length || !_selOrig) return null;
+  const origShapes = [];
+  for (const id of ids) {
+    if (_selOrig[id]) origShapes.push(_selOrig[id]);
+  }
+  if (!origShapes.length) return null;
+  const pts = collectSnapPoints(origShapes, scale);
+  if (!pts.length || pts.length > _KEYPOINT_SNAP_MAX_POINTS) return null;
+  const dxP = realToPaperDist(dxR, scale);
+  const dyP = realToPaperDist(dyR, scale);
+  for (const p of pts) {
+    p.x += dxP;
+    p.y += dyP;
+  }
+  const threshold = SNAP_SCREEN_PX / (state.zoom || 1);
+  const best = snapDragPoints(pts, getAllShapesOnPage(page), scale, threshold, {
+    excludeIds: new Set(ids),
+  });
+  if (!best) return null;
+  let adxR = paperToRealDist(best.dx, scale);
+  let adyR = paperToRealDist(best.dy, scale);
+  if (shiftKey) {
+    // 軸拘束中は拘束されていない軸の補正のみ許可
+    if (dyR === 0) adyR = 0;
+    else adxR = 0;
+    if (adxR === 0 && adyR === 0) return null;
+  }
+  return {
+    dxR: dxR + adxR,
+    dyR: dyR + adyR,
+    x: best.x,
+    y: best.y,
+    snapType: best.snapType,
+  };
 }
 
 function handleVertexDrag(rp) {
@@ -1417,6 +1598,179 @@ function realPointInPaperBBox(rp, bb, scale) {
   return px >= bb.x && px <= bb.x + bb.w && py >= bb.y && py <= bb.y + bb.h;
 }
 
+// ── Geometry-aware hit testing ────────────────────────────────
+// bbox だけだと「丸の四隅」「中身が空の矩形の内側」「回転図形」「重なり」で
+// 誤選択になる。実形状（塗り内 or 輪郭近傍）で当たり判定する。
+const _PICK_TOL_PX = 6; // クリック許容（画面 px）
+
+function _pickTolReal(scale) {
+  const zoom = getState().zoom || 1;
+  return paperToRealDist(_PICK_TOL_PX / zoom, scale);
+}
+
+function _distPointToSeg(px, py, ax, ay, bx, by) {
+  const dx = bx - ax,
+    dy = by - ay;
+  const len2 = dx * dx + dy * dy;
+  let t = len2 ? ((px - ax) * dx + (py - ay) * dy) / len2 : 0;
+  t = Math.max(0, Math.min(1, t));
+  const cx = ax + t * dx,
+    cy = ay + t * dy;
+  return Math.hypot(px - cx, py - cy);
+}
+
+function _pointInRings(px, py, rings) {
+  // even-odd: 複数リング（穴あき path 等）をまとめて判定
+  let inside = false;
+  for (const ring of rings) {
+    for (let i = 0, j = ring.length - 1; i < ring.length; j = i++) {
+      const xi = ring[i][0],
+        yi = ring[i][1];
+      const xj = ring[j][0],
+        yj = ring[j][1];
+      if (
+        yi > py !== yj > py &&
+        px < ((xj - xi) * (py - yi)) / (yj - yi) + xi
+      ) {
+        inside = !inside;
+      }
+    }
+  }
+  return inside;
+}
+
+function _nearAnyRing(px, py, rings, tol, closed) {
+  for (const ring of rings) {
+    const n = ring.length;
+    const edges = closed ? n : n - 1;
+    for (let i = 0; i < edges; i++) {
+      const a = ring[i];
+      const b = ring[(i + 1) % n];
+      if (_distPointToSeg(px, py, a[0], a[1], b[0], b[1]) <= tol) return true;
+    }
+  }
+  return false;
+}
+
+function _flattenBezierReal(shape) {
+  const nodes = shape.nodes || [];
+  if (nodes.length < 2) return nodes.map((n) => [n.x, n.y]);
+  const pts = [];
+  const STEPS = 12;
+  const seg = (p0, p1, p2, p3) => {
+    for (let s = 0; s <= STEPS; s++) {
+      const t = s / STEPS,
+        mt = 1 - t;
+      const a = mt * mt * mt,
+        b = 3 * mt * mt * t,
+        c = 3 * mt * t * t,
+        d = t * t * t;
+      pts.push([
+        a * p0[0] + b * p1[0] + c * p2[0] + d * p3[0],
+        a * p0[1] + b * p1[1] + c * p2[1] + d * p3[1],
+      ]);
+    }
+  };
+  const count = shape.closed ? nodes.length : nodes.length - 1;
+  for (let i = 0; i < count; i++) {
+    const n0 = nodes[i],
+      n1 = nodes[(i + 1) % nodes.length];
+    const p0 = [n0.x, n0.y];
+    const p1 = n0.h2 ? [n0.h2.x, n0.h2.y] : p0;
+    const p3 = [n1.x, n1.y];
+    const p2 = n1.h1 ? [n1.h1.x, n1.h1.y] : p3;
+    seg(p0, p1, p2, p3);
+  }
+  return pts;
+}
+
+function _shapeLocalRings(shape) {
+  switch (shape.type) {
+    case "line":
+      return {
+        rings: [
+          [
+            [shape.x1, shape.y1],
+            [shape.x2, shape.y2],
+          ],
+        ],
+        closed: false,
+      };
+    case "rect":
+    case "image":
+    case "text": {
+      const corners = sampleShapePointsReal(shape);
+      return corners.length ? { rings: [corners], closed: true } : null;
+    }
+    case "circle": {
+      const pts = [];
+      for (let i = 0; i < 48; i++) {
+        const a = (2 * Math.PI * i) / 48;
+        pts.push([shape.cx + shape.r * Math.cos(a), shape.cy + shape.r * Math.sin(a)]);
+      }
+      return { rings: [pts], closed: true };
+    }
+    case "ellipse": {
+      const pts = [];
+      for (let i = 0; i < 48; i++) {
+        const a = (2 * Math.PI * i) / 48;
+        pts.push([shape.cx + shape.rx * Math.cos(a), shape.cy + shape.ry * Math.sin(a)]);
+      }
+      return { rings: [pts], closed: true };
+    }
+    case "bezier": {
+      const pts = _flattenBezierReal(shape);
+      return pts.length ? { rings: [pts], closed: !!shape.closed } : null;
+    }
+    case "path": {
+      const rings = [];
+      for (const poly of shape.contours || []) {
+        for (const ring of poly) rings.push(ring.map(([x, y]) => [x, y]));
+      }
+      return rings.length ? { rings, closed: true } : null;
+    }
+    default:
+      return null;
+  }
+}
+
+function _worldOutlineForShape(shape, ancestorGroups) {
+  const local = _shapeLocalRings(shape);
+  if (!local) return null;
+  const rings = local.rings.map((r) =>
+    r.map(([x, y]) => applyWorldTransformReal(x, y, shape, ancestorGroups)),
+  );
+  return { rings, closed: local.closed };
+}
+
+function realPointInShapeGeometry(rp, shape, scale, ancestorGroups = []) {
+  if (shape.type === "group") {
+    for (const child of shape.children || []) {
+      if (
+        realPointInShapeGeometry(rp, child, scale, [...ancestorGroups, shape])
+      )
+        return true;
+    }
+    // グループは1オブジェクトとして扱う: 子図形の隙間や塗りなし図形の
+    // 内側をつかんでも選択・移動できるよう bbox にフォールバックする
+    const bb = getShapeBBox(shape, scale, ancestorGroups);
+    return Boolean(bb && realPointInPaperBBox(rp, bb, scale));
+  }
+  const outline = _worldOutlineForShape(shape, ancestorGroups);
+  if (!outline) {
+    const bb = getShapeBBox(shape, scale);
+    return Boolean(bb && realPointInPaperBBox(rp, bb, scale));
+  }
+  const areaType =
+    shape.type === "text" ||
+    shape.type === "image" ||
+    (shape.fill && shape.fill !== "none");
+  if (outline.closed && areaType && _pointInRings(rp.x, rp.y, outline.rings))
+    return true;
+  const tol = _pickTolReal(scale);
+  return _nearAnyRing(rp.x, rp.y, outline.rings, tol, outline.closed);
+}
+
 function findTopShapeAtRealPoint(rp) {
   const page = getCurrentPage();
   const scale = page.scale;
@@ -1426,8 +1780,8 @@ function findTopShapeAtRealPoint(rp) {
     if (!layer.visible || layer.locked) continue;
     for (let si = layer.shapes.length - 1; si >= 0; si--) {
       const s = layer.shapes[si];
-      const bb = getShapeBBox(s, scale);
-      if (bb && realPointInPaperBBox(rp, bb, scale)) return s;
+      if (s.locked) continue;
+      if (realPointInShapeGeometry(rp, s, scale)) return s;
     }
   }
 
@@ -2201,7 +2555,9 @@ function _buildCanvasContextItems() {
       action: () => {
         const page = getCurrentPage();
         getState().selectedShapeIds = [
-          ...getAllShapesOnPage(page).map((s) => s.id),
+          ...getAllShapesOnPage(page)
+            .filter((s) => !s.locked)
+            .map((s) => s.id),
           ...getAllDimensionsOnPage(page).map((d) => d.id),
         ];
       },

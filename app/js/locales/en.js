@@ -111,6 +111,7 @@
     "page.grid.10mm": "10 mm",
     "page.snap": "Snap",
     "page.showGrid": "Show grid",
+    "page.showViewGuides": "View guides",
     "page.language": "Language",
     "page.language.ja": "日本語",
     "page.language.en": "English",
@@ -298,6 +299,7 @@
     "props.copy": "Duplicate",
     "props.fill": "Fill",
     "props.fillNone": "None",
+    "props.mixed": "Mixed",
     "props.stroke": "Stroke",
     "props.textColor": "Text color",
     "props.opacity": "Opacity",
@@ -517,6 +519,9 @@
     "view3d.openEdges": "Open edges detected (possibly non-manifold).",
     "view3d.stlWarningConfirm":
       "Warnings before STL export:\n{message}\n\nExport anyway?",
+    "view3d.colorMismatch":
+      "No outline with the same fill color as {color} was found in {views}, so its height was approximated by the overall drawing height. Use the same fill color across views to get the drawn height.",
+    "view3d.viewNameSeparator": ", ",
 
     "multiview.replaceConfirm":
       "Replace the current drawing with the 3D sample (top + front views)?\nYou can undo this action.",

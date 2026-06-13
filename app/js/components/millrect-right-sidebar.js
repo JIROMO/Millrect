@@ -147,6 +147,13 @@ class MillrectRightSidebar extends HTMLElement {
                   </label>
                 </div>
                 <div class="settings-row">
+                  <label data-i18n="page.showViewGuides">ビューガイド</label>
+                  <label class="custom-toggle">
+                    <input type="checkbox" id="show-view-guides" checked>
+                    <span class="custom-toggle-track"></span>
+                  </label>
+                </div>
+                <div class="settings-row">
                   <label data-i18n="page.language">言語</label>
                   <button class="custom-select" id="app-locale" data-value="ja">
                     <span class="custom-select-label">日本語</span>

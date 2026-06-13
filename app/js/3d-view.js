@@ -21,7 +21,7 @@ let _3controls = null;
 let _3meshes = [];
 let _3animId = null;
 let _3canvas = null;
-let _3dStatus = { meshCount: 0, message: null };
+let _3dStatus = { meshCount: 0, message: null, warnings: [] };
 let _3modelPipelineState = {
   ok: false,
   modelIr: null,
@@ -285,7 +285,7 @@ function destroy3DView() {
   _3renderer?.dispose();
 
   _3scene = _3camera = _3renderer = _3controls = _3canvas = null;
-  _3dStatus = { meshCount: 0, message: null };
+  _3dStatus = { meshCount: 0, message: null, warnings: [] };
   _3modelPipelineState = {
     ok: false,
     modelIr: null,
@@ -306,6 +306,7 @@ function get3DSceneStatus() {
   return {
     meshCount: _3dStatus.meshCount,
     message: _3dStatus.message,
+    warnings: _3dStatus.warnings ?? [],
     materialColor: materialColors[0] ?? null,
     materialColors,
   };
@@ -490,6 +491,20 @@ function validateMeshesForExport(meshes) {
 function _normalizeViewType(type) {
   if (type === "section" || type === "detail") return "top";
   return type ?? "top";
+}
+
+// 生成は成功したが近似が入った場合の非ブロッキング警告（empty オーバーレイとは別）。
+function _sync3DWarningOverlay(warnings) {
+  const el = document.getElementById("panel-3d-warning");
+  if (!el) return;
+  const list = warnings || [];
+  if (list.length) {
+    el.hidden = false;
+    el.textContent = list.join("\n");
+  } else {
+    el.hidden = true;
+    el.textContent = "";
+  }
 }
 
 function _sync3DEmptyOverlay(message) {
@@ -841,6 +856,7 @@ function _build3DSceneFromViews() {
   }
 
   const parts = [];
+  const colorMismatches = new Map();
   for (const page of state.pages) {
     const viewType = _normalizeViewType(page.viewDefinition?.type);
     if (!primary.viewTypes.has(viewType)) continue;
@@ -854,9 +870,18 @@ function _build3DSceneFromViews() {
         axisVolumes,
         dims,
         pageFrames,
+        colorMismatches,
       );
       if (part) parts.push(part);
     }
+  }
+
+  const warnings = [];
+  for (const [color, views] of colorMismatches) {
+    const viewNames = [...views]
+      .map((v) => t(`view.type.${v}`))
+      .join(t("view3d.viewNameSeparator"));
+    warnings.push(t("view3d.colorMismatch", { color, views: viewNames }));
   }
 
   for (const vol of [axisVolumes.y, axisVolumes.z, axisVolumes.x]) {
@@ -898,7 +923,7 @@ function _build3DSceneFromViews() {
     };
   }
 
-  return { ok: true, message: null };
+  return { ok: true, message: null, warnings };
 }
 
 function _viewAxis(viewType) {
@@ -1267,6 +1292,7 @@ function _buildPartMesh(
   axisVolumes,
   dims,
   pageFrames,
+  colorMismatches,
 ) {
   const viewType = _normalizeViewType(page.viewDefinition?.type);
   const axis = _viewAxis(viewType); // パーツの押し出し（スイープ）軸
@@ -1279,6 +1305,20 @@ function _buildPartMesh(
   if (axis !== "y" && axisVolumes.y) clampEntries.push(axisVolumes.y);
   if (axis !== "z" && axisVolumes.z) clampEntries.push(axisVolumes.z);
   if (axis !== "x" && axisVolumes.x) clampEntries.push(axisVolumes.x);
+
+  // 同色の輪郭が無い直交ビューを記録する（any フォールバック＝全高近似になるため、
+  // ユーザーへ「ビュー間で色を揃えると高さが図面どおりになる」ことを警告する）。
+  if (colorMismatches) {
+    for (const entry of clampEntries) {
+      if (entry.byColor?.get(color)) continue;
+      for (const spec of entry.specs || []) {
+        if (!spec.pages?.length) continue;
+        let views = colorMismatches.get(color);
+        if (!views) colorMismatches.set(color, (views = new Set()));
+        views.add(spec.viewType);
+      }
+    }
+  }
 
   // 案A: shape.solidIntersect === true の部品だけ、直交ビューの輪郭（丸頭など）を
   // 3D に反映する。円は回転体（滑らかなドーム）、それ以外は真の CSG 交差。
@@ -1512,8 +1552,10 @@ function update3DScene() {
   _3dStatus = {
     meshCount: _3meshes.length,
     message: result?.message ?? null,
+    warnings: result?.warnings ?? [],
   };
   _sync3DEmptyOverlay(_3dStatus.message);
+  _sync3DWarningOverlay(_3dStatus.warnings);
 
   if (_3meshes.length) {
     const box = new THREE.Box3();

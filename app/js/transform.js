@@ -24,6 +24,17 @@ function aabbFromPoints(points) {
 }
 
 function getShapePivotReal(shape) {
+  if (shape && shape.type === "group") {
+    // renderer.js の getGroupLocalPivotPaper と同じ規約:
+    // 子それぞれの変換（子自身の rotation/flip）を適用した点群の AABB 中心
+    const pts = [];
+    for (const child of shape.children || []) {
+      pts.push(...collectWorldPointsReal(child, []));
+    }
+    const bb = aabbFromPoints(pts);
+    if (!bb) return { x: 0, y: 0 };
+    return { x: bb.x + bb.w / 2, y: bb.y + bb.h / 2 };
+  }
   const sample = sampleShapePointsReal(shape);
   if (!sample.length) return { x: 0, y: 0 };
   const xs = sample.map(([x]) => x);

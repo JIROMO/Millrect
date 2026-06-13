@@ -106,6 +106,8 @@ function handleBezierDown(rp, pp) {
       cursorRP: { ...rp },
       cursorPP: pp ? { ...pp } : null,
     };
+    render();
+    renderBezierOverlay();
     return;
   }
   // Click near first node → close path (threshold: ~10 paper px at current zoom)
@@ -122,6 +124,8 @@ function handleBezierDown(rp, pp) {
   }
   _bezierDraw.nodes.push({ x: rp.x, y: rp.y, h1: null, h2: null });
   _bezierDraw.isDragging = true;
+  render();
+  renderBezierOverlay();
 }
 
 function handleBezierMove(rp, pp) {
@@ -199,9 +203,11 @@ function commitBezierPath(closed) {
   uiUpdate();
 }
 
-// Called AFTER render() — overlay always sits on top, never cleared mid-draw.
+// _doRender の末尾と各イベントハンドラから呼ばれる。冪等（既存オーバーレイを差し替え）
 function renderBezierOverlay() {
-  if (!_bezierDraw || !_vp) return;
+  if (!_vp) return;
+  _vp.querySelector("#bezier-overlay")?.remove();
+  if (!_bezierDraw) return;
   const page = getCurrentPage();
   const { nodes, cursorRP, cursorPP, isDragging } = _bezierDraw;
   if (!cursorRP || !nodes.length) return;

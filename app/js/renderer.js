@@ -691,6 +691,8 @@ function _doRender() {
   }
   if (state.showGrid && !printMode) renderGrid(pw, ph, renderZoom);
   renderShapes(page, printMode ? [] : state.selectedShapeIds);
+  if (state.showViewGuides && !printMode)
+    renderViewGuides(page, pw, ph, renderZoom);
   if (!printMode && page.referenceImage?.dataUrl && refSelected) {
     renderReferenceImage(page, renderZoom);
     renderReferenceImageEditOverlay(page, renderZoom);
@@ -698,6 +700,11 @@ function _doRender() {
   if (!printMode && state.selectedShapeIds.length > 0)
     renderSelectionHandles(state.selectedShapeIds, page, renderZoom);
   if (!printMode && _marquee) _renderMarqueeRect(_marquee.a, _marquee.b);
+  // ベジェ描画中のオーバーレイは再描画のたびにここで復元する。
+  // render() は rAF 遅延のため、イベントハンドラ側の手動 append だけだと
+  // 次フレームの replaceChildren で消えてチラつく
+  if (!printMode && typeof renderBezierOverlay === "function")
+    renderBezierOverlay();
   if (typeof window.__3d_render_hook === "function") window.__3d_render_hook();
 }
 
@@ -871,6 +878,166 @@ function renderReferenceScaleAnchorOverlay(anchor, scale, zoom) {
     );
   }
 
+  _vp.appendChild(g);
+}
+
+// ── ビューガイド（見通し線）──────────────────────────────────
+//
+// 他ページの正投影ビューの輪郭位置を、共有する 3D 軸に沿って現在ページへ
+// 投影し、破線ガイドとして表示する（製図の「見通し線」相当）。
+// 軸対応は 3d-view.js の _profileToThreeShapesForView / _applyViewTransform
+// と同じ規約に従う:
+//   X(幅) t∈[0,W] / Y(高さ) t∈[0,H] / Z(奥行) t∈[0,D]
+// dir=-1 はビュー内でページ座標が軸と逆向きに走ることを示す。
+const _VIEW_GUIDE_AXES = {
+  top: { x: { axis: "X", dir: 1 }, y: { axis: "Z", dir: -1 } },
+  bottom: { x: { axis: "X", dir: 1 }, y: { axis: "Z", dir: 1 } },
+  front: { x: { axis: "X", dir: 1 }, y: { axis: "Y", dir: -1 } },
+  back: { x: { axis: "X", dir: -1 }, y: { axis: "Y", dir: -1 } },
+  right: { x: { axis: "Z", dir: 1 }, y: { axis: "Y", dir: -1 } },
+  left: { x: { axis: "Z", dir: -1 }, y: { axis: "Y", dir: -1 } },
+};
+
+function _guideViewType(type) {
+  if (!type) return null;
+  if (type === "section" || type === "detail" || type === "plan") return "top";
+  return _VIEW_GUIDE_AXES[type] ? type : null;
+}
+
+function _guideFrameForPage(page) {
+  if (typeof extractProfilesFromPage !== "function") return null;
+  // 不正な図形で Profile 抽出が失敗しても描画を止めない
+  let profiles;
+  try {
+    profiles = extractProfilesFromPage(page);
+  } catch {
+    return null;
+  }
+  const boxes = profiles.map((p) => p.bbox).filter(Boolean);
+  if (!boxes.length) return null;
+  const minX = Math.min(...boxes.map((b) => b.x));
+  const minY = Math.min(...boxes.map((b) => b.y));
+  const maxX = Math.max(...boxes.map((b) => b.x + b.w));
+  const maxY = Math.max(...boxes.map((b) => b.y + b.h));
+  return { minX, minY, w: maxX - minX, h: maxY - minY, boxes };
+}
+
+// ガイド位置を計算して返す（描画とスナップで共用）。
+// 戻り値: { v: Map(paperX→出典ビュー名), h: Map(paperY→出典ビュー名) } | null
+function computeViewGuides(page) {
+  const curType = _guideViewType(page.viewDefinition?.type);
+  const curAxes = curType && _VIEW_GUIDE_AXES[curType];
+  if (!curAxes) return null;
+  const state = getState();
+  const curFrame = _guideFrameForPage(page);
+
+  // paper 座標（丸め）→ 出典ビュー名。重複ガイドを統合する
+  const vGuides = new Map();
+  const hGuides = new Map();
+
+  for (const other of state.pages) {
+    if (other.id === page.id) continue;
+    const oType = _guideViewType(other.viewDefinition?.type);
+    const oAxes = oType && _VIEW_GUIDE_AXES[oType];
+    if (!oAxes) continue;
+    const oFrame = _guideFrameForPage(other);
+    if (!oFrame) continue;
+
+    for (const oPageAxis of ["x", "y"]) {
+      const oMap = oAxes[oPageAxis];
+      for (const cPageAxis of ["x", "y"]) {
+        const cMap = curAxes[cPageAxis];
+        if (oMap.axis !== cMap.axis) continue;
+        const oMin = oPageAxis === "x" ? oFrame.minX : oFrame.minY;
+        const oSize = oPageAxis === "x" ? oFrame.w : oFrame.h;
+        // 現ページがまだ空のときは出典ビューと同じ位置に重ねて表示する
+        // （上面図の真下に正面図を描く製図配置を想定）
+        let cMin, cSize;
+        if (curFrame) {
+          cMin = cPageAxis === "x" ? curFrame.minX : curFrame.minY;
+          cSize = cPageAxis === "x" ? curFrame.w : curFrame.h;
+        } else {
+          cMin = oMin;
+          cSize = oSize;
+        }
+        for (const bb of oFrame.boxes) {
+          const vals =
+            oPageAxis === "x" ? [bb.x, bb.x + bb.w] : [bb.y, bb.y + bb.h];
+          for (const v of vals) {
+            const t = oMap.dir > 0 ? v - oMin : oSize - (v - oMin);
+            const cl = cMap.dir > 0 ? t : cSize - t;
+            const paper = realToPaper(cMin + cl, page.scale);
+            const key = Math.round(paper * 100) / 100;
+            (cPageAxis === "x" ? vGuides : hGuides).set(key, oType);
+          }
+        }
+      }
+    }
+  }
+
+  return { v: vGuides, h: hGuides };
+}
+
+// スナップ用ガイド取得（ページ単位キャッシュ）。
+// 戻り値: { v: [paperX...], h: [paperY...] } | null
+let _viewGuidesCache = null; // { pageId, guides }
+function getViewSnapGuides() {
+  const state = getState();
+  if (!state.showViewGuides) return null;
+  const page = getCurrentPage();
+  if (!_viewGuidesCache || _viewGuidesCache.pageId !== page.id) {
+    _viewGuidesCache = { pageId: page.id, guides: computeViewGuides(page) };
+  }
+  const g = _viewGuidesCache.guides;
+  if (!g || (!g.v.size && !g.h.size)) return null;
+  return { v: [...g.v.keys()], h: [...g.h.keys()] };
+}
+
+function renderViewGuides(page, pw, ph, zoom) {
+  const guides = computeViewGuides(page);
+  _viewGuidesCache = { pageId: page.id, guides };
+  if (!guides) return;
+  const { v: vGuides, h: hGuides } = guides;
+  if (!vGuides.size && !hGuides.size) return;
+  const g = se("g", { id: "view-guides", "pointer-events": "none" });
+  const sw = 1 / zoom;
+  const dash = `${6 / zoom} ${4 / zoom}`;
+  const fontSize = 9 / zoom;
+  const guideLine = (attrs) =>
+    g.appendChild(
+      se("line", {
+        stroke: "#0ea5e9",
+        "stroke-width": sw,
+        "stroke-dasharray": dash,
+        opacity: "0.55",
+        ...attrs,
+      }),
+    );
+  const guideLabel = (x, y, viewType, vertical) => {
+    const label =
+      typeof t === "function"
+        ? t("view.type." + viewType).replace(/\s*\([^)]*\)\s*$/, "")
+        : viewType;
+    const el = se("text", {
+      x,
+      y,
+      fill: "#0ea5e9",
+      opacity: "0.7",
+      "font-size": fontSize,
+      "font-family": "sans-serif",
+      ...(vertical ? { transform: `rotate(90 ${x} ${y})` } : {}),
+    });
+    el.textContent = label;
+    g.appendChild(el);
+  };
+  for (const [px, oType] of vGuides) {
+    guideLine({ x1: px, y1: 0, x2: px, y2: ph });
+    guideLabel(px + 2 / zoom, 2 / zoom, oType, true);
+  }
+  for (const [py, oType] of hGuides) {
+    guideLine({ x1: 0, y1: py, x2: pw, y2: py });
+    guideLabel(2 / zoom, py - 2 / zoom, oType, false);
+  }
   _vp.appendChild(g);
 }
 
@@ -1443,14 +1610,64 @@ const HANDLE_CURSORS = [
   "ew-resize",
 ];
 
+// 回転ドラッグ用カーソル（Figma 風の円弧矢印）
+const ROTATE_CURSOR = (() => {
+  const svg =
+    '<svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 22 22">' +
+    '<path d="M5 11a6 6 0 1 1 2.4 4.8" fill="none" stroke="#fff" stroke-width="5" stroke-linecap="round"/>' +
+    '<path d="M5 11a6 6 0 1 1 2.4 4.8" fill="none" stroke="#1f2937" stroke-width="2.4" stroke-linecap="round"/>' +
+    '<path d="M9.6 13.4 6.4 18.4 4.4 13.2z" fill="#1f2937" stroke="#fff" stroke-width="1"/>' +
+    "</svg>";
+  return `url("data:image/svg+xml,${encodeURIComponent(svg)}") 11 11, alias`;
+})();
+
+// 変換前のローカル bbox（paper 座標）。回転中の選択枠は
+// ローカル bbox を描いて transform で追従させる（getShapeBBox はワールド AABB を返すため不可）
+function getShapeLocalBBoxPaper(shape, scale) {
+  if (shape.type === "group") {
+    // getGroupLocalPivotPaper と同じ規約: 子の変換のみ適用した点群の AABB
+    const pts = [];
+    for (const child of shape.children || []) {
+      pts.push(...collectWorldPointsReal(child, []));
+    }
+    return aabbFromPoints(
+      pts.map(([x, y]) => [realToPaper(x, scale), realToPaper(y, scale)]),
+    );
+  }
+  return _getShapeBBoxLegacy(shape, scale);
+}
+
+// 図形の rotation / flip と同じ変換を選択枠グループへ適用するための transform 文字列
+// （renderShape と同じ合成順: rotate → flip）
+function buildSelectionTransform(shape, scale) {
+  if (typeof hasVisualTransform !== "function" || !hasVisualTransform(shape))
+    return "";
+  const pivot =
+    shape.type === "group"
+      ? getGroupLocalPivotPaper(shape, scale)
+      : getShapeLocalPivotPaper(shape, scale);
+  if (!pivot) return "";
+  let t = "";
+  if (shape.rotation && shape.rotation % 360 !== 0) {
+    t = `rotate(${shape.rotation},${pivot.x},${pivot.y})`;
+  }
+  if (shape.flipH || shape.flipV) {
+    const sx = shape.flipH ? -1 : 1;
+    const sy = shape.flipV ? -1 : 1;
+    t = `translate(${pivot.x},${pivot.y}) scale(${sx},${sy}) translate(${-pivot.x},${-pivot.y})${t ? " " + t : ""}`;
+  }
+  return t;
+}
+
 function formatMmBadge(v) {
   const n = Math.round(v * 10) / 10;
   return Number.isInteger(n) ? String(n) : n.toFixed(1);
 }
 
-function appendSelectionSizeBadge(g, bb, zoom, scale) {
-  const wMM = paperDistToMM(bb.w, scale);
-  const hMM = paperDistToMM(bb.h, scale);
+function appendSelectionSizeBadge(g, bb, zoom, scale, labelBB) {
+  const sizeBB = labelBB || bb;
+  const wMM = paperDistToMM(sizeBB.w, scale);
+  const hMM = paperDistToMM(sizeBB.h, scale);
   const label = `${formatMmBadge(wMM)} × ${formatMmBadge(hMM)}`;
   const fontSize = 11 / zoom;
   const padX = 6 / zoom;
@@ -1644,10 +1861,18 @@ function renderSelectionHandles(selIds, page, zoom) {
       continue;
     }
 
-    const bb = getShapeBBox(shape, page.scale);
+    // 回転・反転している図形は選択枠・ハンドルも同じ変換で追従させる
+    const xform = res.isDimension
+      ? ""
+      : buildSelectionTransform(shape, page.scale);
+    // 変換中はローカル bbox を使う（getShapeBBox はワールド AABB のため二重変換になる）
+    const bb = xform
+      ? getShapeLocalBBoxPaper(shape, page.scale)
+      : getShapeBBox(shape, page.scale);
     if (!bb) continue;
+    const sg = xform ? se("g", { transform: xform }) : g;
 
-    g.appendChild(
+    sg.appendChild(
       se("rect", {
         x: bb.x - 1 / zoom,
         y: bb.y - 1 / zoom,
@@ -1660,7 +1885,13 @@ function renderSelectionHandles(selIds, page, zoom) {
         "pointer-events": "none",
       }),
     );
-    appendSelectionSizeBadge(g, bb, zoom, page.scale);
+    if (xform) {
+      // バッジは回転させず、表示上の AABB の下端に置く（サイズ表記は図形自身の w×h）
+      const wbb = getShapeBBox(shape, page.scale);
+      if (wbb) appendSelectionSizeBadge(g, wbb, zoom, page.scale, bb);
+    } else {
+      appendSelectionSizeBadge(g, bb, zoom, page.scale);
+    }
 
     if (shape.type === "line") {
       const x1 = realToPaper(shape.x1, page.scale),
@@ -1671,7 +1902,7 @@ function renderSelectionHandles(selIds, page, zoom) {
         [0, x1, y1],
         [1, x2, y2],
       ]) {
-        g.appendChild(
+        sg.appendChild(
           se("rect", {
             x: hx - hs / 2,
             y: hy - hs / 2,
@@ -1699,9 +1930,32 @@ function renderSelectionHandles(selIds, page, zoom) {
         [bb.x, bb.y + bb.h],
         [bb.x, cy],
       ];
+      // 回転ホットゾーン: コーナーハンドルの外周（ハンドルより先に追加して下層に置く）
+      if (!res.isDimension) {
+        const rz = hs * 3;
+        for (const i of [0, 2, 4, 6]) {
+          const [hx, hy] = pts[i];
+          sg.appendChild(
+            se("rect", {
+              x: hx - rz / 2,
+              y: hy - rz / 2,
+              width: rz,
+              height: rz,
+              fill: "none",
+              "pointer-events": "all",
+              "data-rotate-handle": i,
+              "data-sid": id,
+              cursor: ROTATE_CURSOR,
+            }),
+          );
+        }
+      }
+      // 回転表示中はリサイズカーソルの向きを 45° 単位でずらして体感方向に合わせる
+      const cursorShift =
+        Math.round(((((shape.rotation || 0) % 360) + 360) % 360) / 45) % 8;
       for (let i = 0; i < pts.length; i++) {
         const [hx, hy] = pts[i];
-        g.appendChild(
+        sg.appendChild(
           se("rect", {
             x: hx - hs / 2,
             y: hy - hs / 2,
@@ -1712,11 +1966,12 @@ function renderSelectionHandles(selIds, page, zoom) {
             "stroke-width": sw,
             "data-handle": i,
             "data-sid": id,
-            cursor: HANDLE_CURSORS[i],
+            cursor: HANDLE_CURSORS[(i + cursorShift) % 8],
           }),
         );
       }
     }
+    if (sg !== g) g.appendChild(sg);
   }
   _vp.appendChild(g);
 }
@@ -1831,6 +2086,12 @@ function renderSnapIndicator(px, py, zoom, snapType) {
       );
       _vp.appendChild(g);
       return;
+    }
+    case "guide": {
+      // ◇（ガイド色のひし形）
+      const pts = `${px},${py - s} ${px + s},${py} ${px},${py + s} ${px - s},${py}`;
+      el = se("polygon", { ...base, stroke: "#0ea5e9", points: pts });
+      break;
     }
     case "perpendicular": {
       // ⊥ 記号（水平線 + 垂直線）

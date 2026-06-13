@@ -342,6 +342,8 @@ test.describe("テキストアウトライン（ブラウザ）", () => {
   });
 
   test("Google Fonts URL: Kosugi Maru 登録とアウトライン", async ({ page }) => {
+    // フォント TTF のネットワーク取得を含むため遅い（回線次第で 30s を超える）
+    test.slow();
     await page.waitForFunction(() => window.__millrectHbReady === true, null, {
       timeout: 30000,
     });

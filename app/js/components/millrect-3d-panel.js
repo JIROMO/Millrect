@@ -27,6 +27,7 @@ class Millrect3DPanel extends HTMLElement {
         </div>
         <div class="panel-3d-canvas-wrap">
           <canvas id="canvas-3d"></canvas>
+          <div id="panel-3d-warning" class="panel-3d-warning" hidden></div>
           <div id="panel-3d-empty" class="panel-3d-empty" hidden>
             <div class="panel-3d-empty-inner">
               <p class="panel-3d-empty-msg"></p>

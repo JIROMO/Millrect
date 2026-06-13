@@ -91,6 +91,7 @@ function _layerListSignature(state, page) {
       shapes: (layer.shapes || []).map((shape) => ({
         id: shape.id,
         type: shape.type,
+        locked: !!shape.locked,
         text: shape.type === "text" ? shape.text || "" : "",
       })),
     })),
@@ -703,7 +704,8 @@ function updateLayersList() {
     shapes.forEach((shape) => {
       const row = document.createElement("div");
       const isSelected = state2.selectedShapeIds.includes(shape.id);
-      row.className = `list-item shape-item${isSelected ? " active" : ""}`;
+      const isLocked = !!shape.locked;
+      row.className = `list-item shape-item${isSelected ? " active" : ""}${isLocked ? " locked" : ""}`;
 
       const icon = document.createElement("span");
       icon.className = "shape-icon";
@@ -717,12 +719,25 @@ function updateLayersList() {
             t("layers.shapeEmptyText")
           : `${shape.type} ${shape.id.slice(-4)}`;
 
+      const lockBtn = document.createElement("button");
+      lockBtn.className = "shape-lock";
+      lockBtn.title = isLocked ? t("layers.unlock") : t("layers.lock");
+      lockBtn.innerHTML = isLocked ? LOCK_ON : LOCK_OFF;
+      lockBtn.addEventListener("click", (e) => {
+        e.stopPropagation();
+        setShapeLocked(shape.id, !shape.locked);
+        render();
+        uiUpdate();
+      });
+
       const upBtn = document.createElement("button");
       upBtn.className = "zorder-btn";
       upBtn.title = t("layers.bringForward");
       upBtn.textContent = "↑";
+      upBtn.disabled = isLocked;
       upBtn.addEventListener("click", (e) => {
         e.stopPropagation();
+        if (shape.locked) return;
         moveShapeZOrder(shape.id, "up");
         render();
         updateLayersList();
@@ -732,8 +747,10 @@ function updateLayersList() {
       dnBtn.className = "zorder-btn";
       dnBtn.title = t("layers.sendBackward");
       dnBtn.textContent = "↓";
+      dnBtn.disabled = isLocked;
       dnBtn.addEventListener("click", (e) => {
         e.stopPropagation();
+        if (shape.locked) return;
         moveShapeZOrder(shape.id, "down");
         render();
         updateLayersList();
@@ -741,9 +758,14 @@ function updateLayersList() {
 
       row.appendChild(icon);
       row.appendChild(name);
+      row.appendChild(lockBtn);
       row.appendChild(upBtn);
       row.appendChild(dnBtn);
       row.addEventListener("click", () => {
+        if (shape.locked) {
+          updateLayersList();
+          return;
+        }
         state2.selectedShapeIds = [shape.id];
         render();
         uiUpdate();
@@ -1732,19 +1754,25 @@ function buildMultiAppearanceHTML(shapeIds) {
   if (!shapes.length) return "";
 
   const fillable = shapes.filter((s) => shapeSupportsFill(s.type));
+  const strokeWidthable = shapes.filter((s) => s.type !== "image");
   const fills = [...new Set(fillable.map((s) => s.fill || "none"))];
   const strokes = [
     ...new Set(shapes.map((s) => s.stroke || DEFAULT_STROKE_COLOR)),
   ];
+  const strokeWidths = [
+    ...new Set(strokeWidthable.map((s) => s.strokeWidth || "medium")),
+  ];
   const fillNone = fills.length === 1 && fills[0] === "none";
   const fillMixed = fills.length > 1;
   const strokeMixed = strokes.length > 1;
+  const strokeWidthMixed = strokeWidths.length > 1;
   const fillVal = fillMixed
     ? DEFAULT_FILL_COLOR
     : colorForInput(fills[0], DEFAULT_FILL_COLOR);
   const strokeVal = strokeMixed
     ? DEFAULT_STROKE_COLOR
     : colorForInput(strokes[0], DEFAULT_STROKE_COLOR);
+  const mixedBadge = `<span class="prop-mixed-badge">${t("props.mixed")}</span>`;
 
   const parts = [];
   if (fillable.length) {
@@ -1752,8 +1780,9 @@ function buildMultiAppearanceHTML(shapeIds) {
       `<div class="prop-row prop-color-row">
         <label>${t("props.fill")}</label>
         <div class="prop-color-control">
-          <input type="color" data-appearance="fill" value="${fillVal}"${fillNone || fillMixed ? " disabled" : ""}>
-          <button type="button" class="prop-fill-toggle${fillNone || fillMixed ? " active" : ""}" data-fill-none="1" title="${t("props.fillNone")}">${t("props.fillNone")}</button>
+          <input type="color" data-appearance="fill" value="${fillVal}"${fillNone ? " disabled" : ""}${fillMixed ? ' class="prop-mixed"' : ""}>
+          ${fillMixed ? mixedBadge : ""}
+          <button type="button" class="prop-fill-toggle${fillNone ? " active" : ""}" data-fill-none="1" title="${t("props.fillNone")}">${t("props.fillNone")}</button>
         </div>
       </div>`,
       buildSwatchesHTML("fill"),
@@ -1763,11 +1792,27 @@ function buildMultiAppearanceHTML(shapeIds) {
     `<div class="prop-row prop-color-row">
       <label>${t("props.stroke")}</label>
       <div class="prop-color-control">
-        <input type="color" data-appearance="stroke" value="${strokeVal}">
+        <input type="color" data-appearance="stroke" value="${strokeVal}"${strokeMixed ? ' class="prop-mixed"' : ""}>
+        ${strokeMixed ? mixedBadge : ""}
       </div>
     </div>`,
     buildSwatchesHTML("stroke"),
   );
+  if (strokeWidthable.length) {
+    const swOpts = ["thin", "medium", "thick"]
+      .map(
+        (v) =>
+          `<option value="${v}"${!strokeWidthMixed && strokeWidths[0] === v ? " selected" : ""}>${t("props.strokeWidth." + v)}</option>`,
+      )
+      .join("");
+    parts.push(
+      `<div class="prop-row"><label>${t("props.strokeWidth")}</label><select data-appearance="strokeWidth">${
+        strokeWidthMixed
+          ? `<option value="" selected disabled>${t("props.mixed")}</option>`
+          : ""
+      }${swOpts}</select></div>`,
+    );
+  }
   return parts.join("");
 }
 
@@ -1783,14 +1828,17 @@ function applyAppearanceToSelection(updates, shapeIds) {
     const res = findShapeById(id);
     if (!res || res.isDimension) continue;
     const t = res.shape.type;
-    if (updates.fill !== undefined) {
-      if (!shapeSupportsFill(t)) continue;
+    if (updates.fill !== undefined && shapeSupportsFill(t)) {
       res.shape.fill = updates.fill;
       changed = true;
     }
     if (updates.stroke !== undefined) {
       res.shape.stroke = updates.stroke;
       if (t === "text") res.shape.fill = "none";
+      changed = true;
+    }
+    if (updates.strokeWidth !== undefined && t !== "image") {
+      res.shape.strokeWidth = updates.strokeWidth;
       changed = true;
     }
   }
@@ -1884,6 +1932,7 @@ function bindAppearanceEvents(container, shapeIds) {
     container.querySelectorAll("[data-appearance]").forEach((inp) => {
       inp.addEventListener("change", () => {
         const key = inp.dataset.appearance;
+        if (!inp.value) return; // 「混在」プレースホルダ選択時は何もしない
         if (key === "fill") {
           const noneBtn = container.querySelector("[data-fill-none]");
           noneBtn?.classList.remove("active");
@@ -2591,6 +2640,12 @@ function bindPageSettings() {
     getState().showGrid = e.target.checked;
     render();
   });
+  document
+    .getElementById("show-view-guides")
+    ?.addEventListener("change", (e) => {
+      getState().showViewGuides = e.target.checked;
+      render();
+    });
 }
 
 function bindReferenceImageSettings() {

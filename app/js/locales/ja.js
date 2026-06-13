@@ -111,6 +111,7 @@
     "page.grid.10mm": "10 mm",
     "page.snap": "スナップ",
     "page.showGrid": "グリッド表示",
+    "page.showViewGuides": "ビューガイド",
     "page.language": "言語",
     "page.language.ja": "日本語",
     "page.language.en": "English",
@@ -296,6 +297,7 @@
     "props.copy": "複製",
     "props.fill": "塗り",
     "props.fillNone": "なし",
+    "props.mixed": "混在",
     "props.stroke": "線色",
     "props.textColor": "文字色",
     "props.opacity": "不透明度",
@@ -518,6 +520,9 @@
     "view3d.openEdges": "開いたエッジがある可能性があります（非多様体）。",
     "view3d.stlWarningConfirm":
       "STL 出力前の警告:\n{message}\n\nこのまま出力しますか？",
+    "view3d.colorMismatch":
+      "{color} の図形と同じ色の輪郭が {views} にないため、高さを図面全体の高さで近似しました。各ビューで同じ塗り色を使うと高さが図面どおりになります。",
+    "view3d.viewNameSeparator": "、",
 
     "multiview.replaceConfirm":
       "現在の図面を 3D サンプル（上面図・正面図）に置き換えますか？\nUndo で元に戻せます。",

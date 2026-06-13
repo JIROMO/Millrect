@@ -78,10 +78,25 @@ function addShape(shape) {
   pushHistory(`図形追加 (${shape.type})`);
   return true;
 }
+// 図形単位のロック切替（updateShape のロックガードを迂回する専用ルート）
+function setShapeLocked(id, locked) {
+  const res = findShapeById(id);
+  if (!res || res.isDimension) return false;
+  res.shape.locked = !!locked;
+  if (locked) {
+    const sel = getState().selectedShapeIds;
+    const idx = sel.indexOf(id);
+    if (idx !== -1) sel.splice(idx, 1);
+  }
+  pushHistory(locked ? "図形ロック" : "図形ロック解除");
+  return true;
+}
+
 function updateShape(id, values) {
   const res = findShapeById(id);
   if (!res) return false;
   if (!res.isDimension && res.layer?.locked) return false;
+  if (!res.isDimension && res.shape.locked) return false;
   const trackTextPreview = res.shape.type === "text";
   for (const [key, val] of Object.entries(values)) {
     if (key.includes(".")) {
@@ -108,6 +123,7 @@ function deleteShape(id) {
   invalidateTextNativePreview(id);
   const res = findShapeById(id);
   if (!res) return false;
+  if (!res.isDimension && res.shape.locked) return false;
   if (res.isDimension) {
     const dims = res.page.dimensions;
     const idx = dims.indexOf(res.shape);
@@ -129,6 +145,7 @@ function deleteSelectedShapes() {
       const idx = dims.indexOf(res.shape);
       if (idx !== -1) dims.splice(idx, 1);
     } else {
+      if (res.shape.locked) continue;
       const idx = res.layer.shapes.indexOf(res.shape);
       if (idx !== -1) res.layer.shapes.splice(idx, 1);
     }
@@ -217,9 +234,20 @@ function cloneSelectedShapes(dx, dy) {
   return newIds;
 }
 
+// 直前の複製オフセット（real units）。Alt+ドラッグ複製の確定時に記録され、
+// ⌘D が同じ変位を繰り返す（Illustrator の「変形の繰り返し」相当）。
+let _lastDuplicateOffset = null;
+
+function setLastDuplicateOffset(dx, dy) {
+  if (!Number.isFinite(dx) || !Number.isFinite(dy)) return;
+  if (dx === 0 && dy === 0) return;
+  _lastDuplicateOffset = { dx, dy };
+}
+
 function duplicateShapes() {
-  const offset = mmToReal(10);
-  const newIds = cloneSelectedShapes(offset, offset);
+  const dx = _lastDuplicateOffset ? _lastDuplicateOffset.dx : mmToReal(10);
+  const dy = _lastDuplicateOffset ? _lastDuplicateOffset.dy : mmToReal(10);
+  const newIds = cloneSelectedShapes(dx, dy);
   if (!newIds.length) return;
   getState().selectedShapeIds = newIds;
   pushHistory();
