@@ -98,6 +98,29 @@
         </tbody>
       </table>
 
+      <h3 id="bulk-size">Bulk size editing</h3>
+      <p>
+        Select <strong>two or more shapes of the same type</strong> and a <strong>Size (bulk)</strong> section appears in the Design tab,
+        letting you apply the same dimension to every selected shape at once — for example, select several circles and set them all to the same radius.
+      </p>
+      <table>
+        <thead><tr><th>Shape type</th><th>Bulk-editable fields</th></tr></thead>
+        <tbody>
+          <tr><td>Circle</td><td>Radius</td></tr>
+          <tr><td>Rectangle</td><td>Width &amp; height</td></tr>
+          <tr><td>Ellipse</td><td>RX &amp; RY (horizontal / vertical radius)</td></tr>
+          <tr><td>Text</td><td>Font size</td></tr>
+        </tbody>
+      </table>
+      <ul>
+        <li>When the selected shapes share a value it is shown; when they differ the field shows <strong>Mixed</strong></li>
+        <li>Entering a value applies it instantly to all selected shapes of that type (centers and positions are kept)</li>
+        <li>Locked shapes are skipped. The change is recorded as a single step and can be reverted with one Undo</li>
+      </ul>
+      <div class="docs-callout">
+        <p>If the selection mixes different shape types (e.g. a circle and a rectangle) there is no common dimension, so "Size (bulk)" is hidden. Bulk appearance and alignment still work.</p>
+      </div>
+
       <h2 id="align">Alignment and distribution</h2>
       <p>With two or more shapes selected, alignment buttons appear in the Design tab.</p>
       <table>

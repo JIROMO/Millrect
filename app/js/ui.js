@@ -246,6 +246,7 @@ function updateAll() {
   if (_uiCacheChanged("history", historySig)) {
     updateHistoryPanel();
   }
+  if (typeof renderProjectTabs === "function") renderProjectTabs();
   const el = document.getElementById("status-scale");
   if (el) el.textContent = `1/${page.scale.denominator}`;
   const ez = document.getElementById("status-zoom");
@@ -254,13 +255,23 @@ function updateAll() {
 
 function bindToolbar() {
   document.getElementById("btn-new").addEventListener("click", () => {
-    showProjectList().then(applyOpenedProject);
+    // 新規ボタン: 名称未設定プロジェクトを新しいタブで直接開く（モーダル無し）
+    if (typeof openUntitledProjectTab === "function") {
+      openUntitledProjectTab();
+    } else {
+      showProjectList().then(applyOpenedProject);
+    }
   });
   document
     .getElementById("btn-save")
     .addEventListener("click", () => doAutosave());
   document.getElementById("btn-open").addEventListener("click", () => {
-    document.getElementById("btn-new")?.click();
+    // 開くボタン: 保存済みプロジェクトをリストから選んで新しいタブで開く
+    if (typeof promptNewProjectTab === "function") {
+      promptNewProjectTab();
+    } else {
+      showProjectList().then(applyOpenedProject);
+    }
   });
   document
     .getElementById("btn-import-svg")
@@ -396,7 +407,7 @@ function bindToolbar() {
     const { width: cw, height: ch } = svgEl.getBoundingClientRect();
     const mx = cw / 2,
       my = ch / 2;
-    const nz = Math.min(30, state.zoom * 1.25);
+    const nz = Math.min(50, state.zoom * 1.25);
     state.panX = mx - (mx - state.panX) * (nz / state.zoom);
     state.panY = my - (my - state.panY) * (nz / state.zoom);
     state.zoom = nz;
@@ -1331,9 +1342,19 @@ function updatePropertiesPanel() {
   }
   if (state.selectedShapeIds.length > 1) {
     const alignHTML = buildAlignPositionHTML(state.selectedShapeIds);
+    const sizeBody = buildMultiSizeHTML(state.selectedShapeIds);
+    const sizeHTML = sizeBody
+      ? panelSectionHTML(
+          "panel.design.bulk-size",
+          t("panel.design.bulkSize"),
+          sizeBody,
+          true,
+        )
+      : "";
     c.innerHTML =
       `<p class="prop-empty prop-empty-compact">${t("props.multiSelect", { count: state.selectedShapeIds.length })}</p>` +
       alignHTML +
+      sizeHTML +
       panelSectionHTML(
         "panel.design.appearance",
         t("panel.design.appearanceBulk"),
@@ -1362,6 +1383,7 @@ function updatePropertiesPanel() {
       });
     _bindArrayDuplicateEvents(c);
     bindAppearanceEvents(c, state.selectedShapeIds);
+    bindSizeEvents(c, state.selectedShapeIds);
     return;
   }
   const res = findShapeById(state.selectedShapeIds[0]);
@@ -1814,6 +1836,72 @@ function buildMultiAppearanceHTML(shapeIds) {
     );
   }
   return parts.join("");
+}
+
+// 同一タイプの複数選択時にサイズを一括編集できるフィールド定義
+// key = shape プロパティ, unit = "mm"（real units 保存・mm 表示）/ "px"（変換なし）
+const BULK_SIZE_FIELDS = {
+  circle: [{ key: "r", label: "props.radiusMm", unit: "mm" }],
+  rect: [
+    { key: "width", label: "props.widthMm", unit: "mm" },
+    { key: "height", label: "props.heightMm", unit: "mm" },
+  ],
+  ellipse: [
+    { key: "rx", label: "props.rxMm", unit: "mm" },
+    { key: "ry", label: "props.ryMm", unit: "mm" },
+  ],
+  text: [{ key: "fontSize", label: "props.fontSizePx", unit: "px" }],
+};
+
+function buildMultiSizeHTML(shapeIds) {
+  const shapes = shapeIds.map((id) => findShapeById(id)?.shape).filter(Boolean);
+  if (shapes.length < 2) return "";
+  const types = new Set(shapes.map((s) => s.type));
+  if (types.size !== 1) return ""; // 異なるタイプが混在する場合は出さない
+  const fields = BULK_SIZE_FIELDS[shapes[0].type];
+  if (!fields) return "";
+
+  const rows = fields.map((f) => {
+    const vals = [...new Set(shapes.map((s) => Number(s[f.key] ?? 0)))];
+    const mixed = vals.length > 1;
+    const label = stripUnitLabel(t(f.label), f.unit);
+    const display = f.unit === "mm" ? realToMM(vals[0]) : vals[0];
+    const valAttr = mixed ? "" : Number(display).toFixed(2);
+    const extra = mixed
+      ? ` class="prop-mixed" placeholder="${t("props.mixed")}"`
+      : "";
+    const unitAttr = f.unit === "mm" ? ' data-unit="mm"' : "";
+    return `<div class="prop-row"><label>${label}</label><div class="prop-unit-field"><input type="number" step="0.1" data-size="${f.key}"${unitAttr}${extra} value="${valAttr}"><span class="prop-unit-suffix">${f.unit}</span></div></div>`;
+  });
+  return rows.join("");
+}
+
+function applySizeToSelection(key, rawValue, shapeIds, unit) {
+  const value = unit === "mm" ? mmToReal(rawValue) : rawValue;
+  let changed = false;
+  for (const id of shapeIds) {
+    const res = findShapeById(id);
+    if (!res || res.isDimension) continue;
+    if (res.layer?.locked || res.shape.locked) continue;
+    res.shape[key] = value;
+    changed = true;
+  }
+  if (!changed) return;
+  applyConstraints(getCurrentPage());
+  pushHistory();
+  render();
+  uiUpdate();
+}
+
+function bindSizeEvents(container, shapeIds) {
+  container.querySelectorAll("[data-size]").forEach((inp) => {
+    inp.addEventListener("keydown", (e) => e.stopPropagation());
+    inp.addEventListener("change", () => {
+      const v = parseFloat(inp.value);
+      if (isNaN(v)) return;
+      applySizeToSelection(inp.dataset.size, v, shapeIds, inp.dataset.unit);
+    });
+  });
 }
 
 function _rememberDrawColors(updates) {
@@ -3144,8 +3232,8 @@ function showProjectList() {
           </div>
           <div class="startup-row"><label>${t("startup.scale")}</label>
             <select id="startup-scale">
-              <option value="1/1">1/1</option><option value="1/2">1/2</option><option value="1/5">1/5</option>
-              <option value="1/10" selected>1/10</option><option value="1/20">1/20</option>
+              <option value="1/1" selected>1/1</option><option value="1/2">1/2</option><option value="1/5">1/5</option>
+              <option value="1/10">1/10</option><option value="1/20">1/20</option>
               <option value="1/50">1/50</option><option value="1/100">1/100</option>
               <option value="1/200">1/200</option><option value="1/500">1/500</option>
             </select>
@@ -3172,7 +3260,7 @@ function showProjectList() {
       overlay.querySelector("#startup-project-name").value = "";
       overlay.querySelector("#startup-paper").value = "A4";
       overlay.querySelector("#startup-orientation").value = "landscape";
-      const defaultScale = { numerator: 1, denominator: 10 };
+      const defaultScale = { numerator: 1, denominator: 1 };
       overlay.querySelector("#startup-scale").value =
         `${defaultScale.numerator}/${defaultScale.denominator}`;
       overlay.querySelector("#startup-project-name").focus();
@@ -3323,18 +3411,14 @@ document.addEventListener("DOMContentLoaded", () => {
   initAutosaveCheckbox();
   setAutosaveStatus("off");
 
-  showProjectList().then(async (result) => {
-    await applyOpenedProject(result);
-    if (
-      result.template !== "multiview" &&
-      !resolveSampleIdFromTemplate(result.template)
-    ) {
-      requestAnimationFrame(() => {
-        fitPage();
-        render();
-        updateAll();
-      });
-    }
+  // 起動時はモーダルを出さず、名称未設定プロジェクト（A4・横・1/1）を直接開く。
+  // 保存済みを開くにはツールバーの「開く」かタブの「＋」を使う。
+  openUntitledProjectTab().then(() => {
+    requestAnimationFrame(() => {
+      fitPage();
+      render();
+      updateAll();
+    });
   });
 
   svgEl.addEventListener("mousedown", (e) => onMouseDown(e, svgEl));

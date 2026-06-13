@@ -39,7 +39,7 @@
       </nav>
       <h1>Interface</h1>
       <p class="docs-lead">
-        The Millrect window consists of a top toolbar, a left tool palette, a central canvas,
+        The Millrect window consists of a top toolbar and project tabs, a left tool palette, a central canvas,
         a right management panel, and a status bar at the bottom.
       </p>
 
@@ -66,6 +66,28 @@
         </tbody>
       </table>
       <p>On macOS, use Cmd instead of Ctrl.</p>
+
+      <h2 id="project-tabs">Project tabs</h2>
+      <p>
+        Just below the toolbar, browser-style <strong>project tabs</strong> let you keep several projects open at once
+        and switch between them with a single click.
+      </p>
+      <table>
+        <thead><tr><th>Action</th><th>Description</th></tr></thead>
+        <tbody>
+          <tr><td>Click a tab</td><td>Switch to that project</td></tr>
+          <tr><td>+ button</td><td>Open a new tab (create a new project, or load a saved one)</td></tr>
+          <tr><td>× button / middle-click</td><td>Close the tab (pending changes are auto-saved first)</td></tr>
+        </tbody>
+      </table>
+      <ul>
+        <li>Each tab is auto-saved and remains as a saved project after you close it</li>
+        <li><strong>Copy &amp; paste works across tabs</strong> — copy a shape in one tab and paste it into another</li>
+      </ul>
+      <div class="docs-callout docs-callout-warn">
+        <strong>About Undo history</strong>
+        <p>To save memory, only the active tab keeps its Undo / Redo history. Switching to another tab resets the original tab's history (the drawing itself is saved and never lost).</p>
+      </div>
 
       <h2 id="tools">Tool palette (left)</h2>
       <figure class="docs-figure docs-figure-tools">

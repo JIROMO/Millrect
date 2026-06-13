@@ -41,6 +41,15 @@ async function doAutosave() {
   }
 }
 
+// 保留中の autosave があれば即座に書き出す（タブ切替・クローズ前に呼ぶ）。
+// dirty でない（タイマー無し）場合は何もしない＝空プロジェクトを勝手に保存しない。
+async function flushAutosave() {
+  if (!_autosaveTimer) return;
+  clearTimeout(_autosaveTimer);
+  _autosaveTimer = null;
+  await doAutosave();
+}
+
 function setAutosaveStatus(state) {
   if (!_statusEl) _statusEl = document.getElementById("status-autosave");
   if (!_statusEl) return;

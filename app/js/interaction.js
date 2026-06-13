@@ -454,7 +454,7 @@ function onWheel(e, svgEl) {
     my = e.clientY - top;
   if (e.ctrlKey) {
     const f = e.deltaY < 0 ? 1.08 : 1 / 1.08;
-    const nz = Math.max(0.2, Math.min(30, state.zoom * f));
+    const nz = Math.max(0.2, Math.min(50, state.zoom * f));
     state.panX = mx - (mx - state.panX) * (nz / state.zoom);
     state.panY = my - (my - state.panY) * (nz / state.zoom);
     state.zoom = nz;

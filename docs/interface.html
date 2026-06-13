@@ -36,7 +36,7 @@
       <nav class="docs-breadcrumb"><a href="./">ドキュメント</a> / 画面構成</nav>
       <h1>画面構成</h1>
       <p class="docs-lead">
-        Millrect の画面は、上部のツールバー、左のツールパレット、中央のキャンバス、右の管理パネル、
+        Millrect の画面は、上部のツールバーとプロジェクトタブ、左のツールパレット、中央のキャンバス、右の管理パネル、
         下部のステータスバーで構成されています。
       </p>
 
@@ -63,6 +63,28 @@
         </tbody>
       </table>
       <p>macOS では Ctrl の代わりに Cmd キーを使います。</p>
+
+      <h2 id="project-tabs">プロジェクトタブ</h2>
+      <p>
+        ツールバーのすぐ下に、ブラウザのような <strong>プロジェクトタブ</strong> が並びます。
+        複数のプロジェクトを同時に開いておき、タブをクリックするだけで切り替えられます。
+      </p>
+      <table>
+        <thead><tr><th>操作</th><th>説明</th></tr></thead>
+        <tbody>
+          <tr><td>タブをクリック</td><td>そのプロジェクトに切り替え</td></tr>
+          <tr><td>＋ ボタン</td><td>新しいタブを開く（新規作成、または保存済みプロジェクトの読み込み）</td></tr>
+          <tr><td>× ボタン / 中クリック</td><td>タブを閉じる（保留中の変更は閉じる前に自動保存）</td></tr>
+        </tbody>
+      </table>
+      <ul>
+        <li>各タブの内容は自動保存され、閉じても保存済みプロジェクトとして残ります</li>
+        <li><strong>コピー＆ペーストはタブをまたいで</strong>使えます。あるタブでコピーした図形を別のタブに貼り付け可能です</li>
+      </ul>
+      <div class="docs-callout docs-callout-warn">
+        <strong>Undo 履歴について</strong>
+        <p>メモリ節約のため、Undo / Redo 履歴を保持するのはアクティブなタブ 1 枚だけです。別のタブに切り替えると、元のタブの履歴はリセットされます（図面の内容は保存されたまま失われません）。</p>
+      </div>
 
       <h2 id="tools">ツールパレット（左）</h2>
       <figure class="docs-figure docs-figure-tools">
