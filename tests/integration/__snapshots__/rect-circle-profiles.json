@@ -1,0 +1,30 @@
+[
+  {
+    "sourceId": "r1",
+    "bbox": {
+      "x": 10,
+      "y": 20,
+      "w": 100,
+      "h": 60,
+      "minX": 10,
+      "minY": 20,
+      "maxX": 110,
+      "maxY": 80
+    },
+    "ringCount": 1
+  },
+  {
+    "sourceId": "c1",
+    "bbox": {
+      "x": 170,
+      "y": 70,
+      "w": 60,
+      "h": 60,
+      "minX": 170,
+      "minY": 70,
+      "maxX": 230,
+      "maxY": 130
+    },
+    "ringCount": 1
+  }
+]

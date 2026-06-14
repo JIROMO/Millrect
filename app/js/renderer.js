@@ -650,6 +650,18 @@ function render() {
   requestAnimationFrame(_doRender);
 }
 
+// パン専用の軽量更新。パンは vp の translate が変わるだけで、図形・グリッド・
+// 選択ハンドル等の中身は一切変わらない（ズームと違いストローク幅 1/zoom にも
+// 影響しない）。フルレンダーを呼ばず transform だけ書き換える。
+function applyViewportTransform() {
+  if (!_vp || _isPrintRenderMode()) return;
+  const state = getState();
+  _vp.setAttribute(
+    "transform",
+    `translate(${state.panX},${state.panY}) scale(${state.zoom})`,
+  );
+}
+
 function _isPrintRenderMode() {
   return document.getElementById("app")?.classList.contains("mode-print");
 }
@@ -1041,65 +1053,235 @@ function renderViewGuides(page, pw, ph, zoom) {
   _vp.appendChild(g);
 }
 
+// グリッドは 10mm タイルの <pattern> 1 枚 ＋ それを塗る <rect> 1 枚で描く。
+// 以前は用紙サイズに比例した数千本の <line> を毎フレーム生成していた
+// （A4 横で ~5000 要素）。pattern 化で要素数を用紙サイズと無関係な定数に抑える。
 function renderGrid(pw, ph, zoom) {
-  const g = se("g", { id: "grid", "pointer-events": "none" });
-  const ln = (x1, y1, x2, y2, stroke, sw) =>
-    g.appendChild(se("line", { x1, y1, x2, y2, stroke, "stroke-width": sw }));
   const show1 = zoom >= 1.5;
   const show5 = zoom >= 1.0;
+  const TILE = 10; // 10mm メジャータイル
+  const defs = _svg.querySelector("defs");
+  // ズームでストローク幅(=1/zoom)と表示レベルが変わるため毎回作り直す（≤ ~20 要素）
+  defs.querySelector("#grid-pattern")?.remove();
+  const pat = se("pattern", {
+    id: "grid-pattern",
+    patternUnits: "userSpaceOnUse",
+    width: TILE,
+    height: TILE,
+    x: 0,
+    y: 0,
+  });
+  const ln = (x1, y1, x2, y2, stroke, sw) =>
+    pat.appendChild(se("line", { x1, y1, x2, y2, stroke, "stroke-width": sw }));
   if (show1) {
-    for (let mm = 1; mm < pw; mm++) {
+    for (let mm = 1; mm < TILE; mm++) {
       if (mm % 5 === 0) continue;
-      ln(mm, 0, mm, ph, "#ebebeb", 0.15 / zoom);
-    }
-    for (let mm = 1; mm < ph; mm++) {
-      if (mm % 5 === 0) continue;
-      ln(0, mm, pw, mm, "#ebebeb", 0.15 / zoom);
+      ln(mm, 0, mm, TILE, "#ebebeb", 0.15 / zoom);
+      ln(0, mm, TILE, mm, "#ebebeb", 0.15 / zoom);
     }
   }
   if (show5) {
-    for (let mm = 5; mm < pw; mm += 5) {
-      if (mm % 10 === 0) continue;
-      ln(mm, 0, mm, ph, "#ddd", 0.2 / zoom);
-    }
-    for (let mm = 5; mm < ph; mm += 5) {
-      if (mm % 10 === 0) continue;
-      ln(0, mm, pw, mm, "#ddd", 0.2 / zoom);
-    }
+    ln(5, 0, 5, TILE, "#ddd", 0.2 / zoom);
+    ln(0, 5, TILE, 5, "#ddd", 0.2 / zoom);
   }
-  for (let mm = 0; mm <= pw; mm += 10) ln(mm, 0, mm, ph, "#ccc", 0.3 / zoom);
-  for (let mm = 0; mm <= ph; mm += 10) ln(0, mm, pw, mm, "#ccc", 0.3 / zoom);
-  _vp.appendChild(g);
+  // 10mm メジャー線はタイル境界（x=0 / y=0）に置く。タイリングで全面に繰り返される
+  ln(0, 0, 0, TILE, "#ccc", 0.3 / zoom);
+  ln(0, 0, TILE, 0, "#ccc", 0.3 / zoom);
+  defs.appendChild(pat);
+  _vp.appendChild(
+    se("rect", {
+      id: "grid",
+      x: 0,
+      y: 0,
+      width: pw,
+      height: ph,
+      fill: "url(#grid-pattern)",
+      "pointer-events": "none",
+    }),
+  );
+}
+
+// ── 図形レイヤーのキャッシュ（変更検知）─────────────────────────
+// renderShape は (shape, scale) のみに依存し zoom / 選択状態には依存しない。
+// そのため図形が変わっていないフレーム（パン・ズーム・マーキー・スナップ・
+// 描画プレビュー・選択切替）では #shape-root を作り直さず再利用でき、
+// DOM 生成とテキスト reflow をまるごと省ける。
+let _shapeRootCache = null; // { sig, node }
+
+function invalidateShapeCache() {
+  _shapeRootCache = null;
+}
+
+// 図形描画結果を決める入力だけを署名化する。テキストは HarfBuzz の非同期計測
+// （text-outline.js）でレイアウトが後から変わるため、そのバージョンも含める。
+function _shapesSig(page) {
+  const tlv =
+    typeof textLayoutCacheVersion === "function" ? textLayoutCacheVersion() : 0;
+  const sc = page.scale
+    ? `${page.scale.numerator}/${page.scale.denominator}`
+    : "1/1";
+  const fonts = (getState().fonts || []).map((f) => f.id).join(",");
+  return JSON.stringify({
+    pid: page.id,
+    sc,
+    tlv,
+    fonts,
+    layers: page.layers.map((l) => ({
+      id: l.id,
+      v: l.visible,
+      lk: l.locked,
+      s: l.shapes,
+    })),
+    dims: page.dimensions || [],
+  });
+}
+
+function _cssEsc(s) {
+  return window.CSS && CSS.escape
+    ? CSS.escape(String(s))
+    : String(s).replace(/[^\w-]/g, "\\$&");
+}
+
+// 1 図形ぶんの描画結果を決める入力の署名（key reconcile 用）。
+function _shapeSig(shape, scale) {
+  const sc = scale ? `${scale.numerator}/${scale.denominator}` : "1/1";
+  return sc + "|" + JSON.stringify(shape);
+}
+
+// コンテナ直下の図形ノードを data-id で突合して差分更新する（React の key+memo 相当）。
+// data-sig が一致するノードはそのまま再利用（DOM 生成・テキスト reflow を回避）、
+// 変わったものだけ作り直し、消えたものを削除、順序を desired に合わせる。
+function _reconcileShapes(container, shapes, scale, selIds) {
+  const existing = new Map();
+  for (const ch of Array.from(container.children)) {
+    const k = ch.getAttribute("data-id");
+    if (k != null) existing.set(k, ch);
+  }
+  const keep = new Set();
+  for (const shape of shapes) {
+    keep.add(shape.id);
+    const sig = _shapeSig(shape, scale);
+    let node = existing.get(shape.id);
+    if (!node || node.getAttribute("data-sig") !== sig) {
+      const fresh = renderShape(shape, scale, selIds);
+      if (!fresh) {
+        if (node) node.remove();
+        existing.delete(shape.id);
+        continue;
+      }
+      fresh.setAttribute("data-sig", sig);
+      if (node) node.replaceWith(fresh);
+      node = fresh;
+      existing.set(shape.id, node);
+    }
+    container.appendChild(node); // desired 順に並べ替え（既存ノードの移動は安価）
+  }
+  for (const [k, node] of existing) if (!keep.has(k)) node.remove();
+}
+
+// #shape-root のレイヤー群 + dimension-root を差分更新する。
+function _reconcileShapeRoot(root, page, selIds) {
+  const order = [];
+  for (const layer of page.layers) {
+    if (!layer.visible) continue;
+    let lg = root.querySelector(`:scope > #layer-${_cssEsc(layer.id)}`);
+    if (!lg) lg = se("g", { id: `layer-${layer.id}` });
+    lg.setAttribute("opacity", layer.locked ? "0.6" : "1");
+    _reconcileShapes(lg, layer.shapes, page.scale, selIds);
+    order.push(lg);
+  }
+  // 寸法線アノテーションは常に最前面（レイヤーより上）
+  let dg = root.querySelector(":scope > #dimension-root");
+  if (!dg) dg = se("g", { id: "dimension-root" });
+  _reconcileShapes(dg, page.dimensions || [], page.scale, selIds);
+  order.push(dg);
+
+  // 非表示になったレイヤー等、不要な最上位グループを削除してから順序を整える
+  const keep = new Set(order);
+  for (const ch of Array.from(root.children))
+    if (!keep.has(ch)) ch.remove();
+  for (const node of order) root.appendChild(node);
 }
 
 function renderShapes(page, selIds) {
-  const g = se("g", { id: "shape-root" });
-
-  // レイヤー内の図形を描画（寸法線は含まない）
-  for (const layer of page.layers) {
-    if (!layer.visible) continue;
-    const lg = se("g", {
-      id: `layer-${layer.id}`,
-      opacity: layer.locked ? "0.6" : "1",
-    });
-    for (const shape of layer.shapes) {
-      const el = renderShape(shape, page.scale, selIds);
-      if (el) lg.appendChild(el);
-    }
-    g.appendChild(lg);
+  const sig = _shapesSig(page);
+  if (_shapeRootCache && _shapeRootCache.sig === sig && _shapeRootCache.node) {
+    _vp.appendChild(_shapeRootCache.node); // 無変更: 作り直さず再アタッチ
+    return;
   }
+  // 変更あり: 既存ツリーを使い回して差分更新（1 図形編集で全再構築しない）
+  let root = _shapeRootCache && _shapeRootCache.node;
+  if (!root) root = se("g", { id: "shape-root" });
+  _reconcileShapeRoot(root, page, selIds);
+  _shapeRootCache = { sig, node: root };
+  _vp.appendChild(root);
+}
 
-  // 寸法線アノテーションを最前面に描画（常にレイヤーより上）
-  {
-    const dg = se("g", { id: "dimension-root" });
-    for (const dim of page.dimensions || []) {
-      const el = renderShape(dim, page.scale, selIds);
-      if (el) dg.appendChild(el);
-    }
-    g.appendChild(dg);
+// ドラッグ中の差分更新: 動いた図形のノードだけを作り直して差し替える。
+// 全再描画(_doRender)を介さないため、図形数に比例するコストを避けられる。
+// 前回フルレンダーで作った #shape-root（キャッシュ）を直接編集し、
+// sig を無効化して次のフルレンダー（ドラッグ終了時）で作り直させる。
+function liveUpdateShapes(ids) {
+  const root = _shapeRootCache && _shapeRootCache.node;
+  if (!root || !root.isConnected) {
+    render();
+    return;
   }
+  const page = getCurrentPage();
+  const scale = page.scale;
+  const selIds = getState().selectedShapeIds;
+  for (const id of ids) {
+    const old = root.querySelector(`[data-id="${_cssEsc(id)}"]`);
+    const res = findShapeById(id);
+    if (!res) {
+      if (old) old.remove();
+      continue;
+    }
+    const fresh = renderShape(res.shape, scale, selIds);
+    if (old) {
+      fresh ? old.replaceWith(fresh) : old.remove();
+    } else if (fresh) {
+      render(); // ノードが見つからない異常時は安全側でフルレンダー
+      return;
+    }
+  }
+  // 変更を反映済みだが座標は変わったので、次のフルレンダーで作り直させる
+  if (_shapeRootCache) _shapeRootCache.sig = null;
+  // 選択ハンドルは #shape-root の外（_vp 直下）なので個別に更新
+  _vp.querySelector("#sel-handles")?.remove();
+  if (selIds.length > 0)
+    renderSelectionHandles(selIds, page, getState().zoom);
+}
 
-  _vp.appendChild(g);
+// 鉛筆の点列（real units）を滑らかな SVG path d（用紙座標）へ。
+// Catmull-Rom スプラインを 3 次ベジェに変換して、雑なメモ線でも角張らないようにする。
+function pencilPathToD(points, scale) {
+  if (!points || points.length === 0) return "";
+  const p = points.map((pt) => [
+    realToPaper(pt.x, scale),
+    realToPaper(pt.y, scale),
+  ]);
+  if (p.length === 1) {
+    // 単一点はドット（同じ点への極小線分）として描く
+    const [x, y] = p[0];
+    return `M ${x} ${y} L ${x + 0.01} ${y}`;
+  }
+  if (p.length === 2) {
+    return `M ${p[0][0]} ${p[0][1]} L ${p[1][0]} ${p[1][1]}`;
+  }
+  let d = `M ${p[0][0]} ${p[0][1]}`;
+  for (let i = 0; i < p.length - 1; i++) {
+    const p0 = p[i - 1] || p[i];
+    const p1 = p[i];
+    const p2 = p[i + 1];
+    const p3 = p[i + 2] || p2;
+    const c1x = p1[0] + (p2[0] - p0[0]) / 6;
+    const c1y = p1[1] + (p2[1] - p0[1]) / 6;
+    const c2x = p2[0] - (p3[0] - p1[0]) / 6;
+    const c2y = p2[1] - (p3[1] - p1[1]) / 6;
+    d += ` C ${c1x} ${c1y} ${c2x} ${c2y} ${p2[0]} ${p2[1]}`;
+  }
+  return d;
 }
 
 function renderShape(shape, scale, selIds) {
@@ -1382,6 +1564,35 @@ function renderShape(shape, scale, selIds) {
         }),
       );
     }
+  } else if (shape.type === "pencil") {
+    const d = pencilPathToD(shape.points, scale);
+    if (d) {
+      const pw = Number(shape.penWidth) || 1.0;
+      // 太い透明ストロークで掴みやすくする（細いメモ線でも選択できる）
+      g.appendChild(
+        se("path", {
+          d,
+          stroke: "transparent",
+          "stroke-width": Math.max(pw + 2, 4),
+          fill: "none",
+          "stroke-linecap": "round",
+          "stroke-linejoin": "round",
+          "pointer-events": "stroke",
+        }),
+      );
+      g.appendChild(
+        se("path", {
+          d,
+          stroke,
+          "stroke-width": pw,
+          fill: "none",
+          "stroke-linecap": "round",
+          "stroke-linejoin": "round",
+          "pointer-events": "none",
+          ...(ghostDash ? { "stroke-dasharray": ghostDash } : {}),
+        }),
+      );
+    }
   } else if (shape.type === "dimension") {
     return renderDimensionSVG(shape, scale);
   } else if (shape.type === "group") {
@@ -1565,6 +1776,21 @@ function _getShapeBBoxLegacy(shape, scale) {
           if (py > maxY) maxY = py;
         }
       }
+    }
+    if (!isFinite(minX)) return null;
+    return { x: minX, y: minY, w: maxX - minX, h: maxY - minY };
+  } else if (shape.type === "pencil") {
+    let minX = Infinity,
+      minY = Infinity,
+      maxX = -Infinity,
+      maxY = -Infinity;
+    for (const pt of shape.points || []) {
+      const px = realToPaper(pt.x, scale),
+        py = realToPaper(pt.y, scale);
+      if (px < minX) minX = px;
+      if (py < minY) minY = py;
+      if (px > maxX) maxX = px;
+      if (py > maxY) maxY = py;
     }
     if (!isFinite(minX)) return null;
     return { x: minX, y: minY, w: maxX - minX, h: maxY - minY };
@@ -1983,11 +2209,14 @@ function renderPreview(shape) {
   const el = renderShape(shape, page.scale, []);
   if (!el) return;
   el.id = "preview-shape";
-  el.setAttribute("opacity", "0.4");
-  el.setAttribute("stroke", "#2563eb");
-  if (shape.type !== "line" && shape.type !== "dimension")
-    el.setAttribute("fill", "rgba(37,99,235,0.06)");
   el.style.pointerEvents = "none";
+  // 鉛筆は描画中も実際の色・太さで見せる（青の上書きをしない）
+  if (shape.type !== "pencil") {
+    el.setAttribute("opacity", "0.4");
+    el.setAttribute("stroke", "#2563eb");
+    if (shape.type !== "line" && shape.type !== "dimension")
+      el.setAttribute("fill", "rgba(37,99,235,0.06)");
+  }
   _vp.appendChild(el);
 }
 function removePreview() {

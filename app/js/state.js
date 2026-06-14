@@ -82,14 +82,17 @@ function _restoreDoc(snapOrStr) {
 let _historyLabels = ["初期状態"];
 
 function pushHistory(label) {
-  const snap = _snapshotDoc();
+  // 履歴はずっと文字列で保持するので、ここで構造化クローンする必要はない。
+  // ドキュメント部分への浅い参照を一度だけ JSON 化すれば足りる（毎編集の
+  // structuredClone をまるごと省く）。snapRef は保存せず使い捨て。
+  const snapRef = Object.fromEntries(DOC_KEYS.map((k) => [k, _state[k]]));
   // 直前のスナップショットと同一なら何もしない（触っただけで履歴が増えるのを防ぐ）
-  const snapStr = JSON.stringify(snap);
+  const snapStr = JSON.stringify(snapRef);
   if (_histIdx >= 0 && _history[_histIdx] === snapStr) return;
   _history = _history.slice(0, _histIdx + 1);
   _historyLabels = _historyLabels.slice(0, _histIdx + 1);
   _history.push(snapStr);
-  _historyLabels.push(label || _inferHistoryLabel(snap));
+  _historyLabels.push(label || _inferHistoryLabel(snapRef));
   if (_history.length > MAX_HISTORY) {
     _history.shift();
     _historyLabels.shift();
@@ -277,6 +280,7 @@ function defaultState() {
     snapEnabled: true,
     drawFill: "none",
     drawStroke: "#1a1a2e",
+    penWidth: 1.5, // 鉛筆の線幅（用紙 mm）。UI 専用・Undo 非対象
     pages: [
       {
         id: "page-1",

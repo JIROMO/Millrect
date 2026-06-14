@@ -31,6 +31,7 @@ const TOOL_INFO = {
   dimension: "DIM",
   hand: "HAND",
   bezier: "PEN",
+  pencil: "PENCIL",
 };
 
 function initUI() {
@@ -396,6 +397,7 @@ function bindToolbar() {
         onActiveToolChanged(tool);
       }
       updateToolbar();
+      updatePropertiesPanel();
       const el = document.getElementById("status-tool");
       if (el) el.textContent = TOOL_INFO[btn.dataset.tool] || btn.dataset.tool;
     });
@@ -703,6 +705,7 @@ function updateLayersList() {
       line: "╱",
       text: "T",
       bezier: "✒",
+      pencil: "✎",
       dimension: "↔",
       path: "⬠",
       rawpath: "✒",
@@ -1337,6 +1340,17 @@ function updatePropertiesPanel() {
   const selectionKey = state.selectedShapeIds.join(",");
   _propsPanelSelectionKey = selectionKey;
   if (!state.selectedShapeIds.length) {
+    if (state.activeTool === "pencil") {
+      c.innerHTML = panelSectionHTML(
+        "panel.design.pen",
+        t("props.penSettings"),
+        buildPenSettingsHTML(),
+        true,
+      );
+      bindPenSettingsEvents(c);
+      bindPanelSections(c);
+      return;
+    }
     c.innerHTML = `<p class="prop-empty">${t("props.selectShape")}</p>`;
     return;
   }
@@ -1767,6 +1781,56 @@ function buildAppearanceHTML(s) {
     buildSwatchesHTML("stroke"),
   );
   return parts.join("");
+}
+
+// 鉛筆の描画前設定（色 + 線幅）。選択が無く pencil ツール時に表示。
+function buildPenSettingsHTML() {
+  const state = getState();
+  const strokeVal = colorForInput(state.drawStroke, DEFAULT_STROKE_COLOR);
+  const pw = Number(state.penWidth ?? 1.5);
+  return (
+    `<div class="prop-row prop-color-row">
+      <label>${t("props.stroke")}</label>
+      <div class="prop-color-control">
+        <input type="color" data-pen="stroke" value="${strokeVal}">
+      </div>
+    </div>` +
+    buildSwatchesHTML("stroke") +
+    `<div class="prop-row">
+      <label>${stripUnitLabel(t("props.penWidth"), "mm")}</label>
+      <div class="prop-unit-field">
+        <input type="number" step="0.1" min="0.1" data-pen="width" value="${pw.toFixed(1)}">
+        <span class="prop-unit-suffix">mm</span>
+      </div>
+    </div>
+    <input type="range" class="prop-pen-range" data-pen="width-range" min="0.3" max="6" step="0.1" value="${pw}">`
+  );
+}
+
+function bindPenSettingsEvents(container) {
+  const state = getState();
+  const colorInp = container.querySelector('[data-pen="stroke"]');
+  colorInp?.addEventListener("input", () => {
+    state.drawStroke = colorInp.value;
+  });
+  container.querySelectorAll(".prop-color-swatch").forEach((sw) => {
+    sw.addEventListener("click", () => {
+      state.drawStroke = sw.dataset.swatch;
+      if (colorInp) colorInp.value = sw.dataset.swatch;
+    });
+  });
+  const numInp = container.querySelector('[data-pen="width"]');
+  const rangeInp = container.querySelector('[data-pen="width-range"]');
+  const setWidth = (v) => {
+    const n = parseFloat(v);
+    if (isNaN(n) || n <= 0) return;
+    state.penWidth = n;
+    if (numInp) numInp.value = n.toFixed(1);
+    if (rangeInp) rangeInp.value = String(n);
+  };
+  numInp?.addEventListener("keydown", (e) => e.stopPropagation());
+  numInp?.addEventListener("change", () => setWidth(numInp.value));
+  rangeInp?.addEventListener("input", () => setWidth(rangeInp.value));
 }
 
 function buildMultiAppearanceHTML(shapeIds) {
@@ -2229,6 +2293,11 @@ function buildPropsHTML(s) {
     geometry.push(
       `<div class="prop-multi-actions"><button id="btn-bezier-edit">${t("props.bezierEdit")}</button></div>`,
     );
+  } else if (s.type === "pencil") {
+    geometry.push(
+      `<div class="prop-row prop-readonly"><label>${t("props.pointCount")}</label><span>${(s.points || []).length}</span></div>`,
+      `<div class="prop-row"><label>${stripUnitLabel(t("props.penWidth"), "mm")}</label><div class="prop-unit-field"><input type="number" step="0.1" min="0.1" data-key="penWidth" value="${Number(s.penWidth ?? 1.5).toFixed(1)}"><span class="prop-unit-suffix">mm</span></div></div>`,
+    );
   } else if (s.type === "dimension") {
     const hasLabelOffset =
       (s.textOffsetX || 0) !== 0 || (s.textOffsetY || 0) !== 0;
@@ -2285,7 +2354,11 @@ function buildPropsHTML(s) {
     ];
   }
 
-  if (s.type !== "dimension" && s.type !== "image") {
+  if (
+    s.type !== "dimension" &&
+    s.type !== "image" &&
+    s.type !== "pencil"
+  ) {
     geometry.push(
       pSel(t("props.strokeWidth"), "strokeWidth", s.strokeWidth || "medium", [
         { v: "thin", l: t("props.strokeWidth.thin") },
@@ -2910,6 +2983,8 @@ function bindKeyShortcuts() {
       D: "dimension",
       h: "hand",
       H: "hand",
+      p: "pencil",
+      P: "pencil",
     };
     if (map[e.key] && !e.ctrlKey && !e.metaKey) {
       cancelDim();
@@ -2919,6 +2994,7 @@ function bindKeyShortcuts() {
         onActiveToolChanged(tool);
       }
       updateToolbar();
+      updatePropertiesPanel();
       const el = document.getElementById("status-tool");
       if (el) el.textContent = TOOL_INFO[map[e.key]] || map[e.key];
       return;

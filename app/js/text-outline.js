@@ -50,6 +50,22 @@ const _textLayoutCache = new Map();
 const _textLayoutTimers = new Map();
 const _textLiveTransformIds = new Set();
 
+// テキストレイアウトは非同期（HarfBuzz）で後から確定する。renderer.js の
+// #shape-root キャッシュはこのバージョンを署名に含めることで、図形 JSON が
+// 同じでもレイアウト更新時に確実に作り直される。
+let _textLayoutCacheVer = 0;
+function textLayoutCacheVersion() {
+  return _textLayoutCacheVer;
+}
+function _tlcSet(k, v) {
+  _textLayoutCacheVer++;
+  return _textLayoutCache.set(k, v);
+}
+function _tlcDel(k) {
+  _textLayoutCacheVer++;
+  return _textLayoutCache.delete(k);
+}
+
 function _parsePreviewKey(key) {
   try {
     return JSON.parse(key);
@@ -477,7 +493,7 @@ async function _fetchOutlineChildren(shape, scale) {
   }
 
   if (result.layout) {
-    _textLayoutCache.set(shape.id, {
+    _tlcSet(shape.id, {
       key: _textPreviewKey(shape, scale),
       metrics: result.layout,
     });
@@ -501,7 +517,7 @@ function invalidateTextNativePreview(shapeId) {
   if (!shapeId) return;
   _textPreviewCache.delete(shapeId);
   _textPreviewFailures.delete(shapeId);
-  _textLayoutCache.delete(shapeId);
+  _tlcDel(shapeId);
   const timer = _textPreviewTimers.get(shapeId);
   if (timer) {
     clearTimeout(timer);
@@ -547,13 +563,13 @@ async function refreshTextNativeLayout(shapeId) {
   if (!isTextNativeLayoutEnabled()) return;
   const located = findShapeById(shapeId);
   if (!located || located.shape.type !== "text") {
-    _textLayoutCache.delete(shapeId);
+    _tlcDel(shapeId);
     return;
   }
 
   const shape = located.shape;
   if (!shape.text || !/\S/.test(shape.text)) {
-    _textLayoutCache.delete(shapeId);
+    _tlcDel(shapeId);
     return;
   }
 
@@ -568,12 +584,12 @@ async function refreshTextNativeLayout(shapeId) {
     const result = await _invokeMeasureTextLayout(payload);
     if (result?.error) throw new Error(result.error);
     if (result?.layout) {
-      _textLayoutCache.set(shapeId, { key, metrics: result.layout });
+      _tlcSet(shapeId, { key, metrics: result.layout });
       render();
     }
   } catch (err) {
     console.warn("[text-layout] failed", err);
-    _textLayoutCache.delete(shapeId);
+    _tlcDel(shapeId);
   }
 }
 

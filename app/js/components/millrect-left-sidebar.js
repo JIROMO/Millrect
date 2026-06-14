@@ -30,6 +30,9 @@ class MillrectLeftSidebar extends HTMLElement {
           <button class="tool-btn" data-tool="bezier" data-i18n-title="tools.bezier.title">
             <span class="tool-icon"><i data-lucide="pen-tool"></i></span>
           </button>
+          <button class="tool-btn" data-tool="pencil" data-i18n-title="tools.pencil.title">
+            <span class="tool-icon"><i data-lucide="pencil"></i></span>
+          </button>
           <button class="tool-btn" data-tool="text" data-i18n-title="tools.text.title">
             <span class="tool-icon"><i data-lucide="type"></i></span>
           </button>

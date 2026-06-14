@@ -205,6 +205,11 @@ function shiftShape(shape, dx, dy) {
     shape.contours = shape.contours.map((poly) =>
       poly.map((ring) => ring.map(([x, y]) => [x + dx, y + dy])),
     );
+  } else if (shape.type === "pencil") {
+    shape.points = (shape.points || []).map((pt) => ({
+      x: pt.x + dx,
+      y: pt.y + dy,
+    }));
   } else if (shape.type === "group") {
     for (const child of shape.children) shiftShape(child, dx, dy);
   }

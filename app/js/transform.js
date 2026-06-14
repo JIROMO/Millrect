@@ -188,6 +188,8 @@ function sampleShapePointsReal(shape) {
       }
       return pts;
     }
+    case "pencil":
+      return (shape.points || []).map((pt) => [pt.x, pt.y]);
     case "dimension":
       return [
         [shape.from.x, shape.from.y],

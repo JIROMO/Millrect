@@ -16,6 +16,67 @@ function _drawStyle() {
   };
 }
 
+// ── 鉛筆（雑メモ用）─────────────────────────────────
+// 生のカーソル座標を集めて 1 本の pencil 図形にする。スナップは効かせない。
+let _pencil = null;
+const PENCIL_MIN_DIST = 3; // real units。これ未満の移動は間引く
+
+function _rawReal(e, svgEl) {
+  const sv = screenToSVG(e, svgEl);
+  const pp = svgToPaper(sv.x, sv.y);
+  return paperToReal(pp.x, pp.y);
+}
+
+function _pencilPreviewShape() {
+  const style = _drawStyle();
+  return {
+    id: "__pencil_prev__",
+    type: "pencil",
+    points: _pencil.points,
+    stroke: style.stroke,
+    penWidth: getState().penWidth ?? 1.5,
+  };
+}
+
+function handlePencilDown(e, svgEl) {
+  const rp = _rawReal(e, svgEl);
+  _pencil = { points: [{ x: rp.x, y: rp.y }] };
+  renderPreview(_pencilPreviewShape());
+}
+
+function handlePencilMove(e, svgEl) {
+  if (!_pencil) return;
+  const rp = _rawReal(e, svgEl);
+  const last = _pencil.points[_pencil.points.length - 1];
+  if (Math.hypot(rp.x - last.x, rp.y - last.y) < PENCIL_MIN_DIST) return;
+  _pencil.points.push({ x: rp.x, y: rp.y });
+  renderPreview(_pencilPreviewShape());
+}
+
+function handlePencilUp() {
+  if (!_pencil) return;
+  const pts = _pencil.points;
+  _pencil = null;
+  removePreview();
+  // 1 点だけ（クリックしただけ）はメモにならないので捨てる
+  if (pts.length < 2) {
+    render();
+    return;
+  }
+  const style = _drawStyle();
+  const id = genId("pencil");
+  addShape({
+    id,
+    type: "pencil",
+    points: pts,
+    stroke: style.stroke,
+    penWidth: getState().penWidth ?? 1.5,
+  });
+  // ツールは pencil のまま（続けて雑にメモを描けるように）。選択もしない。
+  render();
+  uiUpdate();
+}
+
 // foreignObject content is in HTML namespace; this climbs both HTML and SVG trees
 function svgClosest(el, selector) {
   if (!el) return null;
@@ -129,6 +190,8 @@ function onMouseDown(e, svgEl) {
   else if (tool === "dimension") handleDimDown(pp, rp);
   else if (tool === "bezier") {
     handleBezierDown(rp, pp);
+  } else if (tool === "pencil") {
+    handlePencilDown(e, svgEl);
   }
 }
 
@@ -178,7 +241,15 @@ function onMouseMove(e, svgEl) {
   if (_panning && _panStart) {
     state.panX = _panStart.panX + (e.clientX - _panStart.x);
     state.panY = _panStart.panY + (e.clientY - _panStart.y);
-    render();
+    applyViewportTransform();
+    return;
+  }
+  // 鉛筆はスナップを使わない（生のカーソルで雑に描く）
+  if (state.activeTool === "pencil") {
+    removeSnapIndicator();
+    if (_pencil) handlePencilMove(e, svgEl);
+    const rp0 = _rawReal(e, svgEl);
+    updateStatusCoords(rp0);
     return;
   }
   const sv = screenToSVG(e, svgEl);
@@ -216,7 +287,7 @@ function onMouseMove(e, svgEl) {
   if ((tool === "select" || tool === "hand") && _ds?.action === "pan") {
     state.panX = _ds.origPanX + (e.clientX - _ds.startCX);
     state.panY = _ds.origPanY + (e.clientY - _ds.startCY);
-    render();
+    applyViewportTransform();
     return;
   }
   if (tool === "select" && _ds?.action === "marquee") {
@@ -231,7 +302,7 @@ function onMouseMove(e, svgEl) {
     if (res) {
       res.shape.textOffsetX = origOffsetX + (rp.x - startRP.x);
       res.shape.textOffsetY = origOffsetY + (rp.y - startRP.y);
-      render();
+      liveUpdateShapes([shapeId]);
     }
     return;
   }
@@ -408,6 +479,10 @@ function onMouseUp(e, svgEl) {
     handleBezierUp();
     return;
   }
+  if (tool === "pencil") {
+    handlePencilUp();
+    return;
+  }
   if (!_ds || ["dimension", "text", "select"].includes(tool)) return;
   commitShape(tool, _ds.sr, rp, e.shiftKey);
   removePreview();
@@ -460,11 +535,12 @@ function onWheel(e, svgEl) {
     state.zoom = nz;
     const el = document.getElementById("status-zoom");
     if (el) el.textContent = `${(nz * 100).toFixed(0)}%`;
+    render(); // ズームはストローク幅(1/zoom)等が変わるためフルレンダー
   } else {
     state.panX -= e.deltaX;
     state.panY -= e.deltaY;
+    applyViewportTransform(); // パンは transform だけ
   }
-  render();
 }
 
 function onKeyDown(e) {
@@ -500,6 +576,12 @@ function onKeyDown(e) {
     }
     if (_bezierDraw) {
       cancelBezierDraw();
+      return;
+    }
+    if (_pencil) {
+      _pencil = null;
+      removePreview();
+      render();
       return;
     }
     if (_vertexEditId) {
@@ -1024,7 +1106,7 @@ function handleRotate(rp, shiftKey) {
   let deg = origRotation + delta;
   if (shiftKey) deg = Math.round(deg / 15) * 15;
   res.shape.rotation = normalizeRotationDeg(deg);
-  render();
+  liveUpdateShapes([_ds.shapeId]);
   const rotInput = document.getElementById("rot-angle");
   if (rotInput) rotInput.value = `${res.shape.rotation}°`;
 }
@@ -1308,7 +1390,7 @@ function handleResize(rp, shiftKey) {
     }
   }
 
-  render();
+  liveUpdateShapes([shapeId]);
   _updatePathSizeDisplay(shape);
 }
 
@@ -1407,8 +1489,8 @@ function handleSelMove(pp, shiftKey) {
       shiftShape(shape, dxR, dyR);
     }
   }
-  render();
-  // render() がオーバーレイを再構築するため、インジケーターは後から描く
+  liveUpdateShapes(state.selectedShapeIds);
+  // ドラッグ中はオーバーレイが作り直されるため、インジケーターは後から描く
   if (kp) renderSnapIndicator(kp.x, kp.y, state.zoom, kp.snapType);
   if (state.selectedShapeIds.length === 1) {
     const r = findShapeById(state.selectedShapeIds[0]);
