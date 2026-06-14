@@ -1,6 +1,6 @@
 {
   "name": "millrect",
-  "version": "0.1.5",
+  "version": "0.1.6",
   "description": "Millrect",
   "license": "MIT",
   "author": "JIROMO",
@@ -22,7 +22,8 @@
     "dev": "npm run build:native && npm run build:text-engine && electron .",
     "verify:contours": "node scripts/verify-text-contour-sources.js",
     "test:unit": "node --test tests/unit/**/*.test.js",
-    "test": "npm run verify:contours && npm run test:unit",
+    "test:integration": "node --test tests/integration/**/*.test.js",
+    "test": "npm run verify:contours && npm run test:unit && npm run test:integration",
     "samples:generate": "node scripts/generate-samples.js",
     "build": "npm run build:native && npm run build:text-engine && electron-builder",
     "release": "bash scripts/release-build.sh",
