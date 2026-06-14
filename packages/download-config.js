@@ -7,9 +7,9 @@
    * 手順: docs/RELEASE.ja.md
    */
   global.MILLRECT_DOWNLOAD = {
-    version: "0.1.6",
+    version: "0.1.7",
     githubRepo: "JIROMO/Millrect",
-    releaseTag: "v0.1.6",
+    releaseTag: "v0.1.7",
     platforms: ["mac"],
     get releasesUrl() {
       return "https://github.com/" + this.githubRepo + "/releases/latest";
@@ -24,8 +24,8 @@
       );
     },
     assets: {
-      macArm64: "Millrect-0.1.6-arm64.dmg",
-      macX64: "Millrect-0.1.6.dmg",
+      macArm64: "Millrect-0.1.7-arm64.dmg",
+      macX64: "Millrect-0.1.7.dmg",
     },
   };
 })(typeof window !== "undefined" ? window : globalThis);
