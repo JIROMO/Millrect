@@ -2838,8 +2838,8 @@ function bindReferenceImageSettings() {
     const file = fileInput.files?.[0];
     if (!file) return;
     const reader = new FileReader();
-    reader.onload = () => {
-      setReferenceImage(null, {
+    reader.onload = async () => {
+      await setReferenceImage(null, {
         dataUrl: reader.result,
         widthMm: 120,
         heightMm: 80,

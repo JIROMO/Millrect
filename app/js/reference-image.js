@@ -9,6 +9,49 @@ let _refImageEdit = null;
 
 const REF_IMAGE_MIN_REAL = 100;
 
+// 下絵は原寸である必要がない（配置サイズは mm 指定で決まる）。取り込み時に長辺を
+// 上限へ縮小し JPEG 再エンコードして base64 を小さくする。state・履歴ストア・
+// autosave・保存ファイルすべてが軽くなる。失敗時は元の dataUrl をそのまま返す。
+function compressImageDataUrl(dataUrl, opts = {}) {
+  const maxDim = opts.maxDim ?? 2000;
+  const quality = opts.quality ?? 0.82;
+  return new Promise((resolve) => {
+    if (typeof dataUrl !== "string" || !dataUrl.startsWith("data:image/")) {
+      resolve(dataUrl);
+      return;
+    }
+    const img = new Image();
+    img.onload = () => {
+      try {
+        const w = img.naturalWidth || img.width;
+        const h = img.naturalHeight || img.height;
+        if (!w || !h) {
+          resolve(dataUrl);
+          return;
+        }
+        const scale = Math.min(1, maxDim / Math.max(w, h));
+        const cw = Math.max(1, Math.round(w * scale));
+        const ch = Math.max(1, Math.round(h * scale));
+        const canvas = document.createElement("canvas");
+        canvas.width = cw;
+        canvas.height = ch;
+        const ctx = canvas.getContext("2d");
+        // JPEG は透過を持てない。下絵の透過部は白で潰す（半透明トレース下地として中立）
+        ctx.fillStyle = "#ffffff";
+        ctx.fillRect(0, 0, cw, ch);
+        ctx.drawImage(img, 0, 0, cw, ch);
+        const out = canvas.toDataURL("image/jpeg", quality);
+        // 縮小も再圧縮も効かず逆に大きくなったら元を採用
+        resolve(out && out.length < dataUrl.length ? out : dataUrl);
+      } catch (_e) {
+        resolve(dataUrl);
+      }
+    };
+    img.onerror = () => resolve(dataUrl);
+    img.src = dataUrl;
+  });
+}
+
 function _pageById(pageId) {
   const state = getState();
   if (pageId) {
@@ -20,9 +63,13 @@ function _pageById(pageId) {
 /**
  * 参照画像をページに設定（real units / data URL）
  */
-function setReferenceImage(pageId, spec) {
+async function setReferenceImage(pageId, spec) {
   const page = _pageById(pageId);
   if (!page) return { ok: false, error: "Page not found" };
+
+  if (spec.dataUrl) {
+    spec = { ...spec, dataUrl: await compressImageDataUrl(spec.dataUrl) };
+  }
 
   const widthMm = spec.widthMm ?? spec.width_mm;
   const heightMm = spec.heightMm ?? spec.height_mm;

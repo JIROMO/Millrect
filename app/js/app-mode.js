@@ -178,6 +178,7 @@
     if (next === "3d") {
       panel3d?.classList.add("visible");
       showGeneratingOverlay();
+      if (typeof start3DLoop === "function") start3DLoop(); // 再入時にループ再開
       if (pending3DRefresh) clearTimeout(pending3DRefresh);
       pending3DRefresh = setTimeout(() => {
         requestAnimationFrame(refresh3DNow);
@@ -190,6 +191,8 @@
       if (typeof cancelScheduledUpdate3DScene === "function") {
         cancelScheduledUpdate3DScene();
       }
+      // 2D に戻ったらレンダリングループを止めて CPU/GPU を遊ばせない
+      if (typeof pause3DLoop === "function") pause3DLoop();
       panel3d?.classList.remove("visible");
     }
   }

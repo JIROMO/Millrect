@@ -295,13 +295,30 @@ function init3DView(canvas) {
   _3controls.minDistance = 5;
   _3controls.maxDistance = 2000;
 
-  function tick() {
-    _3animId = requestAnimationFrame(tick);
-    resize3DView();
-    _3controls.update();
-    _3renderer.render(_3scene, _3camera);
+  start3DLoop();
+}
+
+// レンダリングループは 3D ビュー表示中だけ回す。2D に戻ったら pause3DLoop で止め、
+// CPU/GPU を遊ばせない（OrbitControls の damping も止まる）。
+function _tick3D() {
+  if (!_3renderer) {
+    _3animId = null;
+    return;
   }
-  tick();
+  _3animId = requestAnimationFrame(_tick3D);
+  resize3DView();
+  _3controls.update();
+  _3renderer.render(_3scene, _3camera);
+}
+
+function start3DLoop() {
+  if (_3animId || !_3renderer) return; // 既に回っている / 未初期化
+  _tick3D();
+}
+
+function pause3DLoop() {
+  if (_3animId) cancelAnimationFrame(_3animId);
+  _3animId = null;
 }
 
 function resize3DView() {

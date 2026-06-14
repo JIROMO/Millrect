@@ -40,7 +40,8 @@ function deepClone(o) {
 
 function initState() {
   _state = defaultState();
-  _history = [JSON.stringify(_snapshotDoc())]; // _state が確定した後に呼ぶ
+  _imageStore.clear();
+  _history = [_serializeDoc()]; // _state が確定した後に呼ぶ
   _historyLabels = ["初期状態"];
   _histIdx = 0;
   return _state;
@@ -69,12 +70,55 @@ const DOC_KEYS = [
   "projectBrief",
 ];
 
-function _snapshotDoc() {
-  return deepClone(Object.fromEntries(DOC_KEYS.map((k) => [k, _state[k]])));
+// ── 参照画像の de-dup ────────────────────────────────────────
+// referenceImage.dataUrl（base64 の下絵）は読み込み後に内容が変わらないのに、
+// 素直に履歴へ含めると最大 MAX_HISTORY コピーが文字列で複製されメモリを食う。
+// そこでセッション内に dataUrl を imageId 単位で 1 コピーだけ持ち、履歴文字列には
+// imageId だけを載せる（_historyReplacer）。復元時に _rehydrateImages で戻す。
+// 保存 / エクスポートは _historyReplacer を通さない別経路なのでファイルは自己完結。
+const _imageStore = new Map(); // imageId -> dataUrl
+
+function _ensureImageIds() {
+  for (const page of _state.pages || []) {
+    const img = page.referenceImage;
+    if (img && img.dataUrl) {
+      if (!img.imageId)
+        img.imageId = "img-" + Math.random().toString(36).slice(2, 10);
+      _imageStore.set(img.imageId, img.dataUrl);
+    }
+  }
 }
+
+function _historyReplacer(key, value) {
+  // imageId で復元できる referenceImage は dataUrl を履歴文字列から外す
+  if (key === "referenceImage" && value && value.dataUrl && value.imageId) {
+    const { dataUrl, ...rest } = value;
+    return rest;
+  }
+  return value;
+}
+
+function _rehydrateImages(snap) {
+  for (const page of snap?.pages || []) {
+    const img = page.referenceImage;
+    if (img && !img.dataUrl && img.imageId) {
+      const data = _imageStore.get(img.imageId);
+      if (data) img.dataUrl = data;
+    }
+  }
+}
+
+// 現 _state のドキュメント部分を、画像 dataUrl を抜いた履歴文字列に直列化する。
+function _serializeDoc() {
+  _ensureImageIds();
+  const snapRef = Object.fromEntries(DOC_KEYS.map((k) => [k, _state[k]]));
+  return JSON.stringify(snapRef, _historyReplacer);
+}
+
 function _restoreDoc(snapOrStr) {
   const snap =
     typeof snapOrStr === "string" ? JSON.parse(snapOrStr) : snapOrStr;
+  _rehydrateImages(snap);
   for (const k of DOC_KEYS) _state[k] = deepClone(snap[k]);
 }
 
@@ -84,15 +128,14 @@ let _historyLabels = ["初期状態"];
 function pushHistory(label) {
   // 履歴はずっと文字列で保持するので、ここで構造化クローンする必要はない。
   // ドキュメント部分への浅い参照を一度だけ JSON 化すれば足りる（毎編集の
-  // structuredClone をまるごと省く）。snapRef は保存せず使い捨て。
-  const snapRef = Object.fromEntries(DOC_KEYS.map((k) => [k, _state[k]]));
+  // structuredClone をまるごと省く）。画像 dataUrl は _historyReplacer で除外。
+  const snapStr = _serializeDoc();
   // 直前のスナップショットと同一なら何もしない（触っただけで履歴が増えるのを防ぐ）
-  const snapStr = JSON.stringify(snapRef);
   if (_histIdx >= 0 && _history[_histIdx] === snapStr) return;
   _history = _history.slice(0, _histIdx + 1);
   _historyLabels = _historyLabels.slice(0, _histIdx + 1);
   _history.push(snapStr);
-  _historyLabels.push(label || _inferHistoryLabel(snapRef));
+  _historyLabels.push(label || _inferHistoryLabel(JSON.parse(snapStr)));
   if (_history.length > MAX_HISTORY) {
     _history.shift();
     _historyLabels.shift();
@@ -167,7 +210,8 @@ function canRedo() {
 
 function replaceState(newState) {
   _state = newState;
-  _history = [JSON.stringify(_snapshotDoc())]; // ドキュメント部分のみ保存
+  _imageStore.clear(); // 履歴を作り直すので古い画像参照は破棄
+  _history = [_serializeDoc()]; // ドキュメント部分のみ保存（画像 dataUrl は除外）
   _historyLabels = ["読み込み"];
   _histIdx = 0;
 }
