@@ -3666,7 +3666,8 @@ document.addEventListener("DOMContentLoaded", () => {
       document.getElementById("btn-new")?.click();
     });
     onMenu("menu:open", () => {
-      document.getElementById("btn-new")?.click();
+      // 「開く...」: 保存済みプロジェクトのリストモーダルを出す（btn-open と同じ）
+      document.getElementById("btn-open")?.click();
     });
     onMenu("menu:exportJson", () => exportProjectJson());
     onMenu("menu:exportSvg", () => exportCurrentPageSvg());
