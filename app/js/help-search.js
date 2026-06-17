@@ -128,6 +128,12 @@
   }
 
   function updateResults() {
+    if (typeof searchHelpIndex !== "function") {
+      results = [];
+      activeIndex = -1;
+      renderResults();
+      return;
+    }
     results = searchHelpIndex(input.value, 12, currentHelpLocale());
     activeIndex = results.length ? 0 : -1;
     renderResults();
@@ -144,7 +150,14 @@
     }
   }
 
-  function openHelpSearch() {
+  async function openHelpSearch() {
+    if (typeof ensureHelpIndex === "function") {
+      try {
+        await ensureHelpIndex();
+      } catch (e) {
+        console.warn("[help-search] failed to load index:", e);
+      }
+    }
     ensureOverlay();
     overlay.hidden = false;
     input.value = "";

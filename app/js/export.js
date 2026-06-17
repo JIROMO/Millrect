@@ -684,6 +684,9 @@ function exportCurrentPageSvg() {
   );
 }
 async function exportAllPagesPdf() {
+  if (typeof ensurePdfExportLibs === "function") {
+    await ensurePdfExportLibs();
+  }
   if (!window.jspdf) {
     alert(t("common.alert.jspdfMissing"));
     return;

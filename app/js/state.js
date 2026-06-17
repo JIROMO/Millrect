@@ -31,6 +31,8 @@ const MAX_HISTORY = 100;
 let _history = [];
 let _histIdx = -1;
 let _state = null;
+let _documentRenderVersion = 0;
+const _shapeRenderVersions = new Map();
 
 function deepClone(o) {
   return typeof structuredClone === "function"
@@ -44,6 +46,7 @@ function initState() {
   _history = [_serializeDoc()]; // _state が確定した後に呼ぶ
   _historyLabels = ["初期状態"];
   _histIdx = 0;
+  _resetRenderableVersions(_history[0]);
   return _state;
 }
 
@@ -115,6 +118,69 @@ function _serializeDoc() {
   return JSON.stringify(snapRef, _historyReplacer);
 }
 
+function _iterRenderableSnapshots(doc, cb) {
+  for (const page of doc?.pages || []) {
+    for (const layer of page.layers || []) {
+      for (const shape of layer.shapes || []) cb(shape);
+    }
+    for (const dim of page.dimensions || []) cb(dim);
+  }
+}
+
+function _renderableSnapshotMap(doc) {
+  const out = new Map();
+  _iterRenderableSnapshots(doc, (shape) => {
+    if (shape?.id) out.set(shape.id, JSON.stringify(shape));
+  });
+  return out;
+}
+
+function _bumpShapeRenderVersion(id) {
+  if (!id) return;
+  _shapeRenderVersions.set(id, (_shapeRenderVersions.get(id) || 0) + 1);
+}
+
+function _syncRenderableVersions(prevStr, nextStr) {
+  if (!nextStr) return;
+  const prev = prevStr ? _renderableSnapshotMap(JSON.parse(prevStr)) : new Map();
+  const next = _renderableSnapshotMap(JSON.parse(nextStr));
+  const ids = new Set([...prev.keys(), ...next.keys()]);
+  for (const id of ids) {
+    if (prev.get(id) !== next.get(id)) _bumpShapeRenderVersion(id);
+  }
+  _documentRenderVersion++;
+}
+
+function _resetRenderableVersions(snapStr) {
+  _shapeRenderVersions.clear();
+  if (snapStr) {
+    const snap = JSON.parse(snapStr);
+    _iterRenderableSnapshots(snap, (shape) => _bumpShapeRenderVersion(shape?.id));
+  }
+  _documentRenderVersion++;
+}
+
+function getDocumentRenderVersion() {
+  return _documentRenderVersion;
+}
+
+function getShapeRenderVersion(id) {
+  return _shapeRenderVersions.get(id) || 0;
+}
+
+function markShapeDirty(id) {
+  if (!id) return;
+  _bumpShapeRenderVersion(id);
+  for (const group of findAncestorGroups(id) || []) {
+    _bumpShapeRenderVersion(group.id);
+  }
+  _documentRenderVersion++;
+}
+
+function markDocumentDirty() {
+  _documentRenderVersion++;
+}
+
 function _restoreDoc(snapOrStr) {
   const snap =
     typeof snapOrStr === "string" ? JSON.parse(snapOrStr) : snapOrStr;
@@ -132,9 +198,11 @@ function pushHistory(label) {
   const snapStr = _serializeDoc();
   // 直前のスナップショットと同一なら何もしない（触っただけで履歴が増えるのを防ぐ）
   if (_histIdx >= 0 && _history[_histIdx] === snapStr) return;
+  const prevStr = _histIdx >= 0 ? _history[_histIdx] : null;
   _history = _history.slice(0, _histIdx + 1);
   _historyLabels = _historyLabels.slice(0, _histIdx + 1);
   _history.push(snapStr);
+  _syncRenderableVersions(prevStr, snapStr);
   _historyLabels.push(label || _inferHistoryLabel(JSON.parse(snapStr)));
   if (_history.length > MAX_HISTORY) {
     _history.shift();
@@ -177,7 +245,10 @@ function getHistoryIndex() {
 
 function jumpToHistory(idx) {
   if (idx < 0 || idx >= _history.length) return false;
+  const prevStr = _histIdx >= 0 ? _history[_histIdx] : null;
+  const nextStr = _history[idx];
   _histIdx = idx;
+  _syncRenderableVersions(prevStr, nextStr);
   _restoreDoc(_history[_histIdx]);
   if (typeof onStateChanged === "function") onStateChanged();
   return true;
@@ -185,7 +256,9 @@ function jumpToHistory(idx) {
 
 function undo() {
   if (_histIdx > 0) {
+    const prevStr = _history[_histIdx];
     _histIdx--;
+    _syncRenderableVersions(prevStr, _history[_histIdx]);
     _restoreDoc(_history[_histIdx]);
     if (typeof onStateChanged === "function") onStateChanged();
     return true;
@@ -194,7 +267,9 @@ function undo() {
 }
 function redo() {
   if (_histIdx < _history.length - 1) {
+    const prevStr = _history[_histIdx];
     _histIdx++;
+    _syncRenderableVersions(prevStr, _history[_histIdx]);
     _restoreDoc(_history[_histIdx]);
     if (typeof onStateChanged === "function") onStateChanged();
     return true;
@@ -214,6 +289,7 @@ function replaceState(newState) {
   _history = [_serializeDoc()]; // ドキュメント部分のみ保存（画像 dataUrl は除外）
   _historyLabels = ["読み込み"];
   _histIdx = 0;
+  _resetRenderableVersions(_history[0]);
 }
 
 // ── Accessors ────────────────────────────────────────────────

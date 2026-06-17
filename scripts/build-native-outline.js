@@ -1,6 +1,6 @@
 "use strict";
 
-const { execSync } = require("child_process");
+const { spawnSync } = require("child_process");
 const fs = require("fs");
 const path = require("path");
 
@@ -20,8 +20,30 @@ if (!fs.existsSync(src)) {
 }
 
 fs.mkdirSync(outDir, { recursive: true });
-execSync(
-  `swiftc -O -o "${out}" "${src}" -framework CoreText -framework CoreGraphics -framework Foundation`,
+const result = spawnSync(
+  "swiftc",
+  [
+    "-O",
+    "-o",
+    out,
+    src,
+    "-framework",
+    "CoreText",
+    "-framework",
+    "CoreGraphics",
+    "-framework",
+    "Foundation",
+  ],
   { stdio: "inherit" },
 );
+
+if (result.error) {
+  console.error("[build:native] failed to start swiftc:", result.error.message);
+  process.exit(1);
+}
+
+if (result.status !== 0) {
+  process.exit(result.status ?? 1);
+}
+
 console.log("[build:native] built", out);

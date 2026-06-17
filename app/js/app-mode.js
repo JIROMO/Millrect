@@ -9,6 +9,7 @@
   let pending3DRefresh = null;
   let pendingPrintCall = null;
   let printPageStyle = null;
+  let loading3D = null;
 
   function updateToggleButtons(mode) {
     for (const btn of document.querySelectorAll(".toolbar-mode-btn")) {
@@ -128,9 +129,17 @@
     enterPrintMode({ print: true });
   }
 
-  function ensure3DInitialized() {
+  async function ensure3DInitialized() {
     const canvas = document.getElementById("canvas-3d");
     if (!canvas || typeof init3DView !== "function") return false;
+    if (typeof ensure3DLibs === "function") {
+      if (!loading3D) {
+        loading3D = ensure3DLibs().finally(() => {
+          loading3D = null;
+        });
+      }
+      await loading3D;
+    }
     if (!initialized3D) {
       init3DView(canvas);
       initialized3D = true;
@@ -144,12 +153,12 @@
     return true;
   }
 
-  function refresh3DNow() {
+  async function refresh3DNow() {
     if (pending3DRefresh) {
       clearTimeout(pending3DRefresh);
       pending3DRefresh = null;
     }
-    if (!ensure3DInitialized()) return;
+    if (!(await ensure3DInitialized())) return;
     if (typeof resize3DView === "function") resize3DView();
     if (typeof update3DScene === "function") update3DScene();
   }
@@ -181,7 +190,11 @@
       if (typeof start3DLoop === "function") start3DLoop(); // 再入時にループ再開
       if (pending3DRefresh) clearTimeout(pending3DRefresh);
       pending3DRefresh = setTimeout(() => {
-        requestAnimationFrame(refresh3DNow);
+        requestAnimationFrame(() => {
+          refresh3DNow().catch((e) => {
+            console.warn("[3D] failed to initialize:", e);
+          });
+        });
       }, 30);
     } else {
       if (pending3DRefresh) {

@@ -19,11 +19,13 @@ let _3camera = null;
 let _3renderer = null;
 let _3controls = null;
 let _3meshes = [];
+let _3meshPayloads = [];
 let _3animId = null;
 let _3canvas = null;
 let _3dStatus = { meshCount: 0, message: null, warnings: [] };
 let _3modelPipelineState = {
   ok: false,
+  pending: false,
   modelIr: null,
   geometryData: null,
   errors: [],
@@ -33,6 +35,16 @@ let _3modelPipelineState = {
 // 派生パイプライン（Model IR / geometry-data）は重い（全プロジェクトの
 // JSON 直列化 + 検証）ため、3D 更新ごとには走らせず dirty フラグで遅延評価する。
 let _3modelPipelineDirty = false;
+let _3modelPipelineWorker = null;
+let _3modelPipelineRequestId = 0;
+let _3modelPipelineWorkerFailed = false;
+let _3sceneWorker = null;
+let _3sceneWorkerRequestId = 0;
+let _3sceneWorkerFailed = false;
+let _3sceneWorkerPending = null;
+let _3stlWorker = null;
+let _3stlWorkerRequestId = 0;
+let _3stlWorkerFailed = false;
 const UPDATE3D_DEBOUNCE_MS = 300;
 let _update3dTimer = null;
 
@@ -347,6 +359,7 @@ function destroy3DView() {
 
   for (const m of _3meshes) _disposeMesh(m);
   _3meshes = [];
+  _3meshPayloads = [];
 
   if (_3scene) {
     _disposeSceneObject(_3scene);
@@ -360,6 +373,7 @@ function destroy3DView() {
   _3dStatus = { meshCount: 0, message: null, warnings: [] };
   _3modelPipelineState = {
     ok: false,
+    pending: false,
     modelIr: null,
     geometryData: null,
     errors: [],
@@ -367,6 +381,16 @@ function destroy3DView() {
     logs: [],
   };
   _3modelPipelineDirty = false;
+  _3modelPipelineWorker?.terminate();
+  _3modelPipelineWorker = null;
+  _3modelPipelineRequestId = 0;
+  _3sceneWorker?.terminate();
+  _3sceneWorker = null;
+  _3sceneWorkerRequestId = 0;
+  _3sceneWorkerPending = null;
+  _3stlWorker?.terminate();
+  _3stlWorker = null;
+  _3stlWorkerRequestId = 0;
 }
 
 function get3DSceneStatus() {
@@ -386,7 +410,7 @@ function get3DSceneStatus() {
 
 function get3DModelPipelineState() {
   if (_3modelPipelineDirty) {
-    _refreshModelPipelineState();
+    _refreshModelPipelineStateAsync();
     _3modelPipelineDirty = false;
   }
   return _3modelPipelineState;
@@ -416,6 +440,7 @@ function _refreshModelPipelineState() {
   ) {
     _3modelPipelineState = {
       ok: false,
+      pending: false,
       modelIr: null,
       geometryData: null,
       errors: ["Model pipeline packages are not loaded"],
@@ -437,6 +462,7 @@ function _refreshModelPipelineState() {
       : null;
     _3modelPipelineState = {
       ok: Boolean(irResult.ok && geometryResult?.ok),
+      pending: false,
       modelIr: irResult.ir || null,
       geometryData: geometryResult?.data || null,
       errors: [...(irResult.errors || []), ...(geometryResult?.errors || [])],
@@ -449,6 +475,7 @@ function _refreshModelPipelineState() {
   } catch (e) {
     _3modelPipelineState = {
       ok: false,
+      pending: false,
       modelIr: null,
       geometryData: null,
       errors: [e?.message || "Model pipeline failed"],
@@ -457,6 +484,310 @@ function _refreshModelPipelineState() {
     };
   }
   return _3modelPipelineState;
+}
+
+function _ensureModelPipelineWorker() {
+  if (_3modelPipelineWorker || _3modelPipelineWorkerFailed) {
+    return _3modelPipelineWorker;
+  }
+  if (typeof Worker !== "function") return null;
+
+  try {
+    _3modelPipelineWorker = new Worker("js/3d-model-worker.js");
+  } catch (e) {
+    _3modelPipelineWorkerFailed = true;
+    console.warn("[3D] model worker unavailable:", e);
+    return null;
+  }
+
+  _3modelPipelineWorker.onmessage = (event) => {
+    const { id, state } = event.data || {};
+    if (id !== _3modelPipelineRequestId || !state) return;
+    _3modelPipelineState = state;
+  };
+  _3modelPipelineWorker.onerror = (event) => {
+    _3modelPipelineWorkerFailed = true;
+    _3modelPipelineWorker?.terminate();
+    _3modelPipelineWorker = null;
+    _3modelPipelineState = {
+      ok: false,
+      pending: false,
+      modelIr: null,
+      geometryData: null,
+      errors: [event?.message || "Model pipeline worker failed"],
+      warnings: [],
+      logs: [],
+    };
+  };
+  return _3modelPipelineWorker;
+}
+
+function _refreshModelPipelineStateAsync() {
+  const worker = _ensureModelPipelineWorker();
+  if (!worker) {
+    return _refreshModelPipelineState();
+  }
+
+  try {
+    const project = _projectJsonForModelPipeline();
+    const id = ++_3modelPipelineRequestId;
+    _3modelPipelineState = {
+      ok: false,
+      pending: true,
+      modelIr: _3modelPipelineState.modelIr || null,
+      geometryData: _3modelPipelineState.geometryData || null,
+      errors: [],
+      warnings: _3modelPipelineState.warnings || [],
+      logs: _3modelPipelineState.logs || [],
+    };
+    worker.postMessage({ id, project });
+    return _3modelPipelineState;
+  } catch (e) {
+    _3modelPipelineState = {
+      ok: false,
+      pending: false,
+      modelIr: null,
+      geometryData: null,
+      errors: [e?.message || "Model pipeline failed"],
+      warnings: [],
+      logs: [],
+    };
+    return _3modelPipelineState;
+  }
+}
+
+function _ensure3DSceneWorker() {
+  if (_3sceneWorker || _3sceneWorkerFailed) return _3sceneWorker;
+  if (typeof Worker !== "function") return null;
+  try {
+    _3sceneWorker = new Worker("js/3d-scene-worker.js");
+  } catch (e) {
+    _3sceneWorkerFailed = true;
+    console.warn("[3D] scene worker unavailable:", e);
+    return null;
+  }
+  _3sceneWorker.onmessage = (event) => {
+    const { id, result, meshes } = event.data || {};
+    if (id !== _3sceneWorkerRequestId || !_3scene) return;
+    _apply3DScenePayload(result, meshes || []);
+    _3sceneWorkerPending?.resolve?.(_3dStatus);
+    _3sceneWorkerPending = null;
+  };
+  _3sceneWorker.onerror = (event) => {
+    _3sceneWorkerFailed = true;
+    _3sceneWorker?.terminate();
+    _3sceneWorker = null;
+    _3dStatus = {
+      meshCount: 0,
+      message: event?.message || t("view3d.generateFailed"),
+      warnings: [],
+    };
+    _sync3DEmptyOverlay(_3dStatus.message);
+    _sync3DWarningOverlay([]);
+    _3sceneWorkerPending?.reject?.(
+      new Error(event?.message || t("view3d.generateFailed")),
+    );
+    _3sceneWorkerPending = null;
+  };
+  return _3sceneWorker;
+}
+
+function _geometryFromPayload(payload) {
+  const geo = new THREE.BufferGeometry();
+  geo.setAttribute(
+    "position",
+    new THREE.BufferAttribute(new Float32Array(payload.position), 3),
+  );
+  if (payload.normal) {
+    geo.setAttribute(
+      "normal",
+      new THREE.BufferAttribute(new Float32Array(payload.normal), 3),
+    );
+  } else {
+    geo.computeVertexNormals();
+  }
+  geo.computeBoundingBox();
+  return geo;
+}
+
+function _apply3DScenePayload(result, meshPayloads) {
+  for (const m of _3meshes) {
+    _3scene.remove(m);
+    _disposeMesh(m);
+  }
+  _3meshes = [];
+  _3meshPayloads = meshPayloads || [];
+
+  for (const payload of _3meshPayloads) {
+    const mesh = new THREE.Mesh(
+      _geometryFromPayload(payload),
+      _makeMaterial(payload.color || "#5965f9"),
+    );
+    _3scene.add(mesh);
+    _3meshes.push(mesh);
+  }
+
+  _3dStatus = {
+    meshCount: _3meshes.length,
+    message: result?.message ?? null,
+    warnings: result?.warnings ?? [],
+  };
+  _finalize3DSceneLayout();
+  _sync3DEmptyOverlay(_3dStatus.message);
+  _sync3DWarningOverlay(_3dStatus.warnings);
+}
+
+function _worker3DMessages() {
+  const keys = [
+    "view3d.needViews",
+    "view3d.needClosedProfiles",
+    "view3d.generateFailed",
+    "view3d.viewNameSeparator",
+    "view3d.colorMismatch",
+    "view.type.top",
+    "view.type.bottom",
+    "view.type.front",
+    "view.type.back",
+    "view.type.right",
+    "view.type.left",
+  ];
+  return Object.fromEntries(keys.map((key) => [key, t(key)]));
+}
+
+function _request3DSceneWorker() {
+  const worker = _ensure3DSceneWorker();
+  if (!worker) return false;
+  const id = ++_3sceneWorkerRequestId;
+  _3dStatus = {
+    meshCount: 0,
+    message: t("view3d.generating"),
+    warnings: [],
+  };
+  _sync3DEmptyOverlay(_3dStatus.message);
+  _sync3DWarningOverlay([]);
+  _3sceneWorkerPending?.resolve?.(_3dStatus);
+  const pending = {};
+  pending.promise = new Promise((resolve, reject) => {
+    pending.resolve = resolve;
+    pending.reject = reject;
+  });
+  _3sceneWorkerPending = pending;
+  worker.postMessage({
+    id,
+    state: _projectJsonForModelPipeline(),
+    messages: _worker3DMessages(),
+  });
+  return pending.promise;
+}
+
+function _meshPayloadFromMesh(mesh) {
+  mesh.updateMatrixWorld(true);
+  const geometry = mesh.geometry.index
+    ? mesh.geometry.toNonIndexed()
+    : mesh.geometry.clone();
+  geometry.applyMatrix4(mesh.matrixWorld);
+  if (!geometry.attributes.normal) geometry.computeVertexNormals();
+  const payload = {
+    position: geometry.attributes.position.array.slice(),
+    normal: geometry.attributes.normal?.array.slice() || null,
+    color: mesh.material?.color
+      ? `#${mesh.material.color.getHexString()}`
+      : "#5965f9",
+  };
+  geometry.dispose();
+  return payload;
+}
+
+function _payloadsForCurrent3DMeshes() {
+  if (_3meshPayloads.length === _3meshes.length && _3meshPayloads.length) {
+    return _3meshPayloads;
+  }
+  return _3meshes.map(_meshPayloadFromMesh);
+}
+
+function _ensureStlWorker() {
+  if (_3stlWorker || _3stlWorkerFailed) return _3stlWorker;
+  if (typeof Worker !== "function") return null;
+  try {
+    _3stlWorker = new Worker("js/3d-stl-worker.js");
+  } catch (e) {
+    _3stlWorkerFailed = true;
+    console.warn("[3D] STL worker unavailable:", e);
+    return null;
+  }
+  _3stlWorker.onerror = (event) => {
+    _3stlWorkerFailed = true;
+    _3stlWorker?.terminate();
+    _3stlWorker = null;
+    console.warn("[3D] STL worker failed:", event?.message || event);
+  };
+  return _3stlWorker;
+}
+
+function _exportStlInWorker(meshPayloads) {
+  const worker = _ensureStlWorker();
+  if (!worker) return null;
+  const id = ++_3stlWorkerRequestId;
+  const transfers = [];
+  const meshes = meshPayloads.map((payload) => {
+    const position = payload.position.slice();
+    const normal = payload.normal?.slice?.() || null;
+    transfers.push(position.buffer);
+    if (normal) transfers.push(normal.buffer);
+    return { ...payload, position, normal };
+  });
+  return new Promise((resolve, reject) => {
+    const onMessage = (event) => {
+      const data = event.data || {};
+      if (data.id !== id) return;
+      worker.removeEventListener("message", onMessage);
+      if (data.ok) resolve(data.stl);
+      else reject(new Error(data.error || "STL export failed"));
+    };
+    worker.addEventListener("message", onMessage);
+    worker.postMessage({ id, meshes }, transfers);
+  });
+}
+
+function _exportStlOnMainThread(meshes) {
+  const exporter = new THREE.STLExporter();
+  const group = new THREE.Group();
+  const clones = [];
+  for (const m of meshes) {
+    const clone = m.clone();
+    clones.push(clone);
+    group.add(clone);
+  }
+  const stl = exporter.parse(group, { binary: false });
+  for (const clone of clones) _disposeMesh(clone);
+  return stl;
+}
+
+async function _ensureMeshesForExport() {
+  if (_3sceneWorkerPending?.promise) {
+    await _3sceneWorkerPending.promise;
+    return;
+  }
+  if (_3meshes.length) return;
+  const pending = _request3DSceneWorker();
+  if (pending) {
+    await pending;
+    return;
+  }
+  _update3DSceneSync();
+}
+
+function _downloadStl(stl) {
+  const blob = new Blob([stl], { type: "text/plain" });
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(blob);
+  a.download =
+    (document.getElementById("project-name")?.value || "model") + ".stl";
+  a.style.display = "none";
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  URL.revokeObjectURL(a.href);
 }
 
 function _edgeKey(a, b) {
@@ -748,8 +1079,14 @@ function _profileToThreeShapesForView(profile, page, viewType, frame) {
 // 正規ワールド空間: X=[0,W]  Y=[0,H]  Z=[-D,0]
 // 各ビューの輪郭を CSG 交差して立体を生成する。
 //
-function _build3DSceneFromViews() {
-  const state = getState();
+function _addBuilt3DMesh(mesh) {
+  _3scene.add(mesh);
+  _3meshes.push(mesh);
+}
+
+function _build3DSceneFromViews(options = {}) {
+  const state = options.state || getState();
+  const addMesh = options.addMesh || _addBuilt3DMesh;
 
   const byType = {};
   for (const p of state.pages) {
@@ -897,7 +1234,7 @@ function _build3DSceneFromViews() {
     (axisHasViews.z ? 1 : 0) +
     (axisHasViews.x ? 1 : 0);
   if (!primary || viewAxisCount < 2) {
-    return _buildSingleViewExtrusionScene(byType, dims, pageFrames);
+    return _buildSingleViewExtrusionScene(byType, dims, pageFrames, addMesh);
   }
 
   // primary 軸の volume はどの部品の clamp 対象にもならない（部品は直交軸方向の
@@ -977,8 +1314,7 @@ function _build3DSceneFromViews() {
     // role:"cut" は 2D プロファイル段階で _profileToThreeShapesForView() が
     // 差し引き済み（押し出し前にキーホール輪郭化）。ここでの CSG 差し引きは不要。
     merged.material = mat;
-    _3scene.add(merged);
-    _3meshes.push(merged);
+    addMesh(merged);
     added++;
   }
 
@@ -1458,7 +1794,7 @@ function _buildPartMesh(
   return { mesh, color };
 }
 
-function _buildSingleViewExtrusionScene(byType, dims, pageFrames) {
+function _buildSingleViewExtrusionScene(byType, dims, pageFrames, addMesh) {
   const primary = _getPrimaryPartAxis(byType);
   if (!primary) {
     return {
@@ -1511,8 +1847,7 @@ function _buildSingleViewExtrusionScene(byType, dims, pageFrames) {
     // 単一ビュー押し出しは CSG 交差を伴わないので、同色統合は常に連結でよい（O(n)）。
     const merged = _concatMeshList(meshes, mat) || meshes[0];
     merged.material = mat;
-    _3scene.add(merged);
-    _3meshes.push(merged);
+    addMesh(merged);
     added++;
   }
 
@@ -1595,17 +1930,31 @@ function scheduleUpdate3DScene(delayMs = UPDATE3D_DEBOUNCE_MS) {
   );
 }
 
-function update3DScene() {
-  cancelScheduledUpdate3DScene();
-  if (!_3scene) return;
-  _3modelPipelineDirty = true;
-
+function _clear3DMeshes() {
   for (const m of _3meshes) {
     _3scene.remove(m);
     _disposeMesh(m);
   }
   _3meshes = [];
+  _3meshPayloads = [];
+}
 
+function _finalize3DSceneLayout() {
+  if (!_3meshes.length) return;
+  const box = new THREE.Box3();
+  for (const mesh of _3meshes) {
+    mesh.updateMatrixWorld(true);
+    box.union(new THREE.Box3().setFromObject(mesh));
+  }
+  const center = new THREE.Vector3();
+  box.getCenter(center);
+  const offset = new THREE.Vector3(center.x, box.min.y, center.z);
+  for (const mesh of _3meshes) mesh.position.sub(offset);
+  _3controls?.target.set(0, (box.max.y - box.min.y) / 2, 0);
+}
+
+function _update3DSceneSync() {
+  _clear3DMeshes();
   let result;
   try {
     result = _build3DSceneFromViews();
@@ -1620,24 +1969,23 @@ function update3DScene() {
   };
   _sync3DEmptyOverlay(_3dStatus.message);
   _sync3DWarningOverlay(_3dStatus.warnings);
+  _finalize3DSceneLayout();
+}
 
-  if (_3meshes.length) {
-    const box = new THREE.Box3();
-    for (const mesh of _3meshes) {
-      mesh.updateMatrixWorld(true);
-      box.union(new THREE.Box3().setFromObject(mesh));
-    }
-    const center = new THREE.Vector3();
-    box.getCenter(center);
-    const offset = new THREE.Vector3(center.x, box.min.y, center.z);
-    for (const mesh of _3meshes) mesh.position.sub(offset);
-    _3controls?.target.set(0, (box.max.y - box.min.y) / 2, 0);
+function update3DScene(options = {}) {
+  cancelScheduledUpdate3DScene();
+  if (!_3scene) return;
+  _3modelPipelineDirty = true;
+
+  if (!options.forceSync && _request3DSceneWorker()) {
+    return;
   }
+  _update3DSceneSync();
 }
 
 // ── STL export ────────────────────────────────────────────────
-function exportSTL() {
-  update3DScene();
+async function exportSTL() {
+  await _ensureMeshesForExport();
   const validation = validateMeshesForExport(_3meshes);
   if (!validation.ok) {
     alert(validation.message);
@@ -1650,24 +1998,15 @@ function exportSTL() {
     if (!proceed) return;
   }
 
-  const exporter = new THREE.STLExporter();
-  const group = new THREE.Group();
-  const clones = [];
-  for (const m of _3meshes) {
-    const clone = m.clone();
-    clones.push(clone);
-    group.add(clone);
+  const payloads = _payloadsForCurrent3DMeshes();
+  let stl;
+  try {
+    stl =
+      (await _exportStlInWorker(payloads)) ||
+      _exportStlOnMainThread(_3meshes);
+  } catch (e) {
+    console.warn("[3D] STL worker export failed, falling back:", e);
+    stl = _exportStlOnMainThread(_3meshes);
   }
-  const stl = exporter.parse(group, { binary: false });
-  for (const clone of clones) _disposeMesh(clone);
-  const blob = new Blob([stl], { type: "text/plain" });
-  const a = document.createElement("a");
-  a.href = URL.createObjectURL(blob);
-  a.download =
-    (document.getElementById("project-name")?.value || "model") + ".stl";
-  a.style.display = "none";
-  document.body.appendChild(a);
-  a.click();
-  a.remove();
-  URL.revokeObjectURL(a.href);
+  _downloadStl(stl);
 }

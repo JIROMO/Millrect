@@ -65,6 +65,7 @@ const PRELUDE = `
   var render = function () {};
   var renderBezierOverlay = function () {};
   var updateUI = function () {};
+  var Worker = undefined;
   var t = function (key) { return key; }; // i18n。defaultState 等が typeof ガードで参照
 `;
 
@@ -81,6 +82,7 @@ const EXPORT_NAMES = [
   "findShapeById", "getCurrentPage", "getCurrentLayer", "getShapeBBox",
   // history
   "undo", "redo", "canUndo", "canRedo", "pushHistory",
+  "getDocumentRenderVersion", "getShapeRenderVersion", "markShapeDirty",
   // ids
   "genId",
   // derived: profiles（2D→3D 派生の入口）

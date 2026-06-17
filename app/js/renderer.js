@@ -1120,20 +1120,17 @@ function _shapesSig(page) {
   const sc = page.scale
     ? `${page.scale.numerator}/${page.scale.denominator}`
     : "1/1";
-  const fonts = (getState().fonts || []).map((f) => f.id).join(",");
-  return JSON.stringify({
-    pid: page.id,
-    sc,
-    tlv,
-    fonts,
-    layers: page.layers.map((l) => ({
-      id: l.id,
-      v: l.visible,
-      lk: l.locked,
-      s: l.shapes,
-    })),
-    dims: page.dimensions || [],
-  });
+  const docv =
+    typeof getDocumentRenderVersion === "function"
+      ? getDocumentRenderVersion()
+      : 0;
+  const layers = page.layers
+    .map(
+      (l) =>
+        `${l.id}:${l.visible ? 1 : 0}:${l.locked ? 1 : 0}:${l.shapes.length}`,
+    )
+    .join(",");
+  return `${docv}|${tlv}|${page.id}|${sc}|${layers}|${(page.dimensions || []).length}`;
 }
 
 function _cssEsc(s) {
@@ -1145,7 +1142,15 @@ function _cssEsc(s) {
 // 1 図形ぶんの描画結果を決める入力の署名（key reconcile 用）。
 function _shapeSig(shape, scale) {
   const sc = scale ? `${scale.numerator}/${scale.denominator}` : "1/1";
-  return sc + "|" + JSON.stringify(shape);
+  const rv =
+    typeof getShapeRenderVersion === "function"
+      ? getShapeRenderVersion(shape.id)
+      : JSON.stringify(shape);
+  const tlv =
+    shape.type === "text" && typeof textLayoutCacheVersion === "function"
+      ? textLayoutCacheVersion()
+      : 0;
+  return `${shape.id}|${shape.type}|${sc}|${rv}|${tlv}`;
 }
 
 // コンテナ直下の図形ノードを data-id で突合して差分更新する（React の key+memo 相当）。
@@ -1231,6 +1236,7 @@ function liveUpdateShapes(ids) {
   const scale = page.scale;
   const selIds = getState().selectedShapeIds;
   for (const id of ids) {
+    if (typeof markShapeDirty === "function") markShapeDirty(id);
     const old = root.querySelector(`[data-id="${_cssEsc(id)}"]`);
     const res = findShapeById(id);
     if (!res) {
