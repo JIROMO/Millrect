@@ -88,6 +88,7 @@
     "panel.project.fonts": "プロジェクトフォント（任意）",
     "panel.design.layout": "配置・位置",
     "panel.design.props": "プロパティ",
+    "panel.design.solid3d": "3D（立体交差）",
     "panel.design.appearance": "外観",
     "panel.design.appearanceBulk": "外観（一括）",
     "panel.design.bulkSize": "サイズ（一括）",
@@ -324,6 +325,8 @@
     "props.length": "長さ",
     "props.diameter": "直径",
     "props.cornerRadius": "角丸 mm",
+    "props.solidIntersect": "立体交差で生成",
+    "props.solidIntersectHint": "他ビュー（側面図など）にしかない穴・輪郭を3Dに反映します。ONにするとCSG交差が重くなります。",
     "props.cornerToggleUniform": "統一に切り替え",
     "props.cornerToggleIndividual": "個別に切り替え",
     "props.corner.tl": "左上",
@@ -583,6 +586,8 @@
     "common.alert.svgImportError": "SVG読込エラー: {message}",
     "common.alert.imageImportError": "画像読込エラー: {message}",
     "common.alert.jspdfMissing": "jsPDF が読み込まれていません",
+    "common.confirm.exportPdfIncludeDimensions":
+      "PDFに寸法線を含めますか？\n\nOK: 寸法線を含める\nキャンセル: 寸法線なしで出力",
     "common.alert.outlineUnavailable":
       "テキストのアウトライン化を利用できません。フォントの読み込みまたは text engine の初期化に失敗している可能性があります。",
     "common.alert.outlineNoText": "アウトライン化するテキストがありません",

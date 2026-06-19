@@ -33,6 +33,8 @@ let _histIdx = -1;
 let _state = null;
 let _documentRenderVersion = 0;
 const _shapeRenderVersions = new Map();
+const _pendingRenderableDirtyIds = new Set();
+let _pendingDocumentDirty = false;
 
 function deepClone(o) {
   return typeof structuredClone === "function"
@@ -140,8 +142,18 @@ function _bumpShapeRenderVersion(id) {
   _shapeRenderVersions.set(id, (_shapeRenderVersions.get(id) || 0) + 1);
 }
 
+function _clearPendingRenderableDirty() {
+  _pendingRenderableDirtyIds.clear();
+  _pendingDocumentDirty = false;
+}
+
 function _syncRenderableVersions(prevStr, nextStr) {
   if (!nextStr) return;
+  if (_pendingDocumentDirty || _pendingRenderableDirtyIds.size > 0) {
+    _clearPendingRenderableDirty();
+    _documentRenderVersion++;
+    return;
+  }
   const prev = prevStr ? _renderableSnapshotMap(JSON.parse(prevStr)) : new Map();
   const next = _renderableSnapshotMap(JSON.parse(nextStr));
   const ids = new Set([...prev.keys(), ...next.keys()]);
@@ -153,6 +165,7 @@ function _syncRenderableVersions(prevStr, nextStr) {
 
 function _resetRenderableVersions(snapStr) {
   _shapeRenderVersions.clear();
+  _clearPendingRenderableDirty();
   if (snapStr) {
     const snap = JSON.parse(snapStr);
     _iterRenderableSnapshots(snap, (shape) => _bumpShapeRenderVersion(shape?.id));
@@ -171,13 +184,17 @@ function getShapeRenderVersion(id) {
 function markShapeDirty(id) {
   if (!id) return;
   _bumpShapeRenderVersion(id);
+  _pendingRenderableDirtyIds.add(id);
   for (const group of findAncestorGroups(id) || []) {
     _bumpShapeRenderVersion(group.id);
+    _pendingRenderableDirtyIds.add(group.id);
   }
+  _pendingDocumentDirty = true;
   _documentRenderVersion++;
 }
 
 function markDocumentDirty() {
+  _pendingDocumentDirty = true;
   _documentRenderVersion++;
 }
 
@@ -197,7 +214,10 @@ function pushHistory(label) {
   // structuredClone をまるごと省く）。画像 dataUrl は _historyReplacer で除外。
   const snapStr = _serializeDoc();
   // 直前のスナップショットと同一なら何もしない（触っただけで履歴が増えるのを防ぐ）
-  if (_histIdx >= 0 && _history[_histIdx] === snapStr) return;
+  if (_histIdx >= 0 && _history[_histIdx] === snapStr) {
+    _clearPendingRenderableDirty();
+    return;
+  }
   const prevStr = _histIdx >= 0 ? _history[_histIdx] : null;
   _history = _history.slice(0, _histIdx + 1);
   _historyLabels = _historyLabels.slice(0, _histIdx + 1);

@@ -52,6 +52,15 @@ function initUI() {
 }
 
 const _uiPanelCache = Object.create(null);
+let _updateAllRaf = 0;
+
+function scheduleUpdateAll() {
+  if (_updateAllRaf) return;
+  _updateAllRaf = requestAnimationFrame(() => {
+    _updateAllRaf = 0;
+    updateAll();
+  });
+}
 
 function _uiLocaleKey() {
   return typeof getLocale === "function" ? getLocale() : "";
@@ -79,24 +88,43 @@ function _pageListSignature(state) {
 }
 
 function _layerListSignature(state, page) {
-  return JSON.stringify({
-    locale: _uiLocaleKey(),
-    currentPageId: state.currentPageId,
-    currentLayerId: state.currentLayerId,
-    selectedShapeIds: state.selectedShapeIds || [],
-    layers: (page?.layers || []).map((layer) => ({
-      id: layer.id,
-      name: layer.name,
-      visible: layer.visible,
-      locked: layer.locked,
-      shapes: (layer.shapes || []).map((shape) => ({
-        id: shape.id,
-        type: shape.type,
-        locked: !!shape.locked,
-        text: shape.type === "text" ? shape.text || "" : "",
-      })),
-    })),
-  });
+  const selected = (state.selectedShapeIds || []).join(",");
+  const layers = (page?.layers || [])
+    .map((layer) => {
+      const shapes = (layer.shapes || [])
+        .map((shape) => {
+          const rv =
+            typeof getShapeRenderVersion === "function"
+              ? getShapeRenderVersion(shape.id)
+              : 0;
+          return `${shape.id}:${shape.type}:${shape.locked ? 1 : 0}:${rv}`;
+        })
+        .join(",");
+      return `${layer.id}:${layer.name}:${layer.visible ? 1 : 0}:${layer.locked ? 1 : 0}:${shapes}`;
+    })
+    .join("|");
+  return `${_uiLocaleKey()}|${state.currentPageId}|${state.currentLayerId}|${selected}|${layers}`;
+}
+
+function _propertiesPanelSignature(state) {
+  const ids = state.selectedShapeIds || [];
+  if (!ids.length) return `${_uiLocaleKey()}|empty|${state.activeTool}`;
+  const page = getCurrentPage();
+  const sc = page?.scale
+    ? `${page.scale.numerator}/${page.scale.denominator}`
+    : "1/1";
+  const shapes = ids
+    .map((id) => {
+      const res = findShapeById(id);
+      if (!res) return `${id}:missing`;
+      const rv =
+        typeof getShapeRenderVersion === "function"
+          ? getShapeRenderVersion(id)
+          : 0;
+      return `${id}:${res.shape.type}:${rv}`;
+    })
+    .join(",");
+  return `${_uiLocaleKey()}|${state.currentPageId}|${sc}|${state.activeTool}|${shapes}`;
 }
 
 function _pageSettingsSignature(state, page) {
@@ -237,7 +265,10 @@ function updateAll() {
   if (_uiCacheChanged("tasteBrief", tasteSig)) {
     updateTasteBriefPanel();
   }
-  updatePropertiesPanel();
+  const propertiesSig = _propertiesPanelSignature(state);
+  if (_uiCacheChanged("properties", propertiesSig)) {
+    updatePropertiesPanel();
+  }
   const pageSettingsSig = _pageSettingsSignature(state, page);
   if (_uiCacheChanged("pageSettings", pageSettingsSig)) {
     updatePageSettings();
@@ -1435,6 +1466,25 @@ function updatePropertiesPanel() {
   if (window.lucide)
     window.lucide.createIcons({ nameAttr: "data-lucide", nodes: [c] });
   bindAlignPositionEvents(c, state.selectedShapeIds);
+  const cbSolid = c.querySelector("#prop-solid-intersect");
+  if (cbSolid) {
+    cbSolid.addEventListener("change", () => {
+      const r = findShapeById(state.selectedShapeIds[0]);
+      if (!r) return;
+      if (cbSolid.checked) r.shape.solidIntersect = true;
+      else delete r.shape.solidIntersect;
+      pushHistory();
+      render();
+      uiUpdate();
+      if (
+        typeof is3DMode === "function" &&
+        is3DMode() &&
+        typeof scheduleUpdate3DScene === "function"
+      ) {
+        scheduleUpdate3DScene(0);
+      }
+    });
+  }
   const btnVE = c.querySelector("#btn-vertex-edit");
   if (btnVE) {
     btnVE.addEventListener("click", () => {
@@ -2409,6 +2459,18 @@ function buildPropsHTML(s) {
     );
   }
 
+  if (SOLID_INTERSECT_TYPES.has(s.type)) {
+    sections.push(
+      panelSectionHTML(
+        "panel.design.solid3d",
+        t("panel.design.solid3d"),
+        `<label class="prop-checkbox-row"><input type="checkbox" id="prop-solid-intersect"${s.solidIntersect ? " checked" : ""}/> <span>${t("props.solidIntersect")}</span></label>
+        <p class="prop-hint">${t("props.solidIntersectHint")}</p>`,
+        false,
+      ),
+    );
+  }
+
   sections.push(
     panelSectionHTML(
       "panel.design.duplicate",
@@ -2420,6 +2482,9 @@ function buildPropsHTML(s) {
 
   return sections.join("");
 }
+
+// solidIntersect トグルを出す対象（Profile になれる図形のみ）。
+const SOLID_INTERSECT_TYPES = new Set(["rect", "circle", "path", "bezier"]);
 
 function setCustomSelect(id, v) {
   const el = document.getElementById(id);
@@ -3561,7 +3626,7 @@ document.addEventListener("DOMContentLoaded", () => {
     if (e.key !== "Alt") return;
     cancelAltDuplicate();
   });
-  window.addEventListener("millrect:uiupdate", updateAll);
+  window.addEventListener("millrect:uiupdate", scheduleUpdateAll);
 
   // ── 多ビュー CSG 3D プレビュー UI は廃止（2D/3D モード切替に統合）。
   //    update3DScene/exportSTL/MCP 経路はコードに残置（dormant）。完全削除は別タスク。

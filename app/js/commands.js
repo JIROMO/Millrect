@@ -10,6 +10,7 @@ function moveShapeZOrder(id, direction) {
   const newIdx = direction === "up" ? idx + 1 : idx - 1;
   if (newIdx < 0 || newIdx >= shapes.length) return;
   [shapes[idx], shapes[newIdx]] = [shapes[newIdx], shapes[idx]];
+  if (typeof markDocumentDirty === "function") markDocumentDirty();
   pushHistory("図形の重なり順変更");
 }
 
@@ -57,7 +58,10 @@ function reorderSelectionZ(ids, mode) {
       }
     }
   }
-  if (changed) pushHistory("図形の重なり順変更");
+  if (changed) {
+    if (typeof markDocumentDirty === "function") markDocumentDirty();
+    pushHistory("図形の重なり順変更");
+  }
   return changed;
 }
 
@@ -68,6 +72,7 @@ function addShape(shape) {
     const page = getCurrentPage();
     if (!page.dimensions) page.dimensions = [];
     page.dimensions.push(shape);
+    if (typeof markShapeDirty === "function") markShapeDirty(shape.id);
     pushHistory("寸法線追加");
     return true;
   }
@@ -75,6 +80,7 @@ function addShape(shape) {
   if (layer.locked) return false;
   layer.shapes.push(shape);
   if (shape.type === "text") onTextShapeDocumentChanged(shape.id);
+  if (typeof markShapeDirty === "function") markShapeDirty(shape.id);
   pushHistory(`図形追加 (${shape.type})`);
   return true;
 }
@@ -88,6 +94,7 @@ function setShapeLocked(id, locked) {
     const idx = sel.indexOf(id);
     if (idx !== -1) sel.splice(idx, 1);
   }
+  if (typeof markShapeDirty === "function") markShapeDirty(id);
   pushHistory(locked ? "図形ロック" : "図形ロック解除");
   return true;
 }
@@ -116,6 +123,7 @@ function updateShape(id, values) {
   if (trackTextPreview) {
     onTextShapeDocumentChanged(id, Object.keys(values));
   }
+  if (typeof markShapeDirty === "function") markShapeDirty(id);
   pushHistory("図形更新");
   return true;
 }
@@ -132,6 +140,7 @@ function deleteShape(id) {
     const idx = res.layer.shapes.indexOf(res.shape);
     if (idx !== -1) res.layer.shapes.splice(idx, 1);
   }
+  if (typeof markDocumentDirty === "function") markDocumentDirty();
   pushHistory(res.isDimension ? "寸法線削除" : "図形削除");
   return true;
 }
@@ -151,6 +160,7 @@ function deleteSelectedShapes() {
     }
   }
   getState().selectedShapeIds = [];
+  if (typeof markDocumentDirty === "function") markDocumentDirty();
   pushHistory();
 }
 
@@ -672,6 +682,7 @@ function _replaceSelectedWithPath(ids, page, contours, refShape, anchorEntry) {
     ..._booleanStyleFromShape(refShape),
   };
   insertLayer.shapes.splice(insertIdx, 0, newShape);
+  if (typeof markShapeDirty === "function") markShapeDirty(newShape.id);
   return newShape;
 }
 
@@ -808,6 +819,7 @@ function addPage(page = createPage()) {
   state.currentPageId = page.id;
   state.currentLayerId = page.layers[0]?.id || "";
   state.selectedShapeIds = [];
+  if (typeof markDocumentDirty === "function") markDocumentDirty();
   pushHistory(`ページ追加: ${page.name || page.id}`);
 }
 function switchPage(id) {
@@ -831,6 +843,7 @@ function deletePage(id) {
   if (state.currentPageId === id)
     state.currentPageId = state.pages[Math.max(0, idx - 1)].id;
   state.selectedShapeIds = [];
+  if (typeof markDocumentDirty === "function") markDocumentDirty();
   pushHistory("ページ削除");
   return true;
 }
@@ -838,6 +851,7 @@ function updatePage(id, values) {
   const page = getState().pages.find((p) => p.id === id);
   if (!page) return false;
   Object.assign(page, values);
+  if (typeof markDocumentDirty === "function") markDocumentDirty();
   pushHistory("ページ設定更新");
   return true;
 }
@@ -846,6 +860,7 @@ function addLayer(pageId = getState().currentPageId, layer = createLayer()) {
   if (!page) return false;
   page.layers.push(layer);
   getState().currentLayerId = layer.id;
+  if (typeof markDocumentDirty === "function") markDocumentDirty();
   pushHistory(`レイヤー追加: ${layer.name || layer.id}`);
   return true;
 }
@@ -858,6 +873,7 @@ function deleteLayer(pageId, layerId) {
   page.layers.splice(idx, 1);
   if (state.currentLayerId === layerId)
     state.currentLayerId = page.layers[0].id;
+  if (typeof markDocumentDirty === "function") markDocumentDirty();
   pushHistory("レイヤー削除");
   return true;
 }
@@ -867,6 +883,7 @@ function updateLayer(pageId, layerId, values) {
   const layer = page.layers.find((l) => l.id === layerId);
   if (!layer) return false;
   Object.assign(layer, values);
+  if (typeof markDocumentDirty === "function") markDocumentDirty();
   pushHistory("レイヤー更新");
   return true;
 }
@@ -958,6 +975,7 @@ function applyDrawingCommands(commands) {
       if (cmd.state) replaceState(cmd.state);
     }
   }
+  if (typeof markDocumentDirty === "function") markDocumentDirty();
   pushHistory("コマンド適用");
 }
 
@@ -988,6 +1006,7 @@ function groupSelectedShapes() {
   const group = { id: genId("group"), type: "group", children };
   getCurrentLayer().shapes.push(group);
   state.selectedShapeIds = [group.id];
+  if (typeof markShapeDirty === "function") markShapeDirty(group.id);
   pushHistory("グループ化");
 }
 
@@ -1001,6 +1020,7 @@ function ungroupSelectedShapes() {
   const newIds = shape.children.map((c) => c.id);
   layer.shapes.splice(idx, 1, ...shape.children);
   state.selectedShapeIds = newIds;
+  if (typeof markDocumentDirty === "function") markDocumentDirty();
   pushHistory("グループ解除");
 }
 

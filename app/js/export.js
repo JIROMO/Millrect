@@ -652,7 +652,41 @@ function parseSvgPathToCompound(d, scaleX, scaleY) {
   return { nodes, closed: anyClosed };
 }
 
-function buildPageSVG(page) {
+function _prepareDimensionForExport(dimEl) {
+  for (const fo of Array.from(dimEl.querySelectorAll("foreignObject"))) {
+    const label = fo.textContent || "";
+    if (!label) {
+      fo.remove();
+      continue;
+    }
+    const x = parseFloat(fo.getAttribute("x") || "0");
+    const y = parseFloat(fo.getAttribute("y") || "0");
+    const w = parseFloat(fo.getAttribute("width") || "0");
+    const h = parseFloat(fo.getAttribute("height") || "0");
+    const div = fo.firstElementChild;
+    const fontSize = parseFloat(div?.style?.fontSize || "3") || 3;
+    const fill = div?.style?.color || "#1a1a2e";
+    const fontFamily = div?.style?.fontFamily || DEFAULT_TEXT_FONT_FAMILY;
+    const text = se("text", {
+      x: x + w / 2,
+      y: y + h / 2,
+      fill,
+      "font-size": fontSize,
+      "font-family": fontFamily,
+      "text-anchor": "middle",
+      "dominant-baseline": "central",
+      "pointer-events": "none",
+    });
+    const transform = fo.getAttribute("transform");
+    if (transform) text.setAttribute("transform", transform);
+    text.textContent = label;
+    fo.replaceWith(text);
+  }
+  return dimEl;
+}
+
+function buildPageSVG(page, options = {}) {
+  const includeDimensions = !!options.includeDimensions;
   const phys = getPaperSizeMm(page);
   const { width: pw, height: ph } = getPaperDimensions(page);
   const svg = se("svg");
@@ -671,6 +705,14 @@ function buildPageSVG(page) {
       if (el) g.appendChild(el);
     }
     svg.appendChild(g);
+  }
+  if (includeDimensions && page.dimensions?.length) {
+    const dg = se("g", { id: "dimension-root" });
+    for (const dim of page.dimensions) {
+      const el = renderShape(dim, page.scale, []);
+      if (el) dg.appendChild(_prepareDimensionForExport(el));
+    }
+    svg.appendChild(dg);
   }
   return svg;
 }
@@ -693,6 +735,14 @@ async function exportAllPagesPdf() {
   }
   const { jsPDF } = window.jspdf;
   const state = getState();
+  const hasDimensions = state.pages.some((page) => page.dimensions?.length);
+  const includeDimensions =
+    hasDimensions &&
+    confirm(
+      typeof t === "function"
+        ? t("common.confirm.exportPdfIncludeDimensions")
+        : "Include dimension lines in the PDF?",
+    );
   const fp = state.pages[0];
   const fd = getPaperSizeMm(fp);
   const pdf = new jsPDF({
@@ -709,7 +759,7 @@ async function exportAllPagesPdf() {
         [phys.width, phys.height],
         page.orientation === "landscape" ? "l" : "p",
       );
-    const pageSvg = buildPageSVG(page);
+    const pageSvg = buildPageSVG(page, { includeDimensions });
     document.body.appendChild(pageSvg);
     pageSvg.style.cssText = "position:absolute;left:-9999px;top:-9999px";
     try {

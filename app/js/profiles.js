@@ -260,15 +260,37 @@ function canBeProfile(shape) {
 const _profileEntriesCache = new Map();
 
 function _profilePageSignature(page) {
-  return JSON.stringify(
-    (page.layers || []).map((layer) => ({
-      id: layer.id,
-      visible: layer.visible,
-      locked: layer.locked,
-      shapes: layer.shapes || [],
-    })),
-    (key, value) => (key === "dataUrl" ? undefined : value),
-  );
+  const docv =
+    typeof getDocumentRenderVersion === "function"
+      ? getDocumentRenderVersion()
+      : 0;
+  const layers = (page.layers || [])
+    .map((layer) => {
+      const shapes = (layer.shapes || [])
+        .map((shape) => {
+          const rv =
+            typeof getShapeRenderVersion === "function"
+              ? getShapeRenderVersion(shape.id)
+              : 0;
+          const childSig =
+            shape.type === "group"
+              ? `:${(shape.children || [])
+                  .map((child) => {
+                    const crv =
+                      typeof getShapeRenderVersion === "function"
+                        ? getShapeRenderVersion(child.id)
+                        : 0;
+                    return `${child.id}@${crv}`;
+                  })
+                  .join(",")}`
+              : "";
+          return `${shape.id}@${rv}${childSig}`;
+        })
+        .join(",");
+      return `${layer.id}:${layer.visible ? 1 : 0}:${layer.locked ? 1 : 0}:${shapes}`;
+    })
+    .join("|");
+  return `${page.id}|${docv}|${layers}`;
 }
 
 /**

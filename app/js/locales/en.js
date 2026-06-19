@@ -88,6 +88,7 @@
     "panel.project.fonts": "Project fonts (optional)",
     "panel.design.layout": "Layout & position",
     "panel.design.props": "Properties",
+    "panel.design.solid3d": "3D (solid intersect)",
     "panel.design.appearance": "Appearance",
     "panel.design.appearanceBulk": "Appearance (bulk)",
     "panel.design.bulkSize": "Size (bulk)",
@@ -326,6 +327,8 @@
     "props.length": "Length",
     "props.diameter": "Diameter",
     "props.cornerRadius": "Corner radius mm",
+    "props.solidIntersect": "Solid-intersect 3D",
+    "props.solidIntersectHint": "Carves holes/profiles that exist only in other views (e.g. a side view) into the 3D part. Heavier CSG when on.",
     "props.cornerToggleUniform": "Switch to uniform",
     "props.cornerToggleIndividual": "Switch to individual",
     "props.corner.tl": "Top left",
@@ -581,6 +584,8 @@
     "common.alert.svgImportError": "SVG import error: {message}",
     "common.alert.imageImportError": "Image import error: {message}",
     "common.alert.jspdfMissing": "jsPDF is not loaded",
+    "common.confirm.exportPdfIncludeDimensions":
+      "Include dimension lines in the PDF?\n\nOK: include dimensions\nCancel: export without dimensions",
     "common.alert.outlineUnavailable":
       "Text outline is unavailable. Font loading or text engine initialization may have failed.",
     "common.alert.outlineNoText": "No text to outline",

@@ -418,13 +418,17 @@ function onMouseUp(e, svgEl) {
   if (tool === "select" && _ds?.action === "dim-label") {
     const moved =
       Math.abs(rp.x - _ds.startRP.x) > 1 || Math.abs(rp.y - _ds.startRP.y) > 1;
-    if (moved) pushHistory();
+    if (moved) {
+      if (typeof markShapeDirty === "function") markShapeDirty(_ds.shapeId);
+      pushHistory();
+    }
     _ds = null;
     svgEl.style.cursor = "default";
     document.body.classList.remove("dragging");
     return;
   }
   if (tool === "select" && _ds?.action === "rotate") {
+    if (typeof markShapeDirty === "function") markShapeDirty(_ds.shapeId);
     pushHistory();
     _ds = null;
     svgEl.style.cursor = "default";
@@ -433,6 +437,9 @@ function onMouseUp(e, svgEl) {
     return;
   }
   if (tool === "select" && _ds?.action === "multi-resize") {
+    if (typeof markShapeDirty === "function") {
+      for (const id of getState().selectedShapeIds) markShapeDirty(id);
+    }
     pushHistory();
     _ds = null;
     svgEl.style.cursor = "default";
@@ -446,6 +453,7 @@ function onMouseUp(e, svgEl) {
         setTextNativeLiveTransform(_ds.shapeId, false);
       }
     }
+    if (typeof markShapeDirty === "function") markShapeDirty(_ds.shapeId);
     pushHistory();
     _ds = null;
     svgEl.style.cursor = "default";
@@ -456,6 +464,9 @@ function onMouseUp(e, svgEl) {
     // Alt+ドラッグ複製の確定時は変位を記録し、⌘D が同じ複製を繰り返せるようにする
     if (_ds.duplicated && typeof setLastDuplicateOffset === "function") {
       setLastDuplicateOffset(_ds.lastDxR || 0, _ds.lastDyR || 0);
+    }
+    if (typeof markShapeDirty === "function") {
+      for (const id of getState().selectedShapeIds) markShapeDirty(id);
     }
     pushHistory();
     _ds = null;

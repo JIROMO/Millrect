@@ -1993,29 +1993,109 @@ function update3DScene(options = {}) {
 }
 
 // ── STL export ────────────────────────────────────────────────
+// STL 書き出し前のメッシュ清掃。
+// CSG（ブール交差）由来の極薄・面積ゼロ三角形（退化）を除去し、浮動小数の誤差で
+// わずかにズレた重複頂点を溶接して、できるだけ多様体（watertight）に近づける。
+// position はワールド空間の三角形スープ（9 floats/三角形）。indexed geometry を返す。
+function _cleanGeometryForExport(position) {
+  const WELD_TOL = 1e-3; // mm（three 空間 = mm）。FP 誤差レベルの重複だけ溶接する。
+  const inv = 1 / WELD_TOL;
+  const map = new Map();
+  const verts = [];
+  const indices = [];
+  const vid = (x, y, z) => {
+    const key =
+      Math.round(x * inv) + "," + Math.round(y * inv) + "," + Math.round(z * inv);
+    let id = map.get(key);
+    if (id === undefined) {
+      id = verts.length / 3;
+      verts.push(x, y, z);
+      map.set(key, id);
+    }
+    return id;
+  };
+  const triCount = (position.length / 9) | 0;
+  const e1 = new THREE.Vector3();
+  const e2 = new THREE.Vector3();
+  const nrm = new THREE.Vector3();
+  for (let i = 0; i < triCount; i++) {
+    const o = i * 9;
+    const ia = vid(position[o], position[o + 1], position[o + 2]);
+    const ib = vid(position[o + 3], position[o + 4], position[o + 5]);
+    const ic = vid(position[o + 6], position[o + 7], position[o + 8]);
+    if (ia === ib || ib === ic || ia === ic) continue; // 溶接で潰れた=退化
+    e1.set(
+      verts[ib * 3] - verts[ia * 3],
+      verts[ib * 3 + 1] - verts[ia * 3 + 1],
+      verts[ib * 3 + 2] - verts[ia * 3 + 2],
+    );
+    e2.set(
+      verts[ic * 3] - verts[ia * 3],
+      verts[ic * 3 + 1] - verts[ia * 3 + 1],
+      verts[ic * 3 + 2] - verts[ia * 3 + 2],
+    );
+    nrm.crossVectors(e1, e2);
+    if (nrm.lengthSq() < 1e-12) continue; // 面積ゼロ（共線）=退化
+    indices.push(ia, ib, ic);
+  }
+  const geo = new THREE.BufferGeometry();
+  geo.setAttribute("position", new THREE.Float32BufferAttribute(verts, 3));
+  geo.setIndex(indices);
+  return geo;
+}
+
+// 1 メッシュをワールド空間の清掃済み（溶接＋退化除去）メッシュに変換する。
+// マテリアルは複製（_disposeMesh がマテリアルも破棄するため元を壊さない）。
+function _makeCleanExportMesh(mesh) {
+  mesh.updateMatrixWorld(true);
+  const src = mesh.geometry.index
+    ? mesh.geometry.toNonIndexed()
+    : mesh.geometry.clone();
+  src.applyMatrix4(mesh.matrixWorld);
+  const cleaned = _cleanGeometryForExport(src.attributes.position.array);
+  src.dispose();
+  cleaned.computeVertexNormals();
+  const mat = mesh.material?.clone?.() || mesh.material;
+  return new THREE.Mesh(cleaned, mat);
+}
+
 async function exportSTL() {
   await _ensureMeshesForExport();
-  const validation = validateMeshesForExport(_3meshes);
-  if (!validation.ok) {
-    alert(validation.message);
+  if (!_3meshes.length) {
+    alert(_3dStatus.message || t("view3d.noMesh"));
     return;
   }
-  if (validation.message) {
-    const proceed = confirm(
-      t("view3d.stlWarningConfirm", { message: validation.message }),
-    );
-    if (!proceed) return;
-  }
 
-  const payloads = _payloadsForCurrent3DMeshes();
-  let stl;
+  // 書き出し用に清掃済みメッシュを作り、検証・書き出しともこれを使う。
+  const cleanMeshes = _3meshes.map(_makeCleanExportMesh);
   try {
-    stl =
-      (await _exportStlInWorker(payloads)) ||
-      _exportStlOnMainThread(_3meshes);
-  } catch (e) {
-    console.warn("[3D] STL worker export failed, falling back:", e);
-    stl = _exportStlOnMainThread(_3meshes);
+    const validation = validateMeshesForExport(cleanMeshes);
+    if (!validation.ok) {
+      alert(validation.message);
+      return;
+    }
+    if (validation.message) {
+      const proceed = confirm(
+        t("view3d.stlWarningConfirm", { message: validation.message }),
+      );
+      if (!proceed) return;
+    }
+
+    const payloads = cleanMeshes.map(_meshPayloadFromMesh);
+    let stl;
+    try {
+      stl =
+        (await _exportStlInWorker(payloads)) ||
+        _exportStlOnMainThread(cleanMeshes);
+    } catch (e) {
+      console.warn("[3D] STL worker export failed, falling back:", e);
+      stl = _exportStlOnMainThread(cleanMeshes);
+    }
+    _downloadStl(stl);
+  } finally {
+    for (const m of cleanMeshes) {
+      m.geometry?.dispose();
+      m.material?.dispose?.();
+    }
   }
-  _downloadStl(stl);
 }

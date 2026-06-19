@@ -1284,6 +1284,24 @@ millrect-3d-panel {
   padding: 2px var(--panel-pad);
   min-height: var(--panel-row-h);
 }
+.prop-checkbox-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 4px var(--panel-pad);
+  font-size: 12px;
+  cursor: pointer;
+}
+.prop-checkbox-row input {
+  cursor: pointer;
+}
+.prop-hint {
+  margin: 0;
+  padding: 0 var(--panel-pad) 6px;
+  font-size: 10px;
+  line-height: 1.4;
+  color: var(--text-3);
+}
 .prop-row label {
   width: 72px;
   font-size: 11px;
