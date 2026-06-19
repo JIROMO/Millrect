@@ -239,14 +239,9 @@
       }
     });
 
-    window.__3d_render_hook = () => {
-      if (!is3DMode()) return;
-      if (typeof scheduleUpdate3DScene === "function") {
-        scheduleUpdate3DScene();
-      } else if (typeof update3DScene === "function") {
-        update3DScene();
-      }
-    };
+    // 3D 再生成は 3D ボタンで表示/再選択したタイミングに限定する。
+    // 2D render() から自動更新すると、編集中に重い CSG が割り込んで操作が重くなる。
+    window.__3d_render_hook = null;
 
     document.addEventListener("keydown", (e) => {
       if (!(e.ctrlKey || e.metaKey) || e.key.toLowerCase() !== "p") return;

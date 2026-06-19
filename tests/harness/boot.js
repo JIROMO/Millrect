@@ -87,6 +87,8 @@ const EXPORT_NAMES = [
   "genId",
   // derived: profiles（2D→3D 派生の入口）
   "shapeToProfile", "shapeToProfileRings", "extractProfilesFromPage",
+  // boolean 入力（回転焼き込みの回帰テスト用）
+  "shapeToClipPolygon",
   // ops
   "alignShapes", "distributeShapes",
   "groupSelectedShapes", "ungroupSelectedShapes",

@@ -45,7 +45,8 @@ let _3sceneWorkerPending = null;
 let _3stlWorker = null;
 let _3stlWorkerRequestId = 0;
 let _3stlWorkerFailed = false;
-const UPDATE3D_DEBOUNCE_MS = 300;
+const UPDATE3D_DEBOUNCE_MS = 800;
+const UPDATE3D_ACTIVE_EDIT_RETRY_MS = 800;
 let _update3dTimer = null;
 
 function _disposeMesh(mesh) {
@@ -1917,6 +1918,10 @@ function cancelScheduledUpdate3DScene() {
   _update3dTimer = null;
 }
 
+function _is2DEditInteractionActive() {
+  return !!document.body?.classList.contains("dragging");
+}
+
 /** 図面編集中の連続 render / UI 更新後の 3D 再生成向け。 */
 function scheduleUpdate3DScene(delayMs = UPDATE3D_DEBOUNCE_MS) {
   if (!_3scene) return;
@@ -1924,6 +1929,10 @@ function scheduleUpdate3DScene(delayMs = UPDATE3D_DEBOUNCE_MS) {
   _update3dTimer = setTimeout(
     () => {
       _update3dTimer = null;
+      if (_is2DEditInteractionActive()) {
+        scheduleUpdate3DScene(UPDATE3D_ACTIVE_EDIT_RETRY_MS);
+        return;
+      }
       requestAnimationFrame(() => update3DScene());
     },
     Math.max(0, delayMs),
