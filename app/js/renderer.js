@@ -129,7 +129,9 @@ function addHitLine(g, x1, y1, x2, y2) {
       x2,
       y2,
       stroke: "transparent",
-      "stroke-width": 4,
+      // ズーム非依存の一定幅（画面px）にして、寸法線をどのズームでも掴めるようにする。
+      "stroke-width": 10,
+      "vector-effect": "non-scaling-stroke",
       "pointer-events": "stroke",
     }),
   );
@@ -1203,8 +1205,7 @@ function _reconcileShapeRoot(root, page, selIds) {
 
   // 非表示になったレイヤー等、不要な最上位グループを削除してから順序を整える
   const keep = new Set(order);
-  for (const ch of Array.from(root.children))
-    if (!keep.has(ch)) ch.remove();
+  for (const ch of Array.from(root.children)) if (!keep.has(ch)) ch.remove();
   for (const node of order) root.appendChild(node);
 }
 
@@ -1255,8 +1256,52 @@ function liveUpdateShapes(ids) {
   if (_shapeRootCache) _shapeRootCache.sig = null;
   // 選択ハンドルは #shape-root の外（_vp 直下）なので個別に更新
   _vp.querySelector("#sel-handles")?.remove();
-  if (selIds.length > 0)
-    renderSelectionHandles(selIds, page, getState().zoom);
+  if (selIds.length > 0) renderSelectionHandles(selIds, page, getState().zoom);
+}
+
+// ── ドラッグ中のライブ移動（transform のみ・DOM 非再生成）──────────
+// グループのように子の多い図形を毎フレーム renderShape で作り直すと重い
+// （renderShape(group) が全子要素を再生成する）。代わりに既存ノードへ
+// translate を被せるだけにして 1 フレーム O(1) にする。実座標への確定は
+// mouseup 時に一度だけ行う（interaction.js）。
+function liveDragByTransform(ids, dxPaper, dyPaper) {
+  const root = _shapeRootCache && _shapeRootCache.node;
+  if (!root || !root.isConnected) return false;
+  const tr = `translate(${dxPaper},${dyPaper})`;
+  const apply = (node) => {
+    // ノード本来の transform（回転・反転）を一度だけ退避し、その外側に
+    // translate を被せる（合成順: translate → 既存）。
+    let base = node.getAttribute("data-drag-base");
+    if (base == null) {
+      base = node.getAttribute("transform") || "";
+      node.setAttribute("data-drag-base", base);
+    }
+    node.setAttribute("transform", base ? `${tr} ${base}` : tr);
+  };
+  const dimRoot = _vp.querySelector("#dimension-root");
+  for (const id of ids) {
+    const sel = `[data-id="${_cssEsc(id)}"]`;
+    const node =
+      root.querySelector(sel) || (dimRoot && dimRoot.querySelector(sel));
+    if (!node) return false; // ノード未生成 → 呼び出し側で従来パスにフォールバック
+    apply(node);
+  }
+  // 選択ハンドルも同じ変位で追従（ドラッグ開始時に一度だけ描かれている）
+  const handles = _vp.querySelector("#sel-handles");
+  if (handles) apply(handles);
+  return true;
+}
+
+// ライブドラッグの transform を消して本来の transform に戻す。
+// （複製開始など、確定前に DOM を素の状態へ戻したいときに使う）
+function clearLiveDragTransforms() {
+  if (!_vp) return;
+  for (const node of _vp.querySelectorAll("[data-drag-base]")) {
+    const base = node.getAttribute("data-drag-base");
+    if (base) node.setAttribute("transform", base);
+    else node.removeAttribute("transform");
+    node.removeAttribute("data-drag-base");
+  }
 }
 
 // 鉛筆の点列（real units）を滑らかな SVG path d（用紙座標）へ。
@@ -1656,6 +1701,10 @@ function getShapeLocalPivotPaper(shape, scale) {
 }
 
 function getGroupLocalPivotPaper(shape, scale, ancestorGroups = []) {
+  if (!ancestorGroups.length) {
+    const bb = getShapeLocalBBoxPaper(shape, scale);
+    return bb ? { x: bb.x + bb.w / 2, y: bb.y + bb.h / 2 } : null;
+  }
   let minX = Infinity,
     minY = Infinity,
     maxX = -Infinity,
@@ -1675,6 +1724,7 @@ function getGroupLocalPivotPaper(shape, scale, ancestorGroups = []) {
 function getShapeBBox(shape, scale, ancestorGroups) {
   if (
     ancestorGroups === undefined &&
+    shape?.type !== "group" &&
     shape?.id &&
     typeof findAncestorGroups === "function"
   ) {
@@ -1683,15 +1733,17 @@ function getShapeBBox(shape, scale, ancestorGroups) {
   ancestorGroups = ancestorGroups || [];
 
   if (shape.type === "group") {
-    const pts = collectWorldPointsReal(shape, ancestorGroups);
-    if (!pts.length) return null;
-    const paperPts = pts.map(([x, y]) => [
-      realToPaper(x, scale),
-      realToPaper(y, scale),
-    ]);
-    const bb = aabbFromPoints(paperPts);
-    if (!bb) return null;
-    return { x: bb.x, y: bb.y, w: bb.w, h: bb.h };
+    return _getCachedShapeBBox(shape, scale, ancestorGroups, "world", () => {
+      const pts = collectWorldPointsReal(shape, ancestorGroups);
+      if (!pts.length) return null;
+      const paperPts = pts.map(([x, y]) => [
+        realToPaper(x, scale),
+        realToPaper(y, scale),
+      ]);
+      const bb = aabbFromPoints(paperPts);
+      if (!bb) return null;
+      return { x: bb.x, y: bb.y, w: bb.w, h: bb.h };
+    });
   }
 
   const sample = sampleShapePointsReal(shape);
@@ -1701,7 +1753,9 @@ function getShapeBBox(shape, scale, ancestorGroups) {
     hasVisualTransform(shape) ||
     ancestorGroups.some((g) => hasVisualTransform(g));
 
-  if (!hasTransform) return _getShapeBBoxLegacy(shape, scale);
+  if (!hasTransform) {
+    return _getShapeBBoxLegacy(shape, scale);
+  }
 
   const paperPts = sample.map(([x, y]) => {
     const [rx, ry] = applyWorldTransformReal(x, y, shape, ancestorGroups);
@@ -1853,18 +1907,60 @@ const ROTATE_CURSOR = (() => {
   return `url("data:image/svg+xml,${encodeURIComponent(svg)}") 11 11, alias`;
 })();
 
+const _shapeBBoxCache = new Map();
+let _shapeBBoxCacheDocVersion = -1;
+
+function _shapeBBoxCacheKey(shape, scale, ancestorGroups = [], kind = "world") {
+  if (!shape?.id) return null;
+  const sc = scale ? `${scale.numerator}/${scale.denominator}` : "1/1";
+  const rv =
+    typeof getShapeRenderVersion === "function"
+      ? getShapeRenderVersion(shape.id)
+      : 0;
+  const av = ancestorGroups
+    .map((g) => {
+      const gv =
+        typeof getShapeRenderVersion === "function"
+          ? getShapeRenderVersion(g.id)
+          : 0;
+      return `${g.id}:${gv}`;
+    })
+    .join("/");
+  return `${kind}|${shape.id}|${rv}|${sc}|${av}`;
+}
+
+function _getCachedShapeBBox(shape, scale, ancestorGroups, kind, compute) {
+  const docv =
+    typeof getDocumentRenderVersion === "function"
+      ? getDocumentRenderVersion()
+      : -1;
+  if (docv !== _shapeBBoxCacheDocVersion) {
+    _shapeBBoxCache.clear();
+    _shapeBBoxCacheDocVersion = docv;
+  }
+  const key = _shapeBBoxCacheKey(shape, scale, ancestorGroups, kind);
+  if (!key) return compute();
+  const hit = _shapeBBoxCache.get(key);
+  if (hit) return hit;
+  const bb = compute();
+  if (bb) _shapeBBoxCache.set(key, bb);
+  return bb;
+}
+
 // 変換前のローカル bbox（paper 座標）。回転中の選択枠は
 // ローカル bbox を描いて transform で追従させる（getShapeBBox はワールド AABB を返すため不可）
 function getShapeLocalBBoxPaper(shape, scale) {
   if (shape.type === "group") {
-    // getGroupLocalPivotPaper と同じ規約: 子の変換のみ適用した点群の AABB
-    const pts = [];
-    for (const child of shape.children || []) {
-      pts.push(...collectWorldPointsReal(child, []));
-    }
-    return aabbFromPoints(
-      pts.map(([x, y]) => [realToPaper(x, scale), realToPaper(y, scale)]),
-    );
+    return _getCachedShapeBBox(shape, scale, [], "local", () => {
+      // getGroupLocalPivotPaper と同じ規約: 子の変換のみ適用した点群の AABB
+      const pts = [];
+      for (const child of shape.children || []) {
+        pts.push(...collectWorldPointsReal(child, []));
+      }
+      return aabbFromPoints(
+        pts.map(([x, y]) => [realToPaper(x, scale), realToPaper(y, scale)]),
+      );
+    });
   }
   return _getShapeBBoxLegacy(shape, scale);
 }
@@ -1966,7 +2062,9 @@ function renderSelectionHandles(selIds, page, zoom) {
     const types = [...new Set(shapes.map((s) => s.type))];
     const multiResizable =
       types.length === 1 &&
-      !["line", "bezier", "path", "dimension", "text"].includes(types[0]);
+      !["line", "bezier", "path", "dimension", "text", "group"].includes(
+        types[0],
+      );
     if (multiResizable) {
       let minX = Infinity,
         minY = Infinity,
@@ -2117,12 +2215,16 @@ function renderSelectionHandles(selIds, page, zoom) {
         "pointer-events": "none",
       }),
     );
-    if (xform) {
-      // バッジは回転させず、表示上の AABB の下端に置く（サイズ表記は図形自身の w×h）
-      const wbb = getShapeBBox(shape, page.scale);
-      if (wbb) appendSelectionSizeBadge(g, wbb, zoom, page.scale, bb);
-    } else {
-      appendSelectionSizeBadge(g, bb, zoom, page.scale);
+    // 寸法線は W×H のサイズバッジを出さない。寸法線は面積を持たず、
+    // 計測値（自身の数字）こそが意味なので、選択枠の w×h は誤解を招く。
+    if (!res.isDimension) {
+      if (xform) {
+        // バッジは回転させず、表示上の AABB の下端に置く（サイズ表記は図形自身の w×h）
+        const wbb = getShapeBBox(shape, page.scale);
+        if (wbb) appendSelectionSizeBadge(g, wbb, zoom, page.scale, bb);
+      } else {
+        appendSelectionSizeBadge(g, bb, zoom, page.scale);
+      }
     }
 
     if (shape.type === "line") {
@@ -2181,6 +2283,10 @@ function renderSelectionHandles(selIds, page, zoom) {
             }),
           );
         }
+      }
+      if (shape.type === "group") {
+        if (sg !== g) g.appendChild(sg);
+        continue;
       }
       // 回転表示中はリサイズカーソルの向きを 45° 単位でずらして体感方向に合わせる
       const cursorShift =

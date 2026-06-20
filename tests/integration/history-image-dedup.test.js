@@ -32,7 +32,10 @@ describe("reference image history de-dup", () => {
     app.pushHistory("画像追加");
 
     // de-dup 経路が走り imageId が振られている（履歴文字列には dataUrl が入らない）
-    assert.ok(app.getCurrentPage().referenceImage.imageId, "imageId が付与される");
+    assert.ok(
+      app.getCurrentPage().referenceImage.imageId,
+      "imageId が付与される",
+    );
 
     app.getCurrentPage().referenceImage.opacity = 0.6;
     app.pushHistory("不透明度変更");

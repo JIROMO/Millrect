@@ -328,7 +328,8 @@
     "props.diameter": "Diameter",
     "props.cornerRadius": "Corner radius mm",
     "props.solidIntersect": "Solid-intersect 3D",
-    "props.solidIntersectHint": "Carves holes/profiles that exist only in other views (e.g. a side view) into the 3D part. Heavier CSG when on.",
+    "props.solidIntersectHint":
+      "Carves holes/profiles that exist only in other views (e.g. a side view) into the 3D part. Heavier CSG when on.",
     "props.cornerToggleUniform": "Switch to uniform",
     "props.cornerToggleIndividual": "Switch to individual",
     "props.corner.tl": "Top left",

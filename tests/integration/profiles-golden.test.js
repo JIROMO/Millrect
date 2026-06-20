@@ -23,22 +23,39 @@ describe("derived profiles (golden)", () => {
       {
         action: "addShape",
         shape: {
-          id: "r1", type: "rect", x: 10, y: 20, width: 100, height: 60,
-          stroke: "#000", fill: "#000", strokeWidth: "thin",
+          id: "r1",
+          type: "rect",
+          x: 10,
+          y: 20,
+          width: 100,
+          height: 60,
+          stroke: "#000",
+          fill: "#000",
+          strokeWidth: "thin",
         },
       },
       {
         action: "addShape",
         shape: {
-          id: "c1", type: "circle", cx: 200, cy: 100, r: 30,
-          stroke: "#000", fill: "#000", strokeWidth: "thin",
+          id: "c1",
+          type: "circle",
+          cx: 200,
+          cy: 100,
+          r: 30,
+          stroke: "#000",
+          fill: "#000",
+          strokeWidth: "thin",
         },
       },
     ]);
 
     const profiles = app
       .extractProfilesFromPage(app.getCurrentPage())
-      .map((p) => ({ sourceId: p.sourceId, bbox: p.bbox, ringCount: p.rings.length }));
+      .map((p) => ({
+        sourceId: p.sourceId,
+        bbox: p.bbox,
+        ringCount: p.rings.length,
+      }));
 
     matchSnapshot("rect-circle-profiles", profiles);
   });
@@ -47,7 +64,16 @@ describe("derived profiles (golden)", () => {
     app.applyDrawingCommands([
       {
         action: "addShape",
-        shape: { id: "l1", type: "line", x1: 0, y1: 0, x2: 50, y2: 50, stroke: "#000", strokeWidth: "thin" },
+        shape: {
+          id: "l1",
+          type: "line",
+          x1: 0,
+          y1: 0,
+          x2: 50,
+          y2: 50,
+          stroke: "#000",
+          strokeWidth: "thin",
+        },
       },
     ]);
     const profiles = app.extractProfilesFromPage(app.getCurrentPage());

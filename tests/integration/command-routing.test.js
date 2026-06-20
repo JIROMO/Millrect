@@ -16,9 +16,7 @@ describe("command routing (applyDrawingCommands)", () => {
   });
 
   it("rect は currentLayer.shapes へ入る", () => {
-    app.applyDrawingCommands([
-      { action: "addShape", shape: rect("r1") },
-    ]);
+    app.applyDrawingCommands([{ action: "addShape", shape: rect("r1") }]);
     const page = app.getCurrentPage();
     assert.equal(page.layers[0].shapes.length, 1);
     assert.equal(page.layers[0].shapes[0].id, "r1");
@@ -39,7 +37,11 @@ describe("command routing (applyDrawingCommands)", () => {
       },
     ]);
     const page = app.getCurrentPage();
-    assert.equal(page.layers[0].shapes.length, 1, "shapes に dimension が混入しない");
+    assert.equal(
+      page.layers[0].shapes.length,
+      1,
+      "shapes に dimension が混入しない",
+    );
     assert.equal(page.dimensions.length, 1);
     assert.equal(page.dimensions[0].id, "d1");
   });

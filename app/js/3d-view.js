@@ -1145,9 +1145,7 @@ function _build3DSceneFromViews(options = {}) {
   const anySolid = state.pages.some((pg) =>
     [...iterProfileSourcesFromPage(pg)].some(
       ({ shape }) =>
-        shape?.solidIntersect &&
-        shape.type !== "line" &&
-        shape.type !== "text",
+        shape?.solidIntersect && shape.type !== "line" && shape.type !== "text",
     ),
   );
   _3dConcatVolumes = !anySolid;
@@ -1210,7 +1208,9 @@ function _build3DSceneFromViews(options = {}) {
           const prev = byColor.get(color);
           byColor.set(
             color,
-            prev ? _combineVolumeMeshes(prev, mesh, _makeMaterial(color)) : mesh,
+            prev
+              ? _combineVolumeMeshes(prev, mesh, _makeMaterial(color))
+              : mesh,
           );
         }
       }
@@ -1249,7 +1249,10 @@ function _build3DSceneFromViews(options = {}) {
       { pages: byType[viewB], viewType: viewB },
     ];
     return makeAxisEntry(
-      axisVolume(buildUnion(byType[viewA], viewA), buildUnion(byType[viewB], viewB)),
+      axisVolume(
+        buildUnion(byType[viewA], viewA),
+        buildUnion(byType[viewB], viewB),
+      ),
       specs,
     );
   };
@@ -1593,9 +1596,7 @@ function _buildPartMeshByRevolve(
           const bbMaxX = prof.bbox.maxX ?? prof.bbox.x + prof.bbox.w;
           if (rawX < bbMinX || rawX > bbMaxX) continue;
           const halfW = _realToThreeMM(bbMaxX - bbMinX) / 2;
-          const centerLx = _realToThreeMM(
-            (bbMinX + bbMaxX) / 2 - frame.bbox.x,
-          );
+          const centerLx = _realToThreeMM((bbMinX + bbMaxX) / 2 - frame.bbox.x);
           const center = maps.toWorld(centerLx);
           if (!best || halfW < best.halfW) best = { center, halfW };
         }
@@ -2005,7 +2006,11 @@ function _cleanGeometryForExport(position) {
   const indices = [];
   const vid = (x, y, z) => {
     const key =
-      Math.round(x * inv) + "," + Math.round(y * inv) + "," + Math.round(z * inv);
+      Math.round(x * inv) +
+      "," +
+      Math.round(y * inv) +
+      "," +
+      Math.round(z * inv);
     let id = map.get(key);
     if (id === undefined) {
       id = verts.length / 3;

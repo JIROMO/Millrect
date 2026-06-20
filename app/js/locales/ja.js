@@ -326,7 +326,8 @@
     "props.diameter": "直径",
     "props.cornerRadius": "角丸 mm",
     "props.solidIntersect": "立体交差で生成",
-    "props.solidIntersectHint": "他ビュー（側面図など）にしかない穴・輪郭を3Dに反映します。ONにするとCSG交差が重くなります。",
+    "props.solidIntersectHint":
+      "他ビュー（側面図など）にしかない穴・輪郭を3Dに反映します。ONにするとCSG交差が重くなります。",
     "props.cornerToggleUniform": "統一に切り替え",
     "props.cornerToggleIndividual": "個別に切り替え",
     "props.corner.tl": "左上",

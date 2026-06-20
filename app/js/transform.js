@@ -7,6 +7,8 @@
 // SVG renderer.js の pivot（未変換 bbox 中心）と一致させる。
 
 const _UNIT_SCALE = { numerator: 1, denominator: 1 };
+const _shapePivotRealCache = new Map();
+let _shapePivotRealCacheDocVersion = -1;
 
 function aabbFromPoints(points) {
   if (!points.length) return null;
@@ -24,6 +26,29 @@ function aabbFromPoints(points) {
 }
 
 function getShapePivotReal(shape) {
+  const docv =
+    typeof getDocumentRenderVersion === "function"
+      ? getDocumentRenderVersion()
+      : -1;
+  if (docv !== _shapePivotRealCacheDocVersion) {
+    _shapePivotRealCache.clear();
+    _shapePivotRealCacheDocVersion = docv;
+  }
+  const tlv =
+    shape?.type === "text" && typeof textLayoutCacheVersion === "function"
+      ? textLayoutCacheVersion()
+      : 0;
+  const rv =
+    shape?.id && typeof getShapeRenderVersion === "function"
+      ? getShapeRenderVersion(shape.id)
+      : 0;
+  const cacheKey =
+    shape?.id && shape.type === "group" ? `${shape.id}|${rv}|${tlv}` : null;
+  if (cacheKey) {
+    const hit = _shapePivotRealCache.get(cacheKey);
+    if (hit) return hit;
+  }
+  let pivot;
   if (shape && shape.type === "group") {
     // renderer.js の getGroupLocalPivotPaper と同じ規約:
     // 子それぞれの変換（子自身の rotation/flip）を適用した点群の AABB 中心
@@ -32,17 +57,27 @@ function getShapePivotReal(shape) {
       pts.push(...collectWorldPointsReal(child, []));
     }
     const bb = aabbFromPoints(pts);
-    if (!bb) return { x: 0, y: 0 };
-    return { x: bb.x + bb.w / 2, y: bb.y + bb.h / 2 };
+    pivot = bb ? { x: bb.x + bb.w / 2, y: bb.y + bb.h / 2 } : { x: 0, y: 0 };
+  } else {
+    const sample = sampleShapePointsReal(shape);
+    if (!sample.length) {
+      pivot = { x: 0, y: 0 };
+    } else {
+      let minX = Infinity,
+        minY = Infinity,
+        maxX = -Infinity,
+        maxY = -Infinity;
+      for (const [x, y] of sample) {
+        if (x < minX) minX = x;
+        if (y < minY) minY = y;
+        if (x > maxX) maxX = x;
+        if (y > maxY) maxY = y;
+      }
+      pivot = { x: (minX + maxX) / 2, y: (minY + maxY) / 2 };
+    }
   }
-  const sample = sampleShapePointsReal(shape);
-  if (!sample.length) return { x: 0, y: 0 };
-  const xs = sample.map(([x]) => x);
-  const ys = sample.map(([, y]) => y);
-  return {
-    x: (Math.min(...xs) + Math.max(...xs)) / 2,
-    y: (Math.min(...ys) + Math.max(...ys)) / 2,
-  };
+  if (cacheKey) _shapePivotRealCache.set(cacheKey, pivot);
+  return pivot;
 }
 
 function hasVisualTransform(shape) {

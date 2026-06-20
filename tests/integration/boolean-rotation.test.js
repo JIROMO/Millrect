@@ -64,8 +64,14 @@ describe("boolean: 回転焼き込みが二重適用されない", () => {
     });
     const { w, h } = polyBBox(poly);
     const expected = 100 * Math.SQRT2; // ≈141.4（単一回転）。二重回転=90°なら100のまま
-    assert.ok(Math.abs(w - expected) < 1, `width expected ~${expected}, got ${w}`);
-    assert.ok(Math.abs(h - expected) < 1, `height expected ~${expected}, got ${h}`);
+    assert.ok(
+      Math.abs(w - expected) < 1,
+      `width expected ~${expected}, got ${w}`,
+    );
+    assert.ok(
+      Math.abs(h - expected) < 1,
+      `height expected ~${expected}, got ${h}`,
+    );
   });
 
   it("回転なしの rect はそのまま", () => {

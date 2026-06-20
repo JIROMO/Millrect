@@ -116,7 +116,11 @@ async function _hydrateAndActivate(tabId) {
   if (target.projectId && typeof dbLoadProject === "function") {
     try {
       const row = await dbLoadProject(target.projectId);
-      if (row && row.data && typeof importProjectFromJsonString === "function") {
+      if (
+        row &&
+        row.data &&
+        typeof importProjectFromJsonString === "function"
+      ) {
         importProjectFromJsonString(row.data);
       }
     } catch (e) {
@@ -288,8 +292,7 @@ function _tabsSignature() {
     activeId: _activeProjectTabId,
     tabs: _projectTabs.map((tab) => ({
       id: tab.tabId,
-      name:
-        tab.tabId === _activeProjectTabId && st ? st.projectName : tab.name,
+      name: tab.tabId === _activeProjectTabId && st ? st.projectName : tab.name,
     })),
   });
 }
@@ -306,8 +309,7 @@ function renderProjectTabs() {
   const esc =
     typeof _escapeHtml === "function" ? _escapeHtml : (s) => String(s ?? "");
   const st = typeof getState === "function" ? getState() : null;
-  const untitled =
-    typeof t === "function" ? t("default.untitled") : "Untitled";
+  const untitled = typeof t === "function" ? t("default.untitled") : "Untitled";
 
   bar.innerHTML = "";
   for (const tab of _projectTabs) {

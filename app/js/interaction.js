@@ -253,14 +253,20 @@ function onMouseMove(e, svgEl) {
     return;
   }
   const sv = screenToSVG(e, svgEl);
-  const snapOpts = _getSelectSnapOpts();
+  const tool = state.activeTool;
+  const isSelectionMove =
+    tool === "select" &&
+    (_ds?.action === "move" || _ds?.action === "move-pending");
+  const snapOpts = isSelectionMove ? { gridOnly: true } : _getSelectSnapOpts();
   const { pt: pp, snapped, snapType } = getSnapped(sv.x, sv.y, snapOpts);
   _lastPP = pp;
   const rp = paperToReal(pp.x, pp.y);
   updateStatusCoords(rp);
-  snapped
-    ? renderSnapIndicator(pp.x, pp.y, state.zoom, snapType)
-    : removeSnapIndicator();
+  if (!isSelectionMove) {
+    snapped
+      ? renderSnapIndicator(pp.x, pp.y, state.zoom, snapType)
+      : removeSnapIndicator();
+  }
 
   if (
     typeof handleReferenceImagePointerMove === "function" &&
@@ -273,7 +279,6 @@ function onMouseMove(e, svgEl) {
     return;
   }
 
-  const tool = state.activeTool;
   if (
     !_ds &&
     (tool === "select" || tool === "hand") &&
@@ -465,10 +470,23 @@ function onMouseUp(e, svgEl) {
     if (_ds.duplicated && typeof setLastDuplicateOffset === "function") {
       setLastDuplicateOffset(_ds.lastDxR || 0, _ds.lastDyR || 0);
     }
+    // ライブドラッグ（transform のみ）中は実座標を動かしていないので、ここで反映する。
+    // その後のフル render が transform 付きノードを素のノードへ作り直す。
+    if (_ds.fastActive) {
+      const dxR = _ds.lastDxR || 0,
+        dyR = _ds.lastDyR || 0;
+      if (dxR || dyR) {
+        for (const id of getState().selectedShapeIds) {
+          const res = findShapeById(id);
+          if (res) shiftShape(res.shape, dxR, dyR);
+        }
+      }
+    }
     if (typeof markShapeDirty === "function") {
       for (const id of getState().selectedShapeIds) markShapeDirty(id);
     }
     pushHistory();
+    if (_ds.fastActive) render();
     _ds = null;
     svgEl.style.cursor = "default";
     document.body.classList.remove("dragging");
@@ -792,6 +810,7 @@ function handleSelDown(e, svgEl, pp, rp) {
     state.selectedShapeIds = [sid];
     const res = findShapeById(sid);
     if (!res) return;
+    if (res.shape?.type === "group") return;
     const origShape = JSON.parse(JSON.stringify(res.shape));
     _ds = {
       action: "resize",
@@ -811,6 +830,41 @@ function handleSelDown(e, svgEl, pp, rp) {
     render();
     uiUpdate();
     return;
+  }
+
+  // 寸法線はオフセット位置に描画され、ヒット線/数字ラベルが DOM 上に存在する。
+  // 見えている形状を直接クリックして選べるよう、幾何 bbox 判定より先に e.target を見る。
+  const dimEl = e.target.closest?.('[data-type="dimension"]');
+  if (dimEl) {
+    const did = dimEl.getAttribute("data-id");
+    const dres = findShapeById(did);
+    if (dres?.isDimension) {
+      if (e.shiftKey) {
+        const idx = state.selectedShapeIds.indexOf(did);
+        if (idx === -1) state.selectedShapeIds.push(did);
+        else state.selectedShapeIds.splice(idx, 1);
+        _ds = null;
+        _resetTextClickState();
+        render();
+        uiUpdate();
+        return;
+      }
+      _resetTextClickState();
+      if (!state.selectedShapeIds.includes(did)) {
+        state.selectedShapeIds = [did];
+      }
+      _selOrig = {};
+      for (const selId of state.selectedShapeIds) {
+        const r = findShapeById(selId);
+        if (r) _selOrig[selId] = JSON.parse(JSON.stringify(r.shape));
+      }
+      _ds = { action: "move", startPP: pp };
+      svgEl.style.cursor = "move";
+      if (e.altKey) _beginDuplicate([...state.selectedShapeIds]);
+      render();
+      uiUpdate();
+      return;
+    }
   }
 
   const picked = findTopShapeAtRealPoint(rp);
@@ -1113,7 +1167,7 @@ function handleRotate(rp, shiftKey) {
   const a = Math.atan2(rp.y - pivot.y, rp.x - pivot.x);
   // デルタを (-180, 180] に正規化して ±180° 境界での値ジャンプを防ぐ
   let delta = ((a - startAngle) * 180) / Math.PI;
-  delta = ((delta % 360) + 540) % 360 - 180;
+  delta = (((delta % 360) + 540) % 360) - 180;
   let deg = origRotation + delta;
   if (shiftKey) deg = Math.round(deg / 15) * 15;
   res.shape.rotation = normalizeRotationDeg(deg);
@@ -1452,6 +1506,26 @@ function handleSelMove(pp, shiftKey) {
   // mouseup で複製オフセットとして記録するため保持
   _ds.lastDxR = dxR;
   _ds.lastDyR = dyR;
+
+  // 子が多いグループは毎フレームの座標書き換え＋サブツリー DOM 再生成が重い。
+  // 単一グループのドラッグは「既存ノードに translate を被せるだけ」で動かし、
+  // 実座標への反映は mouseup で一度だけ行う（liveDragByTransform / fastActive）。
+  const fast =
+    !_ds.duplicated &&
+    typeof liveDragByTransform === "function" &&
+    state.selectedShapeIds.length === 1 &&
+    findShapeById(state.selectedShapeIds[0])?.shape.type === "group";
+  if (fast) {
+    const dxP = realToPaperDist(dxR, scale);
+    const dyP = realToPaperDist(dyR, scale);
+    if (liveDragByTransform(state.selectedShapeIds, dxP, dyP)) {
+      _ds.fastActive = true;
+      if (kp) renderSnapIndicator(kp.x, kp.y, state.zoom, kp.snapType);
+      return;
+    }
+  }
+  _ds.fastActive = false;
+
   for (const id of state.selectedShapeIds) {
     const orig = _selOrig[id];
     if (!orig) continue;
@@ -1495,9 +1569,13 @@ function handleSelMove(pp, shiftKey) {
         h2: n.h2 ? { x: n.h2.x + dxR, y: n.h2.y + dyR } : null,
       }));
     } else if (shape.type === "group") {
-      // Restore children to original positions then shift
-      shape.children = JSON.parse(JSON.stringify(orig.children));
-      shiftShape(shape, dxR, dyR);
+      // 毎フレームでサブツリー全体を JSON deep clone してから絶対変位を当てると、
+      // 子が多い / path 点列が多いグループでドラッグが急に重くなる。
+      // 代わりに前フレームからの「増分」だけシフトする（clone 不要）。
+      const prev = (_ds.groupPrev ||= {});
+      const p = prev[id] || { x: 0, y: 0 };
+      shiftShape(shape, dxR - p.x, dyR - p.y);
+      prev[id] = { x: dxR, y: dyR };
     }
   }
   liveUpdateShapes(state.selectedShapeIds);
@@ -1799,7 +1877,10 @@ function _shapeLocalRings(shape) {
       const pts = [];
       for (let i = 0; i < 48; i++) {
         const a = (2 * Math.PI * i) / 48;
-        pts.push([shape.cx + shape.r * Math.cos(a), shape.cy + shape.r * Math.sin(a)]);
+        pts.push([
+          shape.cx + shape.r * Math.cos(a),
+          shape.cy + shape.r * Math.sin(a),
+        ]);
       }
       return { rings: [pts], closed: true };
     }
@@ -1807,7 +1888,10 @@ function _shapeLocalRings(shape) {
       const pts = [];
       for (let i = 0; i < 48; i++) {
         const a = (2 * Math.PI * i) / 48;
-        pts.push([shape.cx + shape.rx * Math.cos(a), shape.cy + shape.ry * Math.sin(a)]);
+        pts.push([
+          shape.cx + shape.rx * Math.cos(a),
+          shape.cy + shape.ry * Math.sin(a),
+        ]);
       }
       return { rings: [pts], closed: true };
     }
@@ -1838,16 +1922,11 @@ function _worldOutlineForShape(shape, ancestorGroups) {
 
 function realPointInShapeGeometry(rp, shape, scale, ancestorGroups = []) {
   if (shape.type === "group") {
-    for (const child of shape.children || []) {
-      if (
-        realPointInShapeGeometry(rp, child, scale, [...ancestorGroups, shape])
-      )
-        return true;
-    }
+    const bb = getShapeBBox(shape, scale, ancestorGroups);
+    if (!bb || !realPointInPaperBBox(rp, bb, scale)) return false;
     // グループは1オブジェクトとして扱う: 子図形の隙間や塗りなし図形の
     // 内側をつかんでも選択・移動できるよう bbox にフォールバックする
-    const bb = getShapeBBox(shape, scale, ancestorGroups);
-    return Boolean(bb && realPointInPaperBBox(rp, bb, scale));
+    return true;
   }
   const outline = _worldOutlineForShape(shape, ancestorGroups);
   if (!outline) {
@@ -2472,6 +2551,10 @@ function beginAltDuplicate() {
 }
 
 function _beginDuplicate(origIds) {
+  // ライブドラッグ（transform のみ）から複製へ移る場合、元ノードに被せた
+  // translate を素に戻してから複製する（以降は従来パスで座標を動かす）。
+  if (typeof clearLiveDragTransforms === "function") clearLiveDragTransforms();
+  if (_ds) _ds.fastActive = false;
   const page = getCurrentPage();
   // Restore originals to pre-drag positions (in _selOrig) before cloning
   for (const id of origIds) {

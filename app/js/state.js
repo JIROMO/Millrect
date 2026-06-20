@@ -154,7 +154,9 @@ function _syncRenderableVersions(prevStr, nextStr) {
     _documentRenderVersion++;
     return;
   }
-  const prev = prevStr ? _renderableSnapshotMap(JSON.parse(prevStr)) : new Map();
+  const prev = prevStr
+    ? _renderableSnapshotMap(JSON.parse(prevStr))
+    : new Map();
   const next = _renderableSnapshotMap(JSON.parse(nextStr));
   const ids = new Set([...prev.keys(), ...next.keys()]);
   for (const id of ids) {
@@ -168,7 +170,9 @@ function _resetRenderableVersions(snapStr) {
   _clearPendingRenderableDirty();
   if (snapStr) {
     const snap = JSON.parse(snapStr);
-    _iterRenderableSnapshots(snap, (shape) => _bumpShapeRenderVersion(shape?.id));
+    _iterRenderableSnapshots(snap, (shape) =>
+      _bumpShapeRenderVersion(shape?.id),
+    );
   }
   _documentRenderVersion++;
 }
@@ -582,6 +586,37 @@ function snapPoint(pt, gridMm = 1) {
 //   onSegment({ x1, y1, x2, y2 })
 // rotation/flipH/flipV は表示変換だが、スナップは表示位置に合わせる必要が
 // あるため renderer と同じ変換（applyWorldTransformReal）を候補点にも適用する
+// グループのスナップ用 world-AABB（real 単位）。子が多いグループで毎フレーム
+// 全頂点を walk しないよう、ドキュメント版数をキーにキャッシュする。
+const _groupSnapAABBCache = new Map(); // id -> { ver, aabb }
+function _groupSnapAABB(group, ancestors) {
+  const ver =
+    typeof getDocumentRenderVersion === "function"
+      ? getDocumentRenderVersion()
+      : -1;
+  const cached = _groupSnapAABBCache.get(group.id);
+  if (cached && cached.ver === ver) return cached.aabb;
+  let aabb = null;
+  if (typeof collectWorldPointsReal === "function") {
+    const pts = collectWorldPointsReal(group, ancestors);
+    if (pts && pts.length) {
+      let minX = Infinity,
+        minY = Infinity,
+        maxX = -Infinity,
+        maxY = -Infinity;
+      for (const [x, y] of pts) {
+        if (x < minX) minX = x;
+        if (y < minY) minY = y;
+        if (x > maxX) maxX = x;
+        if (y > maxY) maxY = y;
+      }
+      aabb = { minX, minY, maxX, maxY };
+    }
+  }
+  _groupSnapAABBCache.set(group.id, { ver, aabb });
+  return aabb;
+}
+
 function _collectSnapGeometry(shapes, scale, excludeIds, onPoint, onSegment) {
   const rtp = (v) => realToPaperDist(v, scale);
 
@@ -600,8 +635,31 @@ function _collectSnapGeometry(shapes, scale, excludeIds, onPoint, onSegment) {
   function collect(s, ancestors) {
     if (excludeIds && excludeIds.has(s.id)) return;
     if (s.type === "group") {
-      const stack = [...ancestors, s];
-      for (const child of s.children || []) collect(child, stack);
+      // グループはスナップ上「1 つの塊」として扱い、内部の全頂点を展開しない。
+      // 子が多い/複雑なグループでも毎フレームのスナップ計算を bbox（9 点 + 4 辺）
+      // に抑え、「グループが在るだけで全体がもっさり」を防ぐ。
+      if (excludeIds && excludeIds.has(s.id)) return;
+      const aabb = _groupSnapAABB(s, ancestors);
+      if (!aabb) return;
+      const x1 = rtp(aabb.minX),
+        y1 = rtp(aabb.minY),
+        x2 = rtp(aabb.maxX),
+        y2 = rtp(aabb.maxY);
+      const cx = (x1 + x2) / 2,
+        cy = (y1 + y2) / 2;
+      onPoint(x1, y1, "endpoint", 1);
+      onPoint(x2, y1, "endpoint", 1);
+      onPoint(x1, y2, "endpoint", 1);
+      onPoint(x2, y2, "endpoint", 1);
+      onPoint(cx, y1, "midpoint", 3);
+      onPoint(cx, y2, "midpoint", 3);
+      onPoint(x1, cy, "midpoint", 3);
+      onPoint(x2, cy, "midpoint", 3);
+      onPoint(cx, cy, "center", 4);
+      onSegment({ x1, y1, x2, y2: y1 });
+      onSegment({ x1: x2, y1, x2, y2 });
+      onSegment({ x1, y1: y2, x2, y2 });
+      onSegment({ x1, y1, x2: x1, y2 });
       return;
     }
     const xf = makeXf(s, ancestors);
@@ -685,6 +743,42 @@ function _collectSnapGeometry(shapes, scale, excludeIds, onPoint, onSegment) {
   for (const s of shapes) collect(s, []);
 }
 
+// スナップ候補（キーポイント＋線分）をドキュメント版数でキャッシュする。
+// hover / transform-only ドラッグ中は図面が変わらないため毎フレーム再構築せず
+// 再利用でき、複雑な path を含む図面でもマウス移動が O(候補数) のフィルタだけで済む。
+let _snapGeomCache = null;
+function _snapGeometryFor(shapes, scale, excludeIds) {
+  const build = () => {
+    const points = [];
+    const segments = [];
+    _collectSnapGeometry(
+      shapes,
+      scale,
+      excludeIds || null,
+      (x, y, snapType, priority) => points.push({ x, y, snapType, priority }),
+      (seg) => segments.push(seg),
+    );
+    return { points, segments };
+  };
+  const ver =
+    typeof getDocumentRenderVersion === "function"
+      ? getDocumentRenderVersion()
+      : -1;
+  const pageId =
+    typeof getCurrentPage === "function" ? getCurrentPage()?.id : "";
+  const sc = scale ? `${scale.numerator}/${scale.denominator}` : "1/1";
+  const excludeKey =
+    excludeIds && excludeIds.size ? [...excludeIds].sort().join(",") : "";
+  const key = `${ver}|${pageId}|${sc}|${excludeKey}`;
+  if (_snapGeomCache && _snapGeomCache.key === key) return _snapGeomCache;
+  const g = build();
+  _snapGeomCache = { key, points: g.points, segments: g.segments };
+  return _snapGeomCache;
+}
+
+// 近傍線分が多すぎると交点・垂線が O(n²) に膨らむため上限を設ける。
+const _NEAR_SEG_CAP = 48;
+
 // ── snapToShapes: オブジェクトスナップ ────────────────────────
 // 戻り値: { x, y, snapType } | null
 // snapType: "endpoint" | "midpoint" | "center" | "intersection" | "perpendicular" | "guide"
@@ -699,7 +793,14 @@ function _collectSnapGeometry(shapes, scale, excludeIds, onPoint, onSegment) {
 //
 // guides: ビューガイド（見通し線）の paper 座標。{ v: [x...], h: [y...] } | null
 // opts.excludeIds: Set<shapeId> — ドラッグ中の図形を候補から除外（自己スナップ防止）
-function snapToShapes(pt, shapes, scale, threshold = 2, guides = null, opts = {}) {
+function snapToShapes(
+  pt,
+  shapes,
+  scale,
+  threshold = 2,
+  guides = null,
+  opts = {},
+) {
   // 候補リスト: [{ x, y, snapType, priority }]
   const candidates = [];
 
@@ -708,22 +809,22 @@ function snapToShapes(pt, shapes, scale, threshold = 2, guides = null, opts = {}
     if (d < threshold) candidates.push({ x, y, snapType, priority, d });
   }
 
-  // ── 各 shape からキーポイントを収集 ──────────────────────────
-
-  // line セグメントリスト（交点・垂線計算用）
-  const segments = []; // [{ x1,y1,x2,y2 }] (paper座標)
-
-  _collectSnapGeometry(shapes, scale, opts.excludeIds || null, add, (seg) =>
-    segments.push(seg),
-  );
+  // ── 各 shape からキーポイントを収集（hover はキャッシュ）─────────
+  const geom = _snapGeometryFor(shapes, scale, opts.excludeIds || null);
+  for (const p of geom.points) add(p.x, p.y, p.snapType, p.priority);
+  const segments = geom.segments; // [{ x1,y1,x2,y2 }] (paper座標)
 
   // 交点・垂線・ガイド交点の候補はすべてセグメント上の点であり、add() は
   // threshold 以内しか採用しない。pt から threshold より遠いセグメントは
   // 候補を生めないため先に除外する。ブーリアン演算後の多頂点 path で
   // 交点総当たりが O(S²) に爆発するのを防ぐ
-  const nearSegments = segments.filter(
+  let nearSegments = segments.filter(
     (seg) => _pointSegmentDist(pt, seg) < threshold,
   );
+  // 近傍線分が密集していると交点計算が O(n²) になるため上限で打ち切る
+  if (nearSegments.length > _NEAR_SEG_CAP) {
+    nearSegments = nearSegments.slice(0, _NEAR_SEG_CAP);
+  }
 
   // ── 交点スナップ ─────────────────────────────────────────────
   // pt 近傍セグメントペアの交点を計算
@@ -785,7 +886,8 @@ function _pointSegmentDist(pt, seg) {
   const dx = seg.x2 - seg.x1,
     dy = seg.y2 - seg.y1;
   const len2 = dx * dx + dy * dy;
-  let t = len2 < 1e-10 ? 0 : ((pt.x - seg.x1) * dx + (pt.y - seg.y1) * dy) / len2;
+  let t =
+    len2 < 1e-10 ? 0 : ((pt.x - seg.x1) * dx + (pt.y - seg.y1) * dy) / len2;
   t = Math.max(0, Math.min(1, t));
   return Math.hypot(pt.x - (seg.x1 + t * dx), pt.y - (seg.y1 + t * dy));
 }
@@ -797,21 +899,18 @@ function _pointSegmentDist(pt, seg) {
 // 戻り値: { dx, dy, x, y, snapType } | null（paper 座標。x,y は吸着先）
 function snapDragPoints(dragPoints, targetShapes, scale, threshold, opts = {}) {
   if (!dragPoints.length) return null;
-  const targetPts = [];
-  const segments = [];
-  _collectSnapGeometry(
-    targetShapes,
-    scale,
-    opts.excludeIds || null,
-    (x, y, snapType, priority) => targetPts.push({ x, y, snapType, priority }),
-    (seg) => segments.push(seg),
-  );
+  const geom = _snapGeometryFor(targetShapes, scale, opts.excludeIds || null);
+  const targetPts = geom.points.slice();
+  const segments = geom.segments;
 
   // 交点候補: いずれかの dragPoint の threshold 近傍にあるセグメントのみ対象
   // （snapToShapes と同様の O(S²) 爆発対策）
-  const nearSegments = segments.filter((seg) =>
+  let nearSegments = segments.filter((seg) =>
     dragPoints.some((dp) => _pointSegmentDist(dp, seg) < threshold),
   );
+  if (nearSegments.length > _NEAR_SEG_CAP) {
+    nearSegments = nearSegments.slice(0, _NEAR_SEG_CAP);
+  }
   for (let i = 0; i < nearSegments.length; i++) {
     for (let j = i + 1; j < nearSegments.length; j++) {
       const ix = _segmentIntersection(nearSegments[i], nearSegments[j]);
@@ -848,7 +947,13 @@ function snapDragPoints(dragPoints, targetShapes, scale, threshold, opts = {}) {
     }
   }
   if (!best) return null;
-  return { dx: best.dx, dy: best.dy, x: best.x, y: best.y, snapType: best.snapType };
+  return {
+    dx: best.dx,
+    dy: best.dy,
+    x: best.x,
+    y: best.y,
+    snapType: best.snapType,
+  };
 }
 
 // 図形群のスナップキーポイントを paper 座標で列挙（ドラッグ側の基準点用）

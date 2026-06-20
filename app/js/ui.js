@@ -2404,11 +2404,7 @@ function buildPropsHTML(s) {
     ];
   }
 
-  if (
-    s.type !== "dimension" &&
-    s.type !== "image" &&
-    s.type !== "pencil"
-  ) {
+  if (s.type !== "dimension" && s.type !== "image" && s.type !== "pencil") {
     geometry.push(
       pSel(t("props.strokeWidth"), "strokeWidth", s.strokeWidth || "medium", [
         { v: "thin", l: t("props.strokeWidth.thin") },

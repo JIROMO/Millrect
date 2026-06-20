@@ -73,28 +73,49 @@ const PRELUDE = `
 // 新しいコア API を露出したくなったら、ここに名前を足すだけ。
 const EXPORT_NAMES = [
   // lifecycle
-  "initState", "getState", "defaultState",
+  "initState",
+  "getState",
+  "defaultState",
   // command 入口（MCP / WS と同じ本番経路）
   "applyDrawingCommands",
   // shape CRUD
-  "addShape", "updateShape", "deleteShape",
+  "addShape",
+  "updateShape",
+  "deleteShape",
   // lookups
-  "findShapeById", "getCurrentPage", "getCurrentLayer", "getShapeBBox",
+  "findShapeById",
+  "getCurrentPage",
+  "getCurrentLayer",
+  "getShapeBBox",
   // history
-  "undo", "redo", "canUndo", "canRedo", "pushHistory",
-  "getDocumentRenderVersion", "getShapeRenderVersion", "markShapeDirty",
+  "undo",
+  "redo",
+  "canUndo",
+  "canRedo",
+  "pushHistory",
+  "getDocumentRenderVersion",
+  "getShapeRenderVersion",
+  "markShapeDirty",
   // ids
   "genId",
   // derived: profiles（2D→3D 派生の入口）
-  "shapeToProfile", "shapeToProfileRings", "extractProfilesFromPage",
+  "shapeToProfile",
+  "shapeToProfileRings",
+  "extractProfilesFromPage",
   // boolean 入力（回転焼き込みの回帰テスト用）
   "shapeToClipPolygon",
   // ops
-  "alignShapes", "distributeShapes",
-  "groupSelectedShapes", "ungroupSelectedShapes",
-  "subtractSelectedShapes", "unionSelectedShapes",
+  "alignShapes",
+  "distributeShapes",
+  "groupSelectedShapes",
+  "ungroupSelectedShapes",
+  "subtractSelectedShapes",
+  "unionSelectedShapes",
   // constraints
-  "getAllConstraints", "applyConstraints", "addConstraint", "removeConstraint",
+  "getAllConstraints",
+  "applyConstraints",
+  "addConstraint",
+  "removeConstraint",
 ];
 
 function read(rel) {
@@ -127,7 +148,9 @@ function bootApp() {
   // epilogue: トップレベルの束縛を direct eval で拾って globalThis.__app へ
   src +=
     "\n;(function () {\n" +
-    "  var names = " + JSON.stringify(EXPORT_NAMES) + ";\n" +
+    "  var names = " +
+    JSON.stringify(EXPORT_NAMES) +
+    ";\n" +
     "  var out = {};\n" +
     "  for (var i = 0; i < names.length; i++) {\n" +
     "    try { out[names[i]] = eval(names[i]); } catch (e) { /* 未定義はスキップ */ }\n" +

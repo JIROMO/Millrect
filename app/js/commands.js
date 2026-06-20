@@ -65,10 +65,23 @@ function reorderSelectionZ(ids, mode) {
   return changed;
 }
 
+// 縦/横寸法は計測軸に揃える。vertical は to.x = from.x、horizontal は to.y = from.y。
+// 作図時のクリックずれや MCP からの非整列入力で寸法線が斜めにならないよう正規化する。
+function normalizeDimensionGeometry(dim) {
+  if (!dim || dim.type !== "dimension" || !dim.from || !dim.to) return dim;
+  if (dim.dimensionType === "vertical") {
+    dim.to.x = dim.from.x;
+  } else if (dim.dimensionType === "horizontal") {
+    dim.to.y = dim.from.y;
+  }
+  return dim;
+}
+
 function addShape(shape) {
   // 寸法線はページ直属の dimensions[] に格納する（layer.shapes には入れない）
   // これにより Profile抽出・boolean演算・3D生成が寸法線を自動的に無視できる
   if (shape.type === "dimension") {
+    normalizeDimensionGeometry(shape);
     const page = getCurrentPage();
     if (!page.dimensions) page.dimensions = [];
     page.dimensions.push(shape);
@@ -118,6 +131,7 @@ function updateShape(id, values) {
       res.shape[key] = val;
     }
   }
+  if (res.isDimension) normalizeDimensionGeometry(res.shape);
   // 拘束を再適用して幾何的整合性を保つ
   applyConstraints(res.page);
   if (trackTextPreview) {
@@ -900,6 +914,7 @@ function applyDrawingCommands(commands) {
       }
       // 寸法線は dimensions[] へ、それ以外は layer.shapes[] へ
       if (cmd.shape?.type === "dimension") {
+        normalizeDimensionGeometry(cmd.shape);
         const page = getCurrentPage();
         if (!page.dimensions) page.dimensions = [];
         page.dimensions.push(cmd.shape);
@@ -919,14 +934,19 @@ function applyDrawingCommands(commands) {
         }
         const page = getCurrentPage();
         if (!page.dimensions) page.dimensions = [];
-        page.dimensions.push({ type: "dimension", ...dim });
+        const newDim = { type: "dimension", ...dim };
+        normalizeDimensionGeometry(newDim);
+        page.dimensions.push(newDim);
       }
     } else if (
       cmd.action === "updateShape" ||
       cmd.action === "updateDimension"
     ) {
       const r = findShapeById(cmd.id);
-      if (r && cmd.values) Object.assign(r.shape, cmd.values);
+      if (r && cmd.values) {
+        Object.assign(r.shape, cmd.values);
+        if (r.isDimension) normalizeDimensionGeometry(r.shape);
+      }
     } else if (cmd.action === "deleteShape") {
       const r = findShapeById(cmd.id);
       if (r) {
