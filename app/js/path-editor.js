@@ -98,11 +98,58 @@ function startBezierDraw() {
   _bezierDraw = null;
 }
 
-function handleBezierDown(rp, pp) {
+// Snap `pt` so the vector from `from` is constrained to 0/45/90… increments.
+function _bezierAngleSnap(from, pt) {
+  const dx = pt.x - from.x,
+    dy = pt.y - from.y;
+  const len = Math.hypot(dx, dy);
+  if (len < 1e-6) return { x: pt.x, y: pt.y };
+  // 15° increments (0/15/30/45…) — fine enough to hit 45° corners precisely.
+  const step = Math.PI / 12;
+  const snapped = Math.round(Math.atan2(dy, dx) / step) * step;
+  return { x: from.x + len * Math.cos(snapped), y: from.y + len * Math.sin(snapped) };
+}
+
+// Smart guides: snap the cursor so it lines up (same x or same y) with an
+// already-placed node. Returns the snapped real point + guide segments (paper
+// coords) to draw. This is what makes a precise square easy: each new corner
+// locks onto the previous corners' axes.
+function _bezierAlignSnap(rp, pp) {
+  const out = { x: rp.x, y: rp.y, guides: [] };
+  if (!_bezierDraw || !pp || !_bezierDraw.nodes.length) return out;
+  const scale = getCurrentPage().scale;
+  const zoom = getState().zoom;
+  const TH = 6 / zoom; // tolerance in paper px
+  let bestV = null,
+    bestVd = TH; // match X (vertical guide)
+  let bestH = null,
+    bestHd = TH; // match Y (horizontal guide)
+  for (const n of _bezierDraw.nodes) {
+    if (n.break) continue;
+    const npx = realToPaper(n.x, scale),
+      npy = realToPaper(n.y, scale);
+    const dxp = Math.abs(pp.x - npx);
+    if (dxp < bestVd) ((bestVd = dxp), (bestV = { x: n.x, px: npx, py: npy }));
+    const dyp = Math.abs(pp.y - npy);
+    if (dyp < bestHd) ((bestHd = dyp), (bestH = { y: n.y, px: npx, py: npy }));
+  }
+  if (bestV) {
+    out.x = bestV.x;
+    out.guides.push({ x1: bestV.px, y1: bestV.py, x2: bestV.px, y2: pp.y });
+  }
+  if (bestH) {
+    out.y = bestH.y;
+    out.guides.push({ x1: bestH.px, y1: bestH.py, x2: pp.x, y2: bestH.py });
+  }
+  return out;
+}
+
+function handleBezierDown(rp, pp, shiftKey, altKey) {
   if (!_bezierDraw) {
     _bezierDraw = {
       nodes: [{ x: rp.x, y: rp.y, h1: null, h2: null }],
       isDragging: true,
+      dragAlt: !!altKey,
       cursorRP: { ...rp },
       cursorPP: pp ? { ...pp } : null,
     };
@@ -122,26 +169,57 @@ function handleBezierDown(rp, pp) {
       return;
     }
   }
-  _bezierDraw.nodes.push({ x: rp.x, y: rp.y, h1: null, h2: null });
+  // Shift → constrain the new segment to a 15° increment from the previous
+  // anchor. Otherwise apply smart alignment to previous corners' axes.
+  let np = { x: rp.x, y: rp.y };
+  if (shiftKey) {
+    const prev = _bezierDraw.nodes[_bezierDraw.nodes.length - 1];
+    np = _bezierAngleSnap(prev, rp);
+  } else {
+    const al = _bezierAlignSnap(rp, pp);
+    np = { x: al.x, y: al.y };
+  }
+  _bezierDraw.nodes.push({ x: np.x, y: np.y, h1: null, h2: null });
   _bezierDraw.isDragging = true;
+  // Alt → break the handle: this corner's outgoing tangent is set independently
+  // of its incoming side (keeps a sharp "tip" on one side, curve on the other).
+  _bezierDraw.dragAlt = !!altKey;
   render();
   renderBezierOverlay();
 }
 
-function handleBezierMove(rp, pp) {
+function handleBezierMove(rp, pp, shiftKey, altKey) {
   if (!_bezierDraw) return;
   _bezierDraw.cursorRP = { ...rp };
   _bezierDraw.cursorPP = pp ? { ...pp } : null;
+  _bezierDraw.shiftKey = !!shiftKey;
+  _bezierDraw.alignGuides = null;
   if (_bezierDraw.isDragging) {
     const last = _bezierDraw.nodes[_bezierDraw.nodes.length - 1];
-    const dx = rp.x - last.x,
-      dy = rp.y - last.y;
+    // Alt can be (re)pressed mid-drag to toggle the break.
+    const broken = _bezierDraw.dragAlt || !!altKey;
+    _bezierDraw.dragAlt = broken;
+    let hp = { x: rp.x, y: rp.y };
+    if (shiftKey) hp = _bezierAngleSnap(last, rp); // snap handle direction to 15°
+    const dx = hp.x - last.x,
+      dy = hp.y - last.y;
     if (Math.hypot(dx, dy) > 1) {
       last.h2 = { x: last.x + dx, y: last.y + dy };
-      last.h1 = { x: last.x - dx, y: last.y - dy };
+      // Mirror to h1 for a smooth node; with Alt, leave the incoming side a corner.
+      last.h1 = broken ? null : { x: last.x - dx, y: last.y - dy };
     } else {
       last.h2 = null;
       last.h1 = null;
+    }
+  } else if (_bezierDraw.nodes.length) {
+    // Hover preview snaps too, so the ghost segment matches where the click lands.
+    if (shiftKey) {
+      const prev = _bezierDraw.nodes[_bezierDraw.nodes.length - 1];
+      _bezierDraw.cursorRP = _bezierAngleSnap(prev, rp);
+    } else {
+      const al = _bezierAlignSnap(rp, pp);
+      _bezierDraw.cursorRP = { x: al.x, y: al.y };
+      _bezierDraw.alignGuides = al.guides.length ? al.guides : null;
     }
   }
   render();
@@ -226,6 +304,23 @@ function renderBezierOverlay() {
   const rp2p = (v) => realToPaper(v, scale);
   const rpx = (n) => rp2p(n.x),
     rpy = (n) => rp2p(n.y);
+
+  // Smart alignment guides (Figma-red) — drawn first so they sit behind the path.
+  if (_bezierDraw.alignGuides) {
+    for (const gl of _bezierDraw.alignGuides) {
+      g.appendChild(
+        se("line", {
+          x1: gl.x1,
+          y1: gl.y1,
+          x2: gl.x2,
+          y2: gl.y2,
+          stroke: "#f24822",
+          "stroke-width": vsw,
+          "stroke-dasharray": `${3 / zoom} ${2 / zoom}`,
+        }),
+      );
+    }
+  }
 
   const last = nodes[nodes.length - 1];
 
@@ -413,6 +508,53 @@ function renderBezierOverlay() {
     }
   }
 
+  // ── HUD: length (mm) + angle, so connecting/snapping is legible ──
+  {
+    const last = nodes[nodes.length - 1];
+    let vx, vy, anchor;
+    if (isDragging && last.h2) {
+      vx = last.h2.x - last.x;
+      vy = last.h2.y - last.y;
+      anchor = last;
+    } else if (!isDragging) {
+      vx = cursorRP.x - last.x;
+      vy = cursorRP.y - last.y;
+      anchor = last;
+    }
+    if (anchor && Math.hypot(vx, vy) > 0.5) {
+      const lenMm = Math.hypot(vx, vy) / 10;
+      let deg = (-Math.atan2(vy, vx) * 180) / Math.PI; // screen y is down → negate
+      if (deg < 0) deg += 360;
+      const label = `${fmtNum(lenMm)} mm  ${deg.toFixed(0)}°`;
+      const fs = 11 / zoom;
+      const lx = realToPaper(cursorRP.x, scale) + 12 / zoom;
+      const ly = realToPaper(cursorRP.y, scale) - 12 / zoom;
+      const padX = 4 / zoom,
+        padY = 3 / zoom;
+      const w = label.length * fs * 0.55 + padX * 2;
+      g.appendChild(
+        se("rect", {
+          x: lx - padX,
+          y: ly - fs,
+          width: w,
+          height: fs + padY * 2,
+          rx: 3 / zoom,
+          fill: "#1a1a2e",
+          opacity: "0.85",
+        }),
+      );
+      const t = se("text", {
+        x: lx,
+        y: ly + padY,
+        "font-size": fs,
+        "font-family": "Helvetica,Arial,sans-serif",
+        fill: "#fff",
+      });
+      t.textContent = label;
+      g.appendChild(t);
+    }
+  }
+
   _vp.appendChild(g);
 }
 
@@ -492,6 +634,15 @@ function handleBezierEditDown(e, rp) {
       if (shape) break;
     }
     if (!shape) return false;
+    // Alt-click an anchor → convert point type (Figma's convert-point tool):
+    //   smooth (has handles) → corner (sharp, no handles),
+    //   corner (no handles)  → smooth (handles aligned with neighbors).
+    if (e.altKey) {
+      _convertBezierNode(shape, ni);
+      pushHistory();
+      render();
+      return true;
+    }
     _bezierDragH = {
       nodeIdx: ni,
       type: "anchor",
@@ -524,10 +675,10 @@ function handleBezierEditDown(e, rp) {
   return false;
 }
 
-function handleBezierEditMove(rp) {
+function handleBezierEditMove(rp, shiftKey, altKey) {
   if (!_bezierDragH) return false;
   const { nodeIdx, type, shapeId, startRP, origNodes } = _bezierDragH;
-  const dx = rp.x - startRP.x,
+  let dx = rp.x - startRP.x,
     dy = rp.y - startRP.y;
   let shape = null;
   for (const layer of getCurrentPage().layers) {
@@ -546,12 +697,18 @@ function handleBezierEditMove(rp) {
       h2: orig.h2 ? { x: orig.h2.x + dx, y: orig.h2.y + dy } : null,
     };
   } else {
+    // Shift → constrain handle direction to a 15° increment from its anchor.
+    if (shiftKey) {
+      const snapped = _bezierAngleSnap(orig, { x: orig[type].x + dx, y: orig[type].y + dy });
+      dx = snapped.x - orig[type].x;
+      dy = snapped.y - orig[type].y;
+    }
     // Move just this handle
     const h = { x: orig[type].x + dx, y: orig[type].y + dy };
     shape.nodes[nodeIdx] = { ...orig, [type]: h };
-    // Mirror opposite handle for smooth nodes
+    // Mirror opposite handle for smooth nodes; Alt breaks the mirror (independent corner).
     const opp = type === "h1" ? "h2" : "h1";
-    if (orig[opp]) {
+    if (orig[opp] && !altKey) {
       const len = Math.hypot(orig[opp].x - orig.x, orig[opp].y - orig.y);
       const newDx = h.x - orig.x,
         newDy = h.y - orig.y;
@@ -562,7 +719,11 @@ function handleBezierEditMove(rp) {
       };
     }
   }
-  render();
+  // liveUpdateShapes bumps the render version (markShapeDirty) so the path itself
+  // rebuilds — a plain render() would hit the shape-cache and only move the
+  // handle, leaving the curve frozen until release.
+  if (typeof liveUpdateShapes === "function") liveUpdateShapes([shapeId]);
+  else render();
   return true;
 }
 
@@ -571,6 +732,39 @@ function handleBezierEditUp() {
   pushHistory();
   _bezierDragH = null;
   return true;
+}
+
+// Toggle a node between corner (no handles) and smooth (mirrored handles).
+function _convertBezierNode(shape, ni) {
+  const nodes = shape.nodes;
+  const n = nodes[ni];
+  if (!n) return;
+  if (n.h1 || n.h2) {
+    // smooth → corner
+    n.h1 = null;
+    n.h2 = null;
+    return;
+  }
+  // corner → smooth: align handles along the line joining the neighbours,
+  // length ~1/3 of the gap to each side (Figma-style auto-smooth).
+  const prev = nodes[ni - 1];
+  const next = nodes[ni + 1];
+  const a = prev && !prev.break ? prev : n;
+  const b = next && !next.break ? next : n;
+  let tx = b.x - a.x,
+    ty = b.y - a.y;
+  const tlen = Math.hypot(tx, ty);
+  if (tlen < 1e-6) {
+    tx = 1;
+    ty = 0;
+  } else {
+    tx /= tlen;
+    ty /= tlen;
+  }
+  const d1 = (Math.hypot(n.x - a.x, n.y - a.y) || 30) / 3;
+  const d2 = (Math.hypot(b.x - n.x, b.y - n.y) || 30) / 3;
+  n.h1 = { x: n.x - tx * d1, y: n.y - ty * d1 };
+  n.h2 = { x: n.x + tx * d2, y: n.y + ty * d2 };
 }
 
 function exitBezierEditMode() {

@@ -25,6 +25,23 @@ function lineRoleStyle(role, sw) {
   }
 }
 
+// User-selectable line style → stroke-dasharray (scaled to the line weight so
+// the dash rhythm stays proportional). Returns null for solid/unset.
+function lineStyleDashArray(style, sw) {
+  const w = sw || 0.5;
+  switch (style) {
+    case "dashed":
+      return `${w * 6} ${w * 4}`;
+    case "dotted":
+      return `${w * 1.2} ${w * 2}`;
+    case "dashdot":
+      return `${w * 7} ${w * 3} ${w * 1.2} ${w * 3}`;
+    case "solid":
+    default:
+      return null;
+  }
+}
+
 // ── 矢印ヘッド ────────────────────────────────────────────────
 // arrowStyle: "arrow" (塗りつぶし矢印) | "dot" (黒丸) | "slash" (斜線) | "open" (開き矢印)
 function arrowHead(
@@ -1336,11 +1353,14 @@ function pencilPathToD(points, scale) {
 }
 
 function renderShape(shape, scale, selIds) {
-  const sw = LINE_WIDTHS[shape.strokeWidth] ?? LINE_WIDTHS.medium;
+  const sw = resolveStrokeWidthMm(shape.strokeWidth);
   const stroke = shape.stroke || "#1a1a2e";
   const fill = shape.fill || "none";
   const isGhost = Boolean(shape.ghost);
   const ghostDash = isGhost ? `${sw * 4} ${sw * 3}` : null;
+  // User line style (dashed/dotted/dashdot). For non-line shapes it rides on the
+  // group so every child inherits it; lines fold it into their own dash chain.
+  const userDash = lineStyleDashArray(shape.strokeStyle, sw);
 
   const gAttrs = {
     "data-id": shape.id,
@@ -1356,6 +1376,11 @@ function renderShape(shape, scale, selIds) {
     gAttrs.fill = fill;
     gAttrs.stroke = stroke;
   }
+  // Non-line shapes inherit the user dash from the group (per-element ghost/role
+  // dashes still override it where set). Lines handle dash on their own element.
+  if (shape.type !== "line" && !isGhost && userDash) {
+    gAttrs["stroke-dasharray"] = userDash;
+  }
   const g = se("g", gAttrs);
 
   if (shape.type === "line") {
@@ -1366,7 +1391,7 @@ function renderShape(shape, scale, selIds) {
     const cap = shape.strokeLinecap || "butt";
     // ghost は role より優先（digitize プレビュー）
     const roleStyle = isGhost ? null : lineRoleStyle(shape.role, sw);
-    const dash = ghostDash || roleStyle?.dash || null;
+    const dash = ghostDash || userDash || roleStyle?.dash || null;
     if (roleStyle?.opacity && !isGhost)
       g.setAttribute("opacity", roleStyle.opacity);
     g.appendChild(

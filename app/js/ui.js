@@ -124,7 +124,13 @@ function _propertiesPanelSignature(state) {
       return `${id}:${res.shape.type}:${rv}`;
     })
     .join(",");
-  return `${_uiLocaleKey()}|${state.currentPageId}|${sc}|${state.activeTool}|${shapes}`;
+  // Edit-mode toggles don't change the selection, so fold them into the
+  // signature — otherwise the panel cache skips the rebuild and the path-edit
+  // button label stays stale.
+  const editMode = `${typeof _bezierEditId !== "undefined" ? _bezierEditId : ""}/${
+    typeof _vertexEditId !== "undefined" ? _vertexEditId : ""
+  }`;
+  return `${_uiLocaleKey()}|${state.currentPageId}|${sc}|${state.activeTool}|${shapes}|${editMode}`;
 }
 
 function _pageSettingsSignature(state, page) {
@@ -512,6 +518,7 @@ function updateToolbar() {
   const svg = document.getElementById("main-svg");
   if (svg) {
     svg.classList.toggle("tool-select", state.activeTool === "select");
+    svg.classList.toggle("tool-bezier", state.activeTool === "bezier");
     // Idle cursor is CSS-driven: crosshair for drawing tools (#main-svg),
     // default for select (.tool-select). Clear any inline cursor left over from
     // an interaction so CSS wins; the hand tool uses grab.
@@ -988,11 +995,13 @@ function buildAlignPositionHTML(ids) {
   const pageScale = getCurrentPage().scale;
   let bb = null;
   let rotation = 0;
+  let shapeType = null;
   if (!isMulti) {
     const res = findShapeById(ids[0]);
     if (res) {
       bb = shapeBBoxMM(res.shape, pageScale);
       rotation = res.shape.rotation || 0;
+      shapeType = res.shape.type;
     }
   }
 
@@ -1014,8 +1023,8 @@ function buildAlignPositionHTML(ids) {
     ? `
     <div class="prop-section-title">${t("props.position")}</div>
     <div class="prop-xy-row">
-      <div class="prop-xy-field"><span class="prop-xy-label">X</span><input type="number" id="pos-x" value="${bb.x.toFixed(2)}" step="0.1"><span class="prop-xy-unit">mm</span></div>
-      <div class="prop-xy-field"><span class="prop-xy-label">Y</span><input type="number" id="pos-y" value="${bb.y.toFixed(2)}" step="0.1"><span class="prop-xy-unit">mm</span></div>
+      <div class="prop-xy-field"><span class="prop-xy-label">X</span><input type="number" id="pos-x" value="${fmtNum(bb.x)}" step="0.1"><span class="prop-xy-unit">mm</span></div>
+      <div class="prop-xy-field"><span class="prop-xy-label">Y</span><input type="number" id="pos-y" value="${fmtNum(bb.y)}" step="0.1"><span class="prop-xy-unit">mm</span></div>
     </div>`
     : "";
 
@@ -1052,6 +1061,24 @@ function buildAlignPositionHTML(ids) {
       })()
     : "";
 
+  // Path-edit toggle, placed right under rotation for discoverability.
+  const editable =
+    shapeType === "bezier" || shapeType === "path" || shapeType === "rect";
+  const editActive =
+    (shapeType === "bezier" && _bezierEditId === ids[0]) ||
+    ((shapeType === "path" || shapeType === "rect") &&
+      _vertexEditId === ids[0]);
+  const editSection =
+    !isMulti && editable
+      ? `
+    <div class="prop-pathedit-block">
+      <button type="button" id="btn-pathedit-toggle" class="prop-pathedit-btn${editActive ? " active" : ""}" data-shape-type="${shapeType}">
+        <svg width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round" stroke-linecap="round" aria-hidden="true"><path d="M3 13l2-1 7-7-1-1-7 7-1 2Z"/><circle cx="3" cy="13" r="1.1" fill="currentColor" stroke="none"/><circle cx="12.5" cy="3.5" r="1.1" fill="currentColor" stroke="none"/></svg>
+        <span>${editActive ? t("props.pathEditDone") : t("props.pathEdit")}</span>
+      </button>
+    </div>`
+      : "";
+
   const body = `
     <div class="prop-align-section">
       <div class="prop-align-grid">
@@ -1068,6 +1095,7 @@ function buildAlignPositionHTML(ids) {
       </div>
       ${posSection}
       ${rotSection}
+      ${editSection}
     </div>`;
 
   return panelSectionHTML(
@@ -1093,6 +1121,25 @@ function bindAlignPositionEvents(c, ids) {
       uiUpdate();
     });
   });
+  const btnPE = c.querySelector("#btn-pathedit-toggle");
+  if (btnPE) {
+    btnPE.addEventListener("click", () => {
+      const id = ids[0];
+      const type = btnPE.getAttribute("data-shape-type");
+      if (type === "bezier") {
+        // Toggle bezier point-edit mode.
+        _bezierEditId = _bezierEditId === id ? null : id;
+        if (_bezierEditId == null && typeof exitBezierEditMode === "function")
+          exitBezierEditMode();
+      } else {
+        // path / rect → vertex edit (rect converts to an editable path).
+        if (_vertexEditId === id) _vertexEditId = null;
+        else enterVertexEditMode(id);
+      }
+      render();
+      uiUpdate();
+    });
+  }
   const posX = c.querySelector("#pos-x");
   const posY = c.querySelector("#pos-y");
   if (posX)
@@ -1485,64 +1532,8 @@ function updatePropertiesPanel() {
       }
     });
   }
-  const btnVE = c.querySelector("#btn-vertex-edit");
-  if (btnVE) {
-    btnVE.addEventListener("click", () => {
-      const sid = state.selectedShapeIds[0];
-      const r = findShapeById(sid);
-      if (!r) return;
-      const sh = r.shape;
-      if (sh.type === "rect") {
-        const { x, y, width: w, height: h } = sh;
-        let ring;
-        if (sh.rxMode === "individual") {
-          const tl = sh.rxTL ?? 0,
-            tr = sh.rxTR ?? 0,
-            br = sh.rxBR ?? 0,
-            bl = sh.rxBL ?? 0;
-          ring =
-            tl || tr || br || bl
-              ? roundedRectToRing(x, y, w, h, tl, tr, br, bl)
-              : [
-                  [x, y],
-                  [x + w, y],
-                  [x + w, y + h],
-                  [x, y + h],
-                ];
-        } else if (sh.rx) {
-          ring = roundedRectToRing(x, y, w, h, sh.rx, sh.rx, sh.rx, sh.rx);
-        } else {
-          ring = [
-            [x, y],
-            [x + w, y],
-            [x + w, y + h],
-            [x, y + h],
-          ];
-        }
-        const newShape = {
-          id: sh.id,
-          type: "path",
-          contours: [[ring]],
-          stroke: sh.stroke,
-          fill: sh.fill,
-          strokeWidth: sh.strokeWidth,
-        };
-        r.layer.shapes.splice(r.layer.shapes.indexOf(sh), 1, newShape);
-        pushHistory();
-      }
-      _vertexEditId = sid;
-      render();
-      uiUpdate();
-    });
-  }
-  const btnBE = c.querySelector("#btn-bezier-edit");
-  if (btnBE) {
-    btnBE.addEventListener("click", () => {
-      _bezierEditId = state.selectedShapeIds[0];
-      render();
-      uiUpdate();
-    });
-  }
+  // Path/bezier edit-mode toggles now live under the rotation control
+  // (bindAlignPositionEvents → #btn-pathedit-toggle).
   const btnTE = c.querySelector("#btn-text-edit");
   if (btnTE) {
     btnTE.addEventListener("click", () => {
@@ -1627,7 +1618,7 @@ function updatePropertiesPanel() {
     if (inp.type === "number") {
       inp.addEventListener("blur", () => {
         const v = parseFloat(inp.value);
-        if (!isNaN(v)) inp.value = v.toFixed(2);
+        if (!isNaN(v)) inp.value = fmtNum(v);
       });
     }
     inp.addEventListener("change", () => {
@@ -1706,9 +1697,16 @@ function updatePropertiesPanel() {
   _bindArrayDuplicateEvents(c);
   bindAppearanceEvents(c, state.selectedShapeIds);
 }
+// Display a number with up to 2 decimals, trailing zeros stripped
+// (12.00 → "12", 0.50 → "0.5", 0.13 → "0.13").
+function fmtNum(n) {
+  const num = Number(n);
+  if (!Number.isFinite(num)) return typeof n === "string" ? n : "0";
+  return String(parseFloat(num.toFixed(2)));
+}
 function pRow(label, key, value, type = "number") {
   const v =
-    type === "number" && typeof value === "number" ? value.toFixed(2) : value;
+    type === "number" && typeof value === "number" ? fmtNum(value) : value;
   if (type === "textarea") {
     const escaped = String(v)
       .replace(/&/g, "&amp;")
@@ -1727,7 +1725,7 @@ function stripUnitLabel(label, unit) {
 }
 function pRowUnit(label, key, value, unit, type = "number", dataUnit = "") {
   const v =
-    type === "number" && typeof value === "number" ? value.toFixed(2) : value;
+    type === "number" && typeof value === "number" ? fmtNum(value) : value;
   const unitAttr = dataUnit ? ` data-unit="${dataUnit}"` : "";
   const stepAttr = type === "number" ? ' step="0.1"' : "";
   return `<div class="prop-row"><label>${stripUnitLabel(label, unit)}</label><div class="prop-unit-field"><input type="${type}" data-key="${key}"${unitAttr} value="${v}"${stepAttr}><span class="prop-unit-suffix">${unit}</span></div></div>`;
@@ -1738,7 +1736,7 @@ function pRowUnitById(label, id, value, unit, attrs = "") {
 function pRowMm(label, key, realValue, type = "number") {
   const display =
     type === "number" && typeof realValue === "number"
-      ? realToMM(realValue).toFixed(2)
+      ? fmtNum(realToMM(realValue))
       : realValue;
   if (type === "textarea") {
     return pRow(label, key, display, type);
@@ -1751,13 +1749,39 @@ function pSel(label, key, value, options) {
 function pRO(label, value) {
   return `<div class="prop-row prop-readonly"><label>${label}</label><span>${value}</span></div>`;
 }
+// Stroke-width select using the ISO mm presets. Selection matches by resolved mm
+// so legacy thin/medium/thick shapes light up the right option. `attr` is the
+// data-* attribute name ("data-key" single / "data-appearance" multi).
+function strokeWidthSelectHTML(attr, value, mixed) {
+  const curMm = resolveStrokeWidthMm(value);
+  const opts = STROKE_WIDTH_PRESETS.map((w) => {
+    const sel = !mixed && Math.abs(curMm - w) < 1e-6 ? " selected" : "";
+    // Plain number string drops trailing zeros (0.50→0.5, 1.00→1).
+    return `<option value="${w}"${sel}>${w} mm</option>`;
+  }).join("");
+  const mixedOpt = mixed
+    ? `<option value="" selected disabled>${t("props.mixed")}</option>`
+    : "";
+  return `<div class="prop-row"><label>${t("props.strokeWidth")}</label><select ${attr}="strokeWidth">${mixedOpt}${opts}</select></div>`;
+}
+function lineStyleSelectHTML(attr, value, mixed) {
+  const cur = value || "solid";
+  const opts = LINE_STYLES.map(
+    (v) =>
+      `<option value="${v}"${!mixed && cur === v ? " selected" : ""}>${t("props.lineStyle." + v)}</option>`,
+  ).join("");
+  const mixedOpt = mixed
+    ? `<option value="" selected disabled>${t("props.mixed")}</option>`
+    : "";
+  return `<div class="prop-row"><label>${t("props.lineStyle")}</label><select ${attr}="strokeStyle">${mixedOpt}${opts}</select></div>`;
+}
 
 function formatFileSize(bytes) {
   const n = Number(bytes);
   if (!Number.isFinite(n) || n < 0) return "";
   if (n < 1024) return `${Math.round(n)} B`;
-  if (n < 1024 * 1024) return `${(n / 1024).toFixed(1)} KB`;
-  return `${(n / (1024 * 1024)).toFixed(2)} MB`;
+  if (n < 1024 * 1024) return `${fmtNum(n / 1024)} KB`;
+  return `${fmtNum(n / (1024 * 1024))} MB`;
 }
 
 const FILL_PRESETS = [
@@ -1849,7 +1873,7 @@ function buildPenSettingsHTML() {
     `<div class="prop-row">
       <label>${stripUnitLabel(t("props.penWidth"), "mm")}</label>
       <div class="prop-unit-field">
-        <input type="number" step="0.1" min="0.1" data-pen="width" value="${pw.toFixed(1)}">
+        <input type="number" step="0.1" min="0.1" data-pen="width" value="${fmtNum(pw)}">
         <span class="prop-unit-suffix">mm</span>
       </div>
     </div>
@@ -1875,7 +1899,7 @@ function bindPenSettingsEvents(container) {
     const n = parseFloat(v);
     if (isNaN(n) || n <= 0) return;
     state.penWidth = n;
-    if (numInp) numInp.value = n.toFixed(1);
+    if (numInp) numInp.value = fmtNum(n);
     if (rangeInp) rangeInp.value = String(n);
   };
   numInp?.addEventListener("keydown", (e) => e.stopPropagation());
@@ -1935,18 +1959,14 @@ function buildMultiAppearanceHTML(shapeIds) {
     buildSwatchesHTML("stroke"),
   );
   if (strokeWidthable.length) {
-    const swOpts = ["thin", "medium", "thick"]
-      .map(
-        (v) =>
-          `<option value="${v}"${!strokeWidthMixed && strokeWidths[0] === v ? " selected" : ""}>${t("props.strokeWidth." + v)}</option>`,
-      )
-      .join("");
     parts.push(
-      `<div class="prop-row"><label>${t("props.strokeWidth")}</label><select data-appearance="strokeWidth">${
-        strokeWidthMixed
-          ? `<option value="" selected disabled>${t("props.mixed")}</option>`
-          : ""
-      }${swOpts}</select></div>`,
+      strokeWidthSelectHTML("data-appearance", strokeWidths[0], strokeWidthMixed),
+    );
+    const styles = [
+      ...new Set(strokeWidthable.map((s) => s.strokeStyle || "solid")),
+    ];
+    parts.push(
+      lineStyleSelectHTML("data-appearance", styles[0], styles.length > 1),
     );
   }
   return parts.join("");
@@ -1980,7 +2000,7 @@ function buildMultiSizeHTML(shapeIds) {
     const mixed = vals.length > 1;
     const label = stripUnitLabel(t(f.label), f.unit);
     const display = f.unit === "mm" ? realToMM(vals[0]) : vals[0];
-    const valAttr = mixed ? "" : Number(display).toFixed(2);
+    const valAttr = mixed ? "" : fmtNum(display);
     const extra = mixed
       ? ` class="prop-mixed" placeholder="${t("props.mixed")}"`
       : "";
@@ -2041,6 +2061,10 @@ function applyAppearanceToSelection(updates, shapeIds) {
     }
     if (updates.strokeWidth !== undefined && t !== "image") {
       res.shape.strokeWidth = updates.strokeWidth;
+      changed = true;
+    }
+    if (updates.strokeStyle !== undefined && t !== "image") {
+      res.shape.strokeStyle = updates.strokeStyle;
       changed = true;
     }
   }
@@ -2189,7 +2213,7 @@ function buildPropsHTML(s) {
     geometry.push(
       pRO(
         t("props.length"),
-        realToMM(Math.hypot(s.x2 - s.x1, s.y2 - s.y1)).toFixed(2) + " mm",
+        fmtNum(realToMM(Math.hypot(s.x2 - s.x1, s.y2 - s.y1))) + " mm",
       ),
     );
     geometry.push(
@@ -2221,19 +2245,16 @@ function buildPropsHTML(s) {
         `<div class="prop-row prop-corners-header"><label>${t("props.cornerRadius")}</label><button class="prop-corner-toggle active" data-rx-toggle="1" title="${t("props.cornerToggleUniform")}">${toggleIcon}</button></div>`,
       );
       geometry.push(`<div class="prop-corners-grid">
-        <div class="prop-corner"><label>${t("props.corner.tl")}</label><input type="number" step="0.1" data-key="rxTL" data-unit="mm" value="${realToMM(s.rxTL ?? 0).toFixed(2)}"><span class="prop-unit-suffix">mm</span></div>
-        <div class="prop-corner"><label>${t("props.corner.tr")}</label><input type="number" step="0.1" data-key="rxTR" data-unit="mm" value="${realToMM(s.rxTR ?? 0).toFixed(2)}"><span class="prop-unit-suffix">mm</span></div>
-        <div class="prop-corner"><label>${t("props.corner.bl")}</label><input type="number" step="0.1" data-key="rxBL" data-unit="mm" value="${realToMM(s.rxBL ?? 0).toFixed(2)}"><span class="prop-unit-suffix">mm</span></div>
-        <div class="prop-corner"><label>${t("props.corner.br")}</label><input type="number" step="0.1" data-key="rxBR" data-unit="mm" value="${realToMM(s.rxBR ?? 0).toFixed(2)}"><span class="prop-unit-suffix">mm</span></div>
+        <div class="prop-corner"><label>${t("props.corner.tl")}</label><input type="number" step="0.1" data-key="rxTL" data-unit="mm" value="${fmtNum(realToMM(s.rxTL ?? 0))}"><span class="prop-unit-suffix">mm</span></div>
+        <div class="prop-corner"><label>${t("props.corner.tr")}</label><input type="number" step="0.1" data-key="rxTR" data-unit="mm" value="${fmtNum(realToMM(s.rxTR ?? 0))}"><span class="prop-unit-suffix">mm</span></div>
+        <div class="prop-corner"><label>${t("props.corner.bl")}</label><input type="number" step="0.1" data-key="rxBL" data-unit="mm" value="${fmtNum(realToMM(s.rxBL ?? 0))}"><span class="prop-unit-suffix">mm</span></div>
+        <div class="prop-corner"><label>${t("props.corner.br")}</label><input type="number" step="0.1" data-key="rxBR" data-unit="mm" value="${fmtNum(realToMM(s.rxBR ?? 0))}"><span class="prop-unit-suffix">mm</span></div>
       </div>`);
     } else {
       geometry.push(
-        `<div class="prop-row prop-corners-header"><label>${stripUnitLabel(t("props.cornerRadius"), "mm")}</label><div class="prop-unit-field"><input type="number" step="0.1" data-key="rx" data-unit="mm" value="${realToMM(s.rx ?? 0).toFixed(2)}"><span class="prop-unit-suffix">mm</span></div><button class="prop-corner-toggle" data-rx-toggle="1" title="${t("props.cornerToggleIndividual")}">${toggleIcon}</button></div>`,
+        `<div class="prop-row prop-corners-header"><label>${stripUnitLabel(t("props.cornerRadius"), "mm")}</label><div class="prop-unit-field"><input type="number" step="0.1" data-key="rx" data-unit="mm" value="${fmtNum(realToMM(s.rx ?? 0))}"><span class="prop-unit-suffix">mm</span></div><button class="prop-corner-toggle" data-rx-toggle="1" title="${t("props.cornerToggleIndividual")}">${toggleIcon}</button></div>`,
       );
     }
-    geometry.push(
-      `<div class="prop-multi-actions"><button id="btn-vertex-edit">${t("props.pathEdit")}</button></div>`,
-    );
   } else if (s.type === "image") {
     geometry.push(
       pRowMm(t("props.xmm"), "x", s.x),
@@ -2260,7 +2281,7 @@ function buildPropsHTML(s) {
       pRowMm(t("props.cxMm"), "cx", s.cx),
       pRowMm(t("props.cyMm"), "cy", s.cy),
       pRowMm(t("props.radiusMm"), "r", s.r),
-      pRO(t("props.diameter"), (realToMM(s.r) * 2).toFixed(2) + " mm"),
+      pRO(t("props.diameter"), fmtNum(realToMM(s.r) * 2) + " mm"),
     );
   } else if (s.type === "ellipse") {
     geometry.push(
@@ -2320,17 +2341,14 @@ function buildPropsHTML(s) {
           if (x > maxX) maxX = x;
           if (y > maxY) maxY = y;
         }
-    const wMM = isFinite(minX) ? realToMM(maxX - minX).toFixed(2) : "0";
-    const hMM = isFinite(minY) ? realToMM(maxY - minY).toFixed(2) : "0";
+    const wMM = isFinite(minX) ? fmtNum(realToMM(maxX - minX)) : "0";
+    const hMM = isFinite(minY) ? fmtNum(realToMM(maxY - minY)) : "0";
     geometry.push(pRowUnit(t("props.widthMm"), "path-w", wMM, "mm"));
     geometry.push(pRowUnit(t("props.heightMm"), "path-h", hMM, "mm"));
-    geometry.push(
-      `<div class="prop-multi-actions"><button id="btn-vertex-edit">${t("props.pathEdit")}</button></div>`,
-    );
   } else if (s.type === "bezier") {
     const bb = bezierBBox(s, { numerator: 1, denominator: 1 });
-    const wMM = bb ? realToMM(bb.w).toFixed(2) : "0";
-    const hMM = bb ? realToMM(bb.h).toFixed(2) : "0";
+    const wMM = bb ? fmtNum(realToMM(bb.w)) : "0";
+    const hMM = bb ? fmtNum(realToMM(bb.h)) : "0";
     geometry.push(
       `<div class="prop-row"><label>${t("props.nodeCount")}</label><span>${s.nodes.length}</span></div>`,
     );
@@ -2340,13 +2358,10 @@ function buildPropsHTML(s) {
     geometry.push(
       `<div class="prop-row prop-readonly"><label>${t("props.heightMm")}</label><span>${hMM}</span></div>`,
     );
-    geometry.push(
-      `<div class="prop-multi-actions"><button id="btn-bezier-edit">${t("props.bezierEdit")}</button></div>`,
-    );
   } else if (s.type === "pencil") {
     geometry.push(
       `<div class="prop-row prop-readonly"><label>${t("props.pointCount")}</label><span>${(s.points || []).length}</span></div>`,
-      `<div class="prop-row"><label>${stripUnitLabel(t("props.penWidth"), "mm")}</label><div class="prop-unit-field"><input type="number" step="0.1" min="0.1" data-key="penWidth" value="${Number(s.penWidth ?? 1.5).toFixed(1)}"><span class="prop-unit-suffix">mm</span></div></div>`,
+      `<div class="prop-row"><label>${stripUnitLabel(t("props.penWidth"), "mm")}</label><div class="prop-unit-field"><input type="number" step="0.1" min="0.1" data-key="penWidth" value="${fmtNum(s.penWidth ?? 1.5)}"><span class="prop-unit-suffix">mm</span></div></div>`,
     );
   } else if (s.type === "dimension") {
     const hasLabelOffset =
@@ -2361,7 +2376,7 @@ function buildPropsHTML(s) {
     const isOverridden =
       s.value !== undefined && Math.abs(dimensionValueMM(s) - autoValMM) > 0.01;
     geometry.push(
-      `<div class="prop-row prop-readonly"><label>${t("props.autoValue")}</label><span>${autoValMM.toFixed(1)} mm</span></div>`,
+      `<div class="prop-row prop-readonly"><label>${t("props.autoValue")}</label><span>${fmtNum(autoValMM)} mm</span></div>`,
       `<div class="prop-row">
         <label>${t("props.overrideValue")}</label>
         <input type="number" step="0.1" data-key="value" value="${s.value ?? ""}" placeholder="${t("props.overridePlaceholder")}" style="${isOverridden ? "color:#e55;" : ""}">
@@ -2405,13 +2420,8 @@ function buildPropsHTML(s) {
   }
 
   if (s.type !== "dimension" && s.type !== "image" && s.type !== "pencil") {
-    geometry.push(
-      pSel(t("props.strokeWidth"), "strokeWidth", s.strokeWidth || "medium", [
-        { v: "thin", l: t("props.strokeWidth.thin") },
-        { v: "medium", l: t("props.strokeWidth.medium") },
-        { v: "thick", l: t("props.strokeWidth.thick") },
-      ]),
-    );
+    geometry.push(strokeWidthSelectHTML("data-key", s.strokeWidth, false));
+    geometry.push(lineStyleSelectHTML("data-key", s.strokeStyle, false));
   }
 
   const sections = [
@@ -3607,6 +3617,64 @@ document.addEventListener("DOMContentLoaded", () => {
           uiUpdate();
         }
         return;
+      }
+      // Double-click a path/bezier → jump into point-edit mode (Figma-style).
+      // Use the same geometry hit-test as single-click selection so it works
+      // even though the #sel-handles overlay now sits on top of the shape.
+      const picked =
+        typeof findTopShapeAtRealPoint === "function"
+          ? findTopShapeAtRealPoint(rp)
+          : null;
+      if (picked) {
+        const res = findShapeById(picked.id);
+        if (res?.shape?.type === "bezier") {
+          e.preventDefault();
+          e.stopPropagation();
+          state.selectedShapeIds = [picked.id];
+          _bezierEditId = picked.id;
+          render();
+          uiUpdate();
+          return;
+        }
+        if (res?.shape?.type === "path" || res?.shape?.type === "rect") {
+          e.preventDefault();
+          e.stopPropagation();
+          state.selectedShapeIds = [picked.id];
+          enterVertexEditMode(picked.id);
+          return;
+        }
+      }
+      // Fallback: a single path/bezier is already selected (from the 1st click)
+      // and we double-clicked within its bbox → edit it. Covers the case where
+      // the snapped point lands just off a thin unfilled stroke.
+      if (state.selectedShapeIds.length === 1) {
+        const selRes = findShapeById(state.selectedShapeIds[0]);
+        const st = selRes?.shape;
+        if (st && (st.type === "bezier" || st.type === "path")) {
+          const bb = getShapeBBox(st, getCurrentPage().scale);
+          const margin = 8 / state.zoom;
+          if (
+            bb &&
+            realPointInPaperBBox(
+              rp,
+              {
+                x: bb.x - margin,
+                y: bb.y - margin,
+                w: bb.w + 2 * margin,
+                h: bb.h + 2 * margin,
+              },
+              getCurrentPage().scale,
+            )
+          ) {
+            e.preventDefault();
+            e.stopPropagation();
+            if (st.type === "bezier") _bezierEditId = st.id;
+            else enterVertexEditMode(st.id);
+            render();
+            uiUpdate();
+            return;
+          }
+        }
       }
       handleTextShapeDblClick(e, svgEl);
     }

@@ -50,13 +50,13 @@ Tag `v0.1.x`, upload `dist/` artifacts, note unsigned macOS-only distribution in
 ## 6. Deploy site
 
 ```bash
-npm run build:site    # assemble deploy set into dist-site/
+npm run build:site    # assemble deploy set into ../millrect.com/
 ```
 
-Upload the contents of `dist-site/` to the host (manual FTP / control panel). The
-deploy set is defined once in `scripts/site-manifest.js`. Set: `index.html`, `en/`,
-`robots.txt`, `sitemap.xml`, `favicon.ico`, `site/`, `app/`, `packages/`, `samples/`,
-`docs/`. `dist-site/` is gitignored (generated).
+Commit and push the adjacent `millrect.com` repository to trigger the Cloudflare
+deployment. The deploy set is defined once in `scripts/site-manifest.js`. Set:
+`index.html`, `en/`, `robots.txt`, `sitemap.xml`, `favicon.ico`, `site/`, `app/`,
+`packages/`, `samples/`, `docs/`.
 
 ## Later (production distribution)
 

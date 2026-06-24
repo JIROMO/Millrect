@@ -448,6 +448,13 @@ millrect-3d-panel {
 #main-svg.tool-select {
   cursor: default;
 }
+/* Pen tool → pen-nib cursor (hotspot at the nib tip, top-left). */
+#main-svg.tool-bezier {
+  cursor:
+    url("data:image/svg+xml,%3Csvg%20xmlns='http://www.w3.org/2000/svg'%20width='24'%20height='24'%3E%3Cpath%20d='M4%204%20L7%2013%20L10%2010%20L16%2016%20L18%2014%20L12%208%20L15%205%20Z'%20fill='%231a1a2e'%20stroke='white'%20stroke-width='1.3'%20stroke-linejoin='round'/%3E%3C/svg%3E")
+      4 4,
+    crosshair;
+}
 /* With a drawing/hand tool active, the active-tool cursor (crosshair / grab on
    #main-svg) must win even over shapes. Shapes carry a cursor="default"
    presentation attribute; CSS overrides it. Inherit so each tool's cursor flows
@@ -2444,6 +2451,43 @@ input[type="number"] {
   width: 14px;
   height: 14px;
   stroke-width: 1.75;
+}
+
+/* ── Path-edit toggle (under rotation) ── */
+.prop-pathedit-block {
+  margin-top: 8px;
+}
+.prop-pathedit-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  width: 100%;
+  height: 32px;
+  padding: 0 10px;
+  border: 1px solid transparent;
+  border-radius: 6px;
+  background: var(--surface-3);
+  color: var(--text-2);
+  font-size: 11px;
+  font-family: var(--font-sans);
+  cursor: pointer;
+  transition:
+    background 0.1s,
+    color 0.1s,
+    border-color 0.1s;
+}
+.prop-pathedit-btn:hover {
+  background: rgba(255, 255, 255, 0.06);
+  color: var(--text);
+}
+.prop-pathedit-btn.active {
+  background: var(--accent, #2563eb);
+  border-color: var(--accent, #2563eb);
+  color: #fff;
+}
+.prop-pathedit-btn svg {
+  flex-shrink: 0;
 }
 
 /* ── Help popover ── */

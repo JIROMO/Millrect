@@ -18,7 +18,23 @@ const SCALES = [
   { label: "1/100", numerator: 1, denominator: 100 },
 ];
 
+// Legacy named widths (kept for backward compat with existing documents).
 const LINE_WIDTHS = { thin: 0.2, medium: 0.5, thick: 1.0 };
+// ISO 128 technical-drawing line weights (mm on the physical sheet).
+const STROKE_WIDTH_PRESETS = [0.13, 0.18, 0.25, 0.35, 0.5, 0.7, 1.0, 1.4, 2.0];
+// Resolve a shape.strokeWidth (number mm, ISO string "0.35", or legacy
+// "thin"/"medium"/"thick") to a width in mm.
+function resolveStrokeWidthMm(v) {
+  if (typeof v === "number" && isFinite(v)) return v;
+  if (typeof v === "string") {
+    if (v in LINE_WIDTHS) return LINE_WIDTHS[v];
+    const n = parseFloat(v);
+    if (isFinite(n)) return n;
+  }
+  return LINE_WIDTHS.medium;
+}
+// Line styles (dash patterns). solid = no dash.
+const LINE_STYLES = ["solid", "dashed", "dotted", "dashdot"];
 
 // ── ID generator ─────────────────────────────────────────────
 let _idCounter = 1;

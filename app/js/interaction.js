@@ -172,7 +172,14 @@ function onMouseDown(e, svgEl) {
     return;
   }
   // Bezier edit mode is tool-independent — check first
-  if (_bezierEditId && handleBezierEditDown(e, rp)) return;
+  if (_bezierEditId) {
+    // Clicked a node/handle → keep editing.
+    if (handleBezierEditDown(e, rp)) return;
+    // Clicked anywhere else → leave edit mode and fall through to normal
+    // selection (Figma: click outside the points exits point-edit).
+    exitBezierEditMode();
+    render();
+  }
   if (tool === "select") handleSelDown(e, svgEl, pp, rp);
   else if (tool === "hand") {
     _ds = {
@@ -189,7 +196,7 @@ function onMouseDown(e, svgEl) {
   else if (tool === "text") handleTextToolDown(e, rp);
   else if (tool === "dimension") handleDimDown(pp, rp);
   else if (tool === "bezier") {
-    handleBezierDown(rp, pp);
+    handleBezierDown(rp, pp, e.shiftKey, e.altKey);
   } else if (tool === "pencil") {
     handlePencilDown(e, svgEl);
   }
@@ -350,10 +357,10 @@ function onMouseMove(e, svgEl) {
   }
 
   // Bezier edit handle drag is tool-independent
-  if (_bezierEditId && handleBezierEditMove(rp)) return;
+  if (_bezierEditId && handleBezierEditMove(rp, e.shiftKey, e.altKey)) return;
 
   if (tool === "bezier") {
-    handleBezierMove(rp, pp);
+    handleBezierMove(rp, pp, e.shiftKey, e.altKey);
     return;
   }
 
@@ -628,6 +635,13 @@ function onKeyDown(e) {
   if (e.key === "Enter" && _bezierDraw) {
     e.preventDefault();
     handleBezierKey(e);
+    return;
+  }
+  if (e.key === "Enter" && _bezierEditId) {
+    e.preventDefault();
+    exitBezierEditMode();
+    render();
+    uiUpdate();
     return;
   }
   if (
@@ -1368,6 +1382,75 @@ function handleResize(rp, shiftKey) {
         ring.map(([x, y]) => [nx1 + (x - ox1) * sw, ny1 + (y - oy1) * sh]),
       ),
     );
+  } else if (shape.type === "bezier") {
+    // Scale every node (and its control handles) by the bbox transform — same
+    // model as path, just over nodes[] instead of contours[].
+    let ox1 = Infinity,
+      oy1 = Infinity,
+      ox2 = -Infinity,
+      oy2 = -Infinity;
+    const acc = (x, y) => {
+      if (x < ox1) ox1 = x;
+      if (y < oy1) oy1 = y;
+      if (x > ox2) ox2 = x;
+      if (y > oy2) oy2 = y;
+    };
+    for (const n of origShape.nodes) {
+      if (n.break) continue;
+      acc(n.x, n.y);
+      if (n.h1) acc(n.h1.x, n.h1.y);
+      if (n.h2) acc(n.h2.x, n.h2.y);
+    }
+    let nx1 = ox1,
+      ny1 = oy1,
+      nx2 = ox2,
+      ny2 = oy2;
+    if (hi === 0) ((nx1 += dx), (ny1 += dy));
+    if (hi === 1) ny1 += dy;
+    if (hi === 2) ((nx2 += dx), (ny1 += dy));
+    if (hi === 3) nx2 += dx;
+    if (hi === 4) ((nx2 += dx), (ny2 += dy));
+    if (hi === 5) ny2 += dy;
+    if (hi === 6) ((nx1 += dx), (ny2 += dy));
+    if (hi === 7) nx1 += dx;
+    if (shiftKey) {
+      const ow = ox2 - ox1 || 1,
+        oh = oy2 - oy1 || 1;
+      const nw = nx2 - nx1,
+        nh = ny2 - ny1;
+      if (hi === 3 || hi === 7) {
+        ny2 = ny1 + (nw / ow) * oh;
+      } else if (hi === 1 || hi === 5) {
+        nx2 = nx1 + (nh / oh) * ow;
+      } else if (Math.abs(nw / ow) >= Math.abs(nh / oh)) {
+        const s = nw / ow;
+        ny1 = oy1 + (hi === 0 || hi === 2 ? -(s - 1) * oh : 0);
+        ny2 = ny1 + oh * s;
+      } else {
+        const s = nh / oh;
+        nx1 = ox1 + (hi === 0 || hi === 6 ? -(s - 1) * ow : 0);
+        nx2 = nx1 + ow * s;
+      }
+    }
+    nx2 = Math.max(nx1 + MIN, nx2);
+    ny2 = Math.max(ny1 + MIN, ny2);
+    nx1 = Math.min(nx1, nx2 - MIN);
+    ny1 = Math.min(ny1, ny2 - MIN);
+    const sx = (nx2 - nx1) / (ox2 - ox1 || 1),
+      sy = (ny2 - ny1) / (oy2 - oy1 || 1);
+    const mapPt = (p) =>
+      p ? { x: nx1 + (p.x - ox1) * sx, y: ny1 + (p.y - oy1) * sy } : null;
+    shape.nodes = origShape.nodes.map((n) =>
+      n.break
+        ? { ...n }
+        : {
+            ...n,
+            x: nx1 + (n.x - ox1) * sx,
+            y: ny1 + (n.y - oy1) * sy,
+            h1: mapPt(n.h1),
+            h2: mapPt(n.h2),
+          },
+    );
   } else if (shape.type === "dimension") {
     const o = origShape;
     const isH = shape.dimensionType === "horizontal";
@@ -1477,13 +1560,13 @@ function _updatePathSizeDisplay(shape) {
     const wEl = document.querySelector('[data-key="path-w"]'),
       hEl = document.querySelector('[data-key="path-h"]');
     // Panel fields are in mm; convert from real units to match the initial render.
-    if (wEl) wEl.value = realToMM(maxX - minX).toFixed(2);
-    if (hEl) hEl.value = realToMM(maxY - minY).toFixed(2);
+    if (wEl) wEl.value = fmtNum(realToMM(maxX - minX));
+    if (hEl) hEl.value = fmtNum(realToMM(maxY - minY));
   } else if (shape.type === "rect") {
     const wEl = document.querySelector('[data-key="width"]'),
       hEl = document.querySelector('[data-key="height"]');
-    if (wEl) wEl.value = realToMM(shape.width).toFixed(2);
-    if (hEl) hEl.value = realToMM(shape.height).toFixed(2);
+    if (wEl) wEl.value = fmtNum(realToMM(shape.width));
+    if (hEl) hEl.value = fmtNum(realToMM(shape.height));
   }
 }
 function handleSelMove(pp, shiftKey) {
@@ -2221,7 +2304,8 @@ function applyAngleSnap(sr, er) {
     dy = er.y - sr.y;
   const len = Math.hypot(dx, dy);
   const angle = Math.atan2(dy, dx);
-  const snapped = Math.round(angle / (Math.PI / 4)) * (Math.PI / 4);
+  const step = Math.PI / 12; // 15° increments
+  const snapped = Math.round(angle / step) * step;
   return {
     x: sr.x + len * Math.cos(snapped),
     y: sr.y + len * Math.sin(snapped),
@@ -2614,7 +2698,7 @@ function cancelAltDuplicate() {
 function updateStatusCoords(rp) {
   const el = document.getElementById("status-coords");
   if (el)
-    el.textContent = `x: ${realToMM(rp.x).toFixed(1)}  y: ${realToMM(rp.y).toFixed(1)} mm`;
+    el.textContent = `x: ${fmtNum(realToMM(rp.x))}  y: ${fmtNum(realToMM(rp.y))} mm`;
 }
 function uiUpdate() {
   window.dispatchEvent(new CustomEvent("millrect:uiupdate"));
@@ -2704,6 +2788,7 @@ function enterVertexEditMode(sid) {
       stroke: sh.stroke,
       fill: sh.fill,
       strokeWidth: sh.strokeWidth,
+      strokeStyle: sh.strokeStyle,
     };
     r.layer.shapes.splice(r.layer.shapes.indexOf(sh), 1, newShape);
     pushHistory();

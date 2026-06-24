@@ -68,6 +68,15 @@ describe("static deploy assets", () => {
     );
   });
 
+  it("preserves non-generated files in the output repository", () => {
+    const marker = path.join(outDir, "README.md");
+    fs.writeFileSync(marker, "keep me\n");
+
+    buildSite(outDir);
+
+    assert.equal(fs.readFileSync(marker, "utf8"), "keep me\n");
+  });
+
   it("every local asset in every published HTML resolves within the build", () => {
     const htmlFiles = htmlFilesIn(outDir);
     assert.ok(htmlFiles.length > 0, "should produce published HTML files");

@@ -72,10 +72,10 @@ GitHub の **Releases → Draft a new release** から:
 
 ```bash
 npm run seo:sitemap
-npm run build:site    # 配信物を dist-site/ に集約
+npm run build:site    # 配信物を ../millrect.com/ に生成
 ```
 
-`dist-site/` の中身をレンタルサーバーへアップロード（FTP / コントロールパネル等）。配信物の定義は `scripts/site-manifest.js` が唯一の真実の源。対象: `index.html`, `en/`, `robots.txt`, `sitemap.xml`, `favicon.ico`, `site/`, `app/`, `packages/`, `samples/`, `docs/`。`dist-site/` は gitignore 済み（生成物）。
+隣接する `millrect.com` repo を commit / push すると Cloudflare へ自動デプロイされます。配信物の定義は `scripts/site-manifest.js` が唯一の真実の源。対象: `index.html`, `en/`, `robots.txt`, `sitemap.xml`, `favicon.ico`, `site/`, `app/`, `packages/`, `samples/`, `docs/`。
 
 ## 将来（本格配布時）
 
