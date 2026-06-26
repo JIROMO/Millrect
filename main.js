@@ -18,6 +18,7 @@ const crypto = require("crypto");
 const os = require("os");
 const path = require("path");
 const { WebSocketServer } = require("ws");
+const { checkForUpdates } = require("./electron/update-checker");
 
 const REPO_ROOT = __dirname;
 
@@ -899,6 +900,7 @@ app.whenReady().then(() => {
   startWebSocketServer();
   createWindow();
   buildMenu();
+  setTimeout(() => checkForUpdates(_win), 3000);
 });
 app.on("window-all-closed", () => {
   if (process.platform !== "darwin") app.quit();

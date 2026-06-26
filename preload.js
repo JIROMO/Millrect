@@ -50,4 +50,8 @@ contextBridge.exposeInMainWorld("electronAPI", {
   openHelpTopic: (page, anchor) =>
     ipcRenderer.invoke("help:openTopic", { page, anchor }),
   setAppLocale: (locale) => ipcRenderer.invoke("app:setLocale", locale),
+  onUpdateInfo: (cb) =>
+    ipcRenderer.on("update-info", (_, info) => cb(info)),
+  downloadUpdate: (url) => ipcRenderer.invoke("update:download", url),
+  skipUpdate: () => ipcRenderer.invoke("update:skip"),
 });

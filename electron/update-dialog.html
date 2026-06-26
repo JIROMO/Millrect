@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>アップデートがあります</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      font-size: 13px;
+      color: #1a1a2e;
+      background: #fff;
+      display: flex;
+      flex-direction: column;
+      height: 100vh;
+      overflow: hidden;
+    }
+    .header {
+      padding: 20px 24px 16px;
+      border-bottom: 1px solid #e5e7eb;
+    }
+    .header h1 {
+      font-size: 16px;
+      font-weight: 600;
+      margin-bottom: 4px;
+    }
+    .header p {
+      color: #6b7280;
+      font-size: 12px;
+    }
+    .body {
+      flex: 1;
+      overflow-y: auto;
+      padding: 16px 24px;
+    }
+    .release-notes {
+      background: #f9fafb;
+      border: 1px solid #e5e7eb;
+      border-radius: 6px;
+      padding: 12px 14px;
+      font-size: 12px;
+      line-height: 1.6;
+      white-space: pre-wrap;
+      max-height: 200px;
+      overflow-y: auto;
+      color: #374151;
+    }
+    .footer {
+      padding: 14px 24px;
+      border-top: 1px solid #e5e7eb;
+      display: flex;
+      justify-content: flex-end;
+      gap: 8px;
+    }
+    button {
+      padding: 7px 16px;
+      border-radius: 6px;
+      font-size: 13px;
+      cursor: pointer;
+      border: none;
+    }
+    .btn-skip {
+      background: #f3f4f6;
+      color: #374151;
+    }
+    .btn-skip:hover { background: #e5e7eb; }
+    .btn-download {
+      background: #4f46e5;
+      color: #fff;
+      font-weight: 500;
+    }
+    .btn-download:hover { background: #4338ca; }
+  </style>
+</head>
+<body>
+  <div class="header">
+    <h1 id="title">新しいバージョンがあります</h1>
+    <p id="subtitle"></p>
+  </div>
+  <div class="body">
+    <div class="release-notes" id="notes">読み込み中…</div>
+  </div>
+  <div class="footer">
+    <button class="btn-skip" id="btn-skip">今回はスキップ</button>
+    <button class="btn-download" id="btn-download">ダウンロード</button>
+  </div>
+
+  <script>
+    let _downloadUrl = "";
+
+    window.electronAPI.onUpdateInfo((info) => {
+      document.getElementById("title").textContent =
+        `Millrect ${info.version} が利用可能です`;
+      document.getElementById("subtitle").textContent =
+        `現在のバージョンよりも新しいリリースがあります`;
+      document.getElementById("notes").textContent =
+        info.body || "リリースノートはありません。";
+      _downloadUrl = info.downloadUrl;
+    });
+
+    document.getElementById("btn-download").addEventListener("click", () => {
+      window.electronAPI.downloadUpdate(_downloadUrl);
+    });
+
+    document.getElementById("btn-skip").addEventListener("click", () => {
+      window.electronAPI.skipUpdate();
+    });
+  </script>
+</body>
+</html>
