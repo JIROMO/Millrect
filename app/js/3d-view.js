@@ -779,7 +779,9 @@ async function _ensureMeshesForExport() {
 }
 
 function _downloadStl(stl) {
-  const blob = new Blob([stl], { type: "text/plain" });
+  const blob = new Blob([stl], {
+    type: stl instanceof ArrayBuffer ? "model/stl" : "text/plain",
+  });
   const a = document.createElement("a");
   a.href = URL.createObjectURL(blob);
   a.download =

@@ -1,10 +1,10 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="ja">
   <head>
     <meta charset="UTF-8" />
     <meta
       http-equiv="Content-Security-Policy"
-      content="default-src 'self'; script-src 'self' 'wasm-unsafe-eval'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; img-src 'self' data: blob:; font-src 'self' data: https://fonts.gstatic.com; connect-src 'self' https://api.fontsource.org https://fonts.googleapis.com https://fonts.gstatic.com https://cdn.jsdelivr.net; object-src 'none'; base-uri 'self'"
+      content="default-src 'self'; script-src 'self' 'wasm-unsafe-eval' https://static.cloudflareinsights.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; img-src 'self' data: blob:; font-src 'self' data: https://fonts.gstatic.com; connect-src 'self' https://api.fontsource.org https://fonts.googleapis.com https://fonts.gstatic.com https://cdn.jsdelivr.net https://cloudflareinsights.com; object-src 'none'; base-uri 'self'"
     />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Millrect</title>
@@ -23,7 +23,10 @@
       property="og:description"
       content="ブラウザで使える2D作図と多ビュー3D。ログイン不要。"
     />
-    <meta property="og:image" content="https://millrect.com/site/images/ogp.jpg" />
+    <meta
+      property="og:image"
+      content="https://millrect.com/site/images/ogp.jpg"
+    />
     <link rel="stylesheet" href="css/app.css" />
     <script src="js/dependencies.js"></script>
     <script src="vendor/lucide.min.js"></script>
@@ -71,6 +74,7 @@
     <script src="../packages/part-dsl.js"></script>
     <script src="../packages/part-solver.js"></script>
     <script src="../packages/project-json.js"></script>
+    <script src="../packages/viewport-culling.js"></script>
     <script src="../packages/taste-memory.js"></script>
     <script src="../packages/taste-memory-promotion.js"></script>
     <script src="../packages/builtin-fonts.js"></script>

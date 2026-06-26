@@ -1,5 +1,7 @@
 "use strict";
 
+const ViewportCulling = globalThis.ViewportCulling;
+
 // ── SVG helpers ──────────────────────────────────────────────
 const NS = "http://www.w3.org/2000/svg";
 function se(tag, attrs = {}) {
@@ -393,7 +395,196 @@ function renderDimensionSVG(dim, scale) {
 // ── Renderer ──────────────────────────────────────────────────
 let _svg = null,
   _vp = null,
-  _marquee = null;
+  _marquee = null,
+  _renderTarget = null,
+  _activeCullBox = null;
+
+const VIEWPORT_CULL_SHAPE_THRESHOLD = 250;
+const VIEWPORT_CULL_OVERSCAN = 1.5;
+
+const RENDER_ROOT_ORDER = [
+  "paper-root",
+  "reference-underlay-root",
+  "reference-scale-root",
+  "grid-root",
+  "shape-layer-root",
+  "view-guide-root",
+  "reference-overlay-root",
+  "selection-root",
+  "interaction-overlay-root",
+  "preview-root",
+  "snap-root",
+];
+
+function _ensureRenderRoot(id) {
+  let root = _vp.querySelector(`:scope > #${_cssEsc(id)}`);
+  if (!root) root = se("g", { id });
+  return root;
+}
+
+function _syncRenderRoots() {
+  const roots = Object.fromEntries(
+    RENDER_ROOT_ORDER.map((id) => [id, _ensureRenderRoot(id)]),
+  );
+  const rootSet = new Set(Object.values(roots));
+  const firstTransient = Array.from(_vp.children).find(
+    (node) => !rootSet.has(node),
+  );
+  for (const id of RENDER_ROOT_ORDER) {
+    _vp.insertBefore(roots[id], firstTransient || null);
+  }
+  return roots;
+}
+
+function _captureLayer(root, draw) {
+  root.replaceChildren();
+  const previousTarget = _renderTarget;
+  _renderTarget = root;
+  try {
+    draw();
+  } finally {
+    _renderTarget = previousTarget;
+  }
+}
+
+function _appendRenderNode(node) {
+  (_renderTarget || _vp).appendChild(node);
+}
+
+function _appendToRenderRoot(id, node) {
+  const root = _ensureRenderRoot(id);
+  _syncRenderRoots();
+  root.appendChild(node);
+}
+
+function _clearRenderRoot(id) {
+  if (!_vp) return;
+  const root = _vp.querySelector(`:scope > #${_cssEsc(id)}`);
+  if (root) root.replaceChildren();
+}
+
+function _replaceRenderRoot(id, draw) {
+  const root = _ensureRenderRoot(id);
+  _syncRenderRoots();
+  _captureLayer(root, draw);
+  root.removeAttribute("data-render-sig");
+  return root;
+}
+
+function _renderLayer(root, sig, draw) {
+  const nextSig = String(sig);
+  if (root.getAttribute("data-render-sig") === nextSig) return false;
+  _captureLayer(root, draw);
+  root.setAttribute("data-render-sig", nextSig);
+  return true;
+}
+
+function _clearLayer(root) {
+  if (!root.hasChildNodes() && !root.hasAttribute("data-render-sig")) return;
+  root.replaceChildren();
+  root.removeAttribute("data-render-sig");
+}
+
+function _scaleSig(scale) {
+  return scale ? `${scale.numerator}/${scale.denominator}` : "1/1";
+}
+
+function _pageDocVersion() {
+  return typeof getDocumentRenderVersion === "function"
+    ? getDocumentRenderVersion()
+    : 0;
+}
+
+function _referenceImageSig(page) {
+  const img = page.referenceImage;
+  if (!img?.dataUrl) return "none";
+  return JSON.stringify({
+    scale: _scaleSig(page.scale),
+    dataUrl: img.dataUrl,
+    x: img.x,
+    y: img.y,
+    width: img.width,
+    height: img.height,
+    opacity: img.opacity ?? 0.45,
+  });
+}
+
+function _selectionSig(page, selIds, zoom) {
+  const items = [];
+  for (const id of selIds || []) {
+    const res = typeof findShapeById === "function" ? findShapeById(id) : null;
+    if (!res || res.page !== page) continue;
+    items.push(_shapeSig(res.shape, page.scale));
+  }
+  return [
+    page.id,
+    _scaleSig(page.scale),
+    zoom,
+    selIds.join(","),
+    items.join(";"),
+    typeof _bezierEditId !== "undefined" ? _bezierEditId || "" : "",
+    typeof _vertexEditId !== "undefined" ? _vertexEditId || "" : "",
+  ].join("|");
+}
+
+function _pageShapeCount(page) {
+  return (
+    (page.dimensions || []).length +
+    (page.layers || []).reduce(
+      (sum, layer) => sum + (layer.shapes || []).length,
+      0,
+    )
+  );
+}
+
+function _visiblePaperBox() {
+  if (!_svg) return null;
+  const state = getState();
+  const zoom = state.zoom || 1;
+  const rect = _svg.getBoundingClientRect();
+  return {
+    x: -state.panX / zoom,
+    y: -state.panY / zoom,
+    w: rect.width / zoom,
+    h: rect.height / zoom,
+  };
+}
+
+function _viewportCullBox() {
+  const visible = _visiblePaperBox();
+  if (!visible) return null;
+  const margin = Math.max(visible.w, visible.h) * VIEWPORT_CULL_OVERSCAN;
+  return {
+    x: visible.x - margin,
+    y: visible.y - margin,
+    w: visible.w + margin * 2,
+    h: visible.h + margin * 2,
+  };
+}
+
+function _boxContains(outer, inner) {
+  if (!outer || !inner) return true;
+  return (
+    inner.x >= outer.x &&
+    inner.y >= outer.y &&
+    inner.x + inner.w <= outer.x + outer.w &&
+    inner.y + inner.h <= outer.y + outer.h
+  );
+}
+
+function _boxIntersects(a, b) {
+  return ViewportCulling.boxIntersects(a, b);
+}
+
+function _cullSig(cullBox) {
+  if (!cullBox) return "all";
+  return [
+    Math.round(cullBox.x),
+    Math.round(cullBox.y),
+    Math.round(cullBox.w),
+    Math.round(cullBox.h),
+  ].join(",");
+}
 
 function initRenderer(svgElement) {
   _svg = svgElement;
@@ -408,6 +599,30 @@ function realToPaper(v, scale) {
 
 // Measure text in paper units using a hidden DOM element (matches foreignObject layout)
 let _textMeasureEl = null;
+const _textLayoutDomCache = new Map();
+const TEXT_LAYOUT_DOM_CACHE_LIMIT = 400;
+
+function _textLayoutDomCacheKey(shape, paperWidth) {
+  return JSON.stringify({
+    id: shape.id || "",
+    text: shape.text ?? "",
+    width: paperWidth != null && paperWidth > 0 ? paperWidth : null,
+    fontSize: shape.fontSize ?? 3.5,
+    fontFamily: normalizeTextFontFamily(shape.fontFamily),
+    fontWeight: shape.fontWeight === "bold" ? "700" : "400",
+    textAlign: shape.textAlign || "left",
+    lineHeight: textShapeLineHeight(shape),
+  });
+}
+
+function _cacheTextLayoutDom(key, value) {
+  if (_textLayoutDomCache.size >= TEXT_LAYOUT_DOM_CACHE_LIMIT) {
+    _textLayoutDomCache.delete(_textLayoutDomCache.keys().next().value);
+  }
+  _textLayoutDomCache.set(key, value);
+  return value;
+}
+
 function measureTextHeight(shape, paperWidth) {
   return measureTextLayout(shape, paperWidth).h;
 }
@@ -480,6 +695,9 @@ function applyTextShapeElementStyle(el, shape) {
 }
 
 function measureTextLayoutDom(shape, paperWidth) {
+  const cacheKey = _textLayoutDomCacheKey(shape, paperWidth);
+  const cached = _textLayoutDomCache.get(cacheKey);
+  if (cached) return cached;
   const el = _getTextMeasureEl();
   const fs = shape.fontSize ?? 3.5;
   applyTextShapeElementStyle(el, shape);
@@ -493,7 +711,12 @@ function measureTextLayoutDom(shape, paperWidth) {
 
   if (!text) {
     const lh = textShapeLineHeight(shape);
-    return { w: Math.max(fs * 0.25, 1), h: fs * lh, insetTop: 0, insetLeft: 0 };
+    return _cacheTextLayoutDom(cacheKey, {
+      w: Math.max(fs * 0.25, 1),
+      h: fs * lh,
+      insetTop: 0,
+      insetLeft: 0,
+    });
   }
 
   const elRect = el.getBoundingClientRect();
@@ -515,17 +738,22 @@ function measureTextLayoutDom(shape, paperWidth) {
     const insetTop = Math.max(0, elRect.top - minY);
     const insetLeft = Math.max(0, minX - elRect.left);
     const pad = Math.max(0.5, fs * 0.06);
-    return {
+    return _cacheTextLayoutDom(cacheKey, {
       w: Math.max(1, maxX - minX + pad),
       h: Math.max(1, maxY - minY + pad * 0.25),
       insetTop,
       insetLeft,
-    };
+    });
   }
 
   const w = Math.max(1, el.scrollWidth);
   const h = Math.max(el.scrollHeight, fs);
-  return { w: w + fs * 0.1, h, insetTop: 0, insetLeft: 0 };
+  return _cacheTextLayoutDom(cacheKey, {
+    w: w + fs * 0.1,
+    h,
+    insetTop: 0,
+    insetLeft: 0,
+  });
 }
 
 function measureTextLayout(shape, paperWidth) {
@@ -679,6 +907,9 @@ function applyViewportTransform() {
     "transform",
     `translate(${state.panX},${state.panY}) scale(${state.zoom})`,
   );
+  if (_activeCullBox && !_boxContains(_activeCullBox, _visiblePaperBox())) {
+    render();
+  }
 }
 
 function _isPrintRenderMode() {
@@ -693,6 +924,11 @@ function _doRender() {
   const { width: pw, height: ph } = getPaperDimensions(page);
   const printMode = _isPrintRenderMode();
   const renderZoom = printMode ? 1 : state.zoom;
+  const cullBox =
+    !printMode && _pageShapeCount(page) > VIEWPORT_CULL_SHAPE_THRESHOLD
+      ? _viewportCullBox()
+      : null;
+  _activeCullBox = cullBox;
   if (printMode) {
     _svg.setAttribute("viewBox", `0 0 ${pw} ${ph}`);
     _svg.setAttribute("preserveAspectRatio", "xMinYMin meet");
@@ -706,31 +942,90 @@ function _doRender() {
       ? "translate(0,0) scale(1)"
       : `translate(${state.panX},${state.panY}) scale(${state.zoom})`,
   );
-  _vp.replaceChildren();
-  renderPaper(pw, ph, renderZoom);
+  const roots = _syncRenderRoots();
+  _renderLayer(roots["paper-root"], `paper|${pw}|${ph}|${renderZoom}`, () =>
+    renderPaper(pw, ph, renderZoom),
+  );
   const refSelected =
     !printMode &&
     typeof isReferenceImageSelected === "function" &&
     isReferenceImageSelected();
   if (page.referenceImage?.dataUrl && (!refSelected || printMode)) {
-    renderReferenceImage(page, renderZoom);
+    _renderLayer(
+      roots["reference-underlay-root"],
+      `ref-under|${_referenceImageSig(page)}|${printMode}`,
+      () => renderReferenceImage(page, renderZoom),
+    );
+  } else {
+    _clearLayer(roots["reference-underlay-root"]);
   }
   if (!printMode && typeof getReferenceScaleAnchorState === "function") {
     const anchor = getReferenceScaleAnchorState();
-    if (anchor)
-      renderReferenceScaleAnchorOverlay(anchor, page.scale, renderZoom);
+    if (anchor) {
+      _renderLayer(
+        roots["reference-scale-root"],
+        `ref-scale|${JSON.stringify(anchor)}|${_scaleSig(page.scale)}|${renderZoom}`,
+        () => renderReferenceScaleAnchorOverlay(anchor, page.scale, renderZoom),
+      );
+    } else {
+      _clearLayer(roots["reference-scale-root"]);
+    }
+  } else {
+    _clearLayer(roots["reference-scale-root"]);
   }
-  if (state.showGrid && !printMode) renderGrid(pw, ph, renderZoom);
-  renderShapes(page, printMode ? [] : state.selectedShapeIds);
-  if (state.showViewGuides && !printMode)
-    renderViewGuides(page, pw, ph, renderZoom);
+  if (state.showGrid && !printMode) {
+    _renderLayer(
+      roots["grid-root"],
+      `grid|${pw}|${ph}|${renderZoom}`,
+      () => renderGrid(pw, ph, renderZoom),
+    );
+  } else {
+    _clearLayer(roots["grid-root"]);
+  }
+  _renderLayer(
+    roots["shape-layer-root"],
+    `shapes|${_shapesSig(page)}|${printMode}|${_cullSig(cullBox)}`,
+    () => renderShapes(page, printMode ? [] : state.selectedShapeIds, cullBox),
+  );
+  if (state.showViewGuides && !printMode) {
+    _renderLayer(
+      roots["view-guide-root"],
+      `guides|${page.id}|${_pageDocVersion()}|${pw}|${ph}|${renderZoom}`,
+      () => renderViewGuides(page, pw, ph, renderZoom),
+    );
+  } else {
+    _clearLayer(roots["view-guide-root"]);
+  }
   if (!printMode && page.referenceImage?.dataUrl && refSelected) {
-    renderReferenceImage(page, renderZoom);
-    renderReferenceImageEditOverlay(page, renderZoom);
+    _renderLayer(
+      roots["reference-overlay-root"],
+      `ref-over|${_referenceImageSig(page)}|${renderZoom}`,
+      () => {
+        renderReferenceImage(page, renderZoom);
+        renderReferenceImageEditOverlay(page, renderZoom);
+      },
+    );
+  } else {
+    _clearLayer(roots["reference-overlay-root"]);
   }
-  if (!printMode && state.selectedShapeIds.length > 0)
-    renderSelectionHandles(state.selectedShapeIds, page, renderZoom);
-  if (!printMode && _marquee) _renderMarqueeRect(_marquee.a, _marquee.b);
+  if (!printMode && state.selectedShapeIds.length > 0) {
+    _renderLayer(
+      roots["selection-root"],
+      `selection|${_selectionSig(page, state.selectedShapeIds, renderZoom)}`,
+      () => renderSelectionHandles(state.selectedShapeIds, page, renderZoom),
+    );
+  } else {
+    _clearLayer(roots["selection-root"]);
+  }
+  if (!printMode && _marquee) {
+    _renderLayer(
+      roots["interaction-overlay-root"],
+      `marquee|${_marquee.a.x}|${_marquee.a.y}|${_marquee.b.x}|${_marquee.b.y}|${renderZoom}`,
+      () => _renderMarqueeRect(_marquee.a, _marquee.b),
+    );
+  } else {
+    _clearLayer(roots["interaction-overlay-root"]);
+  }
   // ベジェ描画中のオーバーレイは再描画のたびにここで復元する。
   // render() は rAF 遅延のため、イベントハンドラ側の手動 append だけだと
   // 次フレームの replaceChildren で消えてチラつく
@@ -752,7 +1047,7 @@ function _renderMarqueeRect(a, b) {
     width: Math.abs(b.x - a.x),
     height: Math.abs(b.y - a.y),
   });
-  _vp.appendChild(el);
+  _appendRenderNode(el);
 }
 
 function setMarquee(a, b) {
@@ -763,7 +1058,7 @@ function clearMarquee() {
 }
 
 function renderPaper(w, h, zoom) {
-  _vp.appendChild(
+  _appendRenderNode(
     se("rect", {
       x: 2 / zoom,
       y: 2 / zoom,
@@ -773,7 +1068,7 @@ function renderPaper(w, h, zoom) {
       rx: 0.5 / zoom,
     }),
   );
-  _vp.appendChild(
+  _appendRenderNode(
     se("rect", {
       x: 0,
       y: 0,
@@ -807,7 +1102,7 @@ function renderReferenceImage(page, zoom) {
   });
   el.setAttribute("id", "reference-image");
   g.appendChild(el);
-  _vp.appendChild(g);
+  _appendRenderNode(g);
 }
 
 function renderReferenceImageEditOverlay(page, zoom) {
@@ -868,7 +1163,7 @@ function renderReferenceImageEditOverlay(page, zoom) {
     );
   }
 
-  _vp.appendChild(g);
+  _appendRenderNode(g);
 }
 
 function renderReferenceScaleAnchorOverlay(anchor, scale, zoom) {
@@ -909,7 +1204,7 @@ function renderReferenceScaleAnchorOverlay(anchor, scale, zoom) {
     );
   }
 
-  _vp.appendChild(g);
+  _appendRenderNode(g);
 }
 
 // ── ビューガイド（見通し線）──────────────────────────────────
@@ -1069,7 +1364,7 @@ function renderViewGuides(page, pw, ph, zoom) {
     guideLine({ x1: 0, y1: py, x2: pw, y2: py });
     guideLabel(2 / zoom, py - 2 / zoom, oType, false);
   }
-  _vp.appendChild(g);
+  _appendRenderNode(g);
 }
 
 // グリッドは 10mm タイルの <pattern> 1 枚 ＋ それを塗る <rect> 1 枚で描く。
@@ -1107,7 +1402,7 @@ function renderGrid(pw, ph, zoom) {
   ln(0, 0, 0, TILE, "#ccc", 0.3 / zoom);
   ln(0, 0, TILE, 0, "#ccc", 0.3 / zoom);
   defs.appendChild(pat);
-  _vp.appendChild(
+  _appendRenderNode(
     se("rect", {
       id: "grid",
       x: 0,
@@ -1172,6 +1467,145 @@ function _shapeSig(shape, scale) {
   return `${shape.id}|${shape.type}|${sc}|${rv}|${tlv}`;
 }
 
+function _setAttrs(el, attrs) {
+  for (const [k, v] of Object.entries(attrs)) {
+    if (v == null || v === false) el.removeAttribute(k);
+    else el.setAttribute(k, v);
+  }
+}
+
+function _patchSimpleShapeNode(node, shape, scale) {
+  if (!node || shape.rotation || shape.flipH || shape.flipV || shape.ghost) {
+    return false;
+  }
+  const sw = resolveStrokeWidthMm(shape.strokeWidth);
+  const stroke = shape.stroke || "#1a1a2e";
+  const fill = shape.fill || "none";
+  const userDash = lineStyleDashArray(shape.strokeStyle, sw);
+  _setAttrs(node, {
+    "data-id": shape.id,
+    "data-type": shape.type,
+    cursor: "default",
+    fill: shape.type === "image" ? null : fill,
+    stroke: shape.type === "image" ? null : stroke,
+    "stroke-dasharray": shape.type !== "line" ? userDash : null,
+    opacity: null,
+    "data-ghost": null,
+    transform: null,
+  });
+
+  if (shape.type === "line") {
+    if (node.children.length !== 2) return false;
+    const hit = node.children[0];
+    const line = node.children[1];
+    if (hit.tagName !== "line" || line.tagName !== "line") return false;
+    const x1 = realToPaper(shape.x1, scale);
+    const y1 = realToPaper(shape.y1, scale);
+    const x2 = realToPaper(shape.x2, scale);
+    const y2 = realToPaper(shape.y2, scale);
+    const cap = shape.strokeLinecap || "butt";
+    const roleStyle = lineRoleStyle(shape.role, sw);
+    const dash = userDash || roleStyle?.dash || null;
+    if (roleStyle?.opacity) node.setAttribute("opacity", roleStyle.opacity);
+    _setAttrs(hit, {
+      x1,
+      y1,
+      x2,
+      y2,
+      stroke: "transparent",
+      "stroke-width": Math.max(sw + 3, 4),
+      "stroke-linecap": cap,
+      "pointer-events": "stroke",
+    });
+    _setAttrs(line, {
+      x1,
+      y1,
+      x2,
+      y2,
+      stroke,
+      "stroke-width": sw,
+      "stroke-linecap": cap,
+      "pointer-events": "none",
+      "stroke-dasharray": dash,
+    });
+    return true;
+  }
+
+  if (shape.type === "rect") {
+    if (shape.rxMode === "individual" || node.children.length !== 1) {
+      return false;
+    }
+    const rect = node.children[0];
+    if (rect.tagName !== "rect") return false;
+    _setAttrs(rect, {
+      x: realToPaper(shape.x, scale),
+      y: realToPaper(shape.y, scale),
+      width: realToPaper(shape.width, scale),
+      height: realToPaper(shape.height, scale),
+      rx: shape.rx ? realToPaper(shape.rx, scale) : null,
+      stroke,
+      "stroke-width": sw,
+      fill,
+      "pointer-events": "all",
+      "stroke-dasharray": null,
+    });
+    return true;
+  }
+
+  if (shape.type === "circle") {
+    if (node.children.length !== 1 || node.children[0].tagName !== "circle") {
+      return false;
+    }
+    _setAttrs(node.children[0], {
+      cx: realToPaper(shape.cx, scale),
+      cy: realToPaper(shape.cy, scale),
+      r: realToPaper(shape.r, scale),
+      stroke,
+      "stroke-width": sw,
+      fill,
+      "pointer-events": "all",
+      "stroke-dasharray": null,
+    });
+    return true;
+  }
+
+  if (shape.type === "ellipse") {
+    if (node.children.length !== 1 || node.children[0].tagName !== "ellipse") {
+      return false;
+    }
+    _setAttrs(node.children[0], {
+      cx: realToPaper(shape.cx, scale),
+      cy: realToPaper(shape.cy, scale),
+      rx: realToPaper(shape.rx, scale),
+      ry: realToPaper(shape.ry, scale),
+      stroke,
+      "stroke-width": sw,
+      fill,
+      "pointer-events": "all",
+    });
+    return true;
+  }
+
+  if (shape.type === "image") {
+    if (node.children.length !== 1 || node.children[0].tagName !== "image") {
+      return false;
+    }
+    _setAttrs(node.children[0], {
+      href: shape.dataUrl,
+      x: realToPaper(shape.x, scale),
+      y: realToPaper(shape.y, scale),
+      width: realToPaper(shape.width, scale),
+      height: realToPaper(shape.height, scale),
+      opacity: shape.opacity ?? 1,
+      preserveAspectRatio: "none",
+      "pointer-events": "all",
+    });
+    return true;
+  }
+
+  return false;
+}
+
 // コンテナ直下の図形ノードを data-id で突合して差分更新する（React の key+memo 相当）。
 // data-sig が一致するノードはそのまま再利用（DOM 生成・テキスト reflow を回避）、
 // 変わったものだけ作り直し、消えたものを削除、順序を desired に合わせる。
@@ -1187,16 +1621,20 @@ function _reconcileShapes(container, shapes, scale, selIds) {
     const sig = _shapeSig(shape, scale);
     let node = existing.get(shape.id);
     if (!node || node.getAttribute("data-sig") !== sig) {
-      const fresh = renderShape(shape, scale, selIds);
-      if (!fresh) {
-        if (node) node.remove();
-        existing.delete(shape.id);
-        continue;
+      if (node && _patchSimpleShapeNode(node, shape, scale)) {
+        node.setAttribute("data-sig", sig);
+      } else {
+        const fresh = renderShape(shape, scale, selIds);
+        if (!fresh) {
+          if (node) node.remove();
+          existing.delete(shape.id);
+          continue;
+        }
+        fresh.setAttribute("data-sig", sig);
+        if (node) node.replaceWith(fresh);
+        node = fresh;
+        existing.set(shape.id, node);
       }
-      fresh.setAttribute("data-sig", sig);
-      if (node) node.replaceWith(fresh);
-      node = fresh;
-      existing.set(shape.id, node);
     }
     container.appendChild(node); // desired 順に並べ替え（既存ノードの移動は安価）
   }
@@ -1204,20 +1642,51 @@ function _reconcileShapes(container, shapes, scale, selIds) {
 }
 
 // #shape-root のレイヤー群 + dimension-root を差分更新する。
-function _reconcileShapeRoot(root, page, selIds) {
+function _shapeVisibleInCull(shape, page, cullBox, selSet) {
+  return ViewportCulling.isShapeVisibleInCull(
+    shape,
+    page,
+    cullBox,
+    selSet,
+    getShapeBBox,
+  );
+}
+
+function _visibleShapesForRender(shapes, page, cullBox, selSet) {
+  return ViewportCulling.visibleShapesForRender(
+    shapes,
+    page,
+    cullBox,
+    selSet,
+    getShapeBBox,
+  );
+}
+
+function _reconcileShapeRoot(root, page, selIds, cullBox) {
+  const selSet = new Set(selIds || []);
   const order = [];
   for (const layer of page.layers) {
     if (!layer.visible) continue;
     let lg = root.querySelector(`:scope > #layer-${_cssEsc(layer.id)}`);
     if (!lg) lg = se("g", { id: `layer-${layer.id}` });
     lg.setAttribute("opacity", layer.locked ? "0.6" : "1");
-    _reconcileShapes(lg, layer.shapes, page.scale, selIds);
+    _reconcileShapes(
+      lg,
+      _visibleShapesForRender(layer.shapes, page, cullBox, selSet),
+      page.scale,
+      selIds,
+    );
     order.push(lg);
   }
   // 寸法線アノテーションは常に最前面（レイヤーより上）
   let dg = root.querySelector(":scope > #dimension-root");
   if (!dg) dg = se("g", { id: "dimension-root" });
-  _reconcileShapes(dg, page.dimensions || [], page.scale, selIds);
+  _reconcileShapes(
+    dg,
+    _visibleShapesForRender(page.dimensions || [], page, cullBox, selSet),
+    page.scale,
+    selIds,
+  );
   order.push(dg);
 
   // 非表示になったレイヤー等、不要な最上位グループを削除してから順序を整える
@@ -1226,25 +1695,50 @@ function _reconcileShapeRoot(root, page, selIds) {
   for (const node of order) root.appendChild(node);
 }
 
-function renderShapes(page, selIds) {
-  const sig = _shapesSig(page);
+function renderShapes(page, selIds, cullBox = null) {
+  const sig = `${_shapesSig(page)}|${_cullSig(cullBox)}`;
   if (_shapeRootCache && _shapeRootCache.sig === sig && _shapeRootCache.node) {
-    _vp.appendChild(_shapeRootCache.node); // 無変更: 作り直さず再アタッチ
+    _appendRenderNode(_shapeRootCache.node); // 無変更: 作り直さず再アタッチ
     return;
   }
   // 変更あり: 既存ツリーを使い回して差分更新（1 図形編集で全再構築しない）
   let root = _shapeRootCache && _shapeRootCache.node;
   if (!root) root = se("g", { id: "shape-root" });
-  _reconcileShapeRoot(root, page, selIds);
+  _reconcileShapeRoot(root, page, selIds, cullBox);
   _shapeRootCache = { sig, node: root };
-  _vp.appendChild(root);
+  _appendRenderNode(root);
 }
 
 // ドラッグ中の差分更新: 動いた図形のノードだけを作り直して差し替える。
 // 全再描画(_doRender)を介さないため、図形数に比例するコストを避けられる。
 // 前回フルレンダーで作った #shape-root（キャッシュ）を直接編集し、
 // sig を無効化して次のフルレンダー（ドラッグ終了時）で作り直させる。
-function liveUpdateShapes(ids) {
+function _canLiveTransformSelectionHandles(ids, options = {}) {
+  return (
+    ids?.length > 0 &&
+    Number.isFinite(options.dxPaper) &&
+    Number.isFinite(options.dyPaper) &&
+    typeof _bezierEditId !== "undefined" &&
+    !_bezierEditId &&
+    typeof _vertexEditId !== "undefined" &&
+    !_vertexEditId
+  );
+}
+
+function _translateSelectionHandles(dxPaper, dyPaper) {
+  const handles = _vp?.querySelector("#selection-root #sel-handles");
+  if (!handles) return false;
+  let base = handles.getAttribute("data-drag-base");
+  if (base == null) {
+    base = handles.getAttribute("transform") || "";
+    handles.setAttribute("data-drag-base", base);
+  }
+  const tr = `translate(${dxPaper},${dyPaper})`;
+  handles.setAttribute("transform", base ? `${tr} ${base}` : tr);
+  return true;
+}
+
+function liveUpdateShapes(ids, options = {}) {
   const root = _shapeRootCache && _shapeRootCache.node;
   if (!root || !root.isConnected) {
     render();
@@ -1261,19 +1755,36 @@ function liveUpdateShapes(ids) {
       if (old) old.remove();
       continue;
     }
-    const fresh = renderShape(res.shape, scale, selIds);
-    if (old) {
-      fresh ? old.replaceWith(fresh) : old.remove();
-    } else if (fresh) {
+    const sig = _shapeSig(res.shape, scale);
+    if (old && _patchSimpleShapeNode(old, res.shape, scale)) {
+      old.setAttribute("data-sig", sig);
+    } else if (old) {
+      const fresh = renderShape(res.shape, scale, selIds);
+      if (fresh) {
+        fresh.setAttribute("data-sig", sig);
+        old.replaceWith(fresh);
+      } else {
+        old.remove();
+      }
+    } else {
       render(); // ノードが見つからない異常時は安全側でフルレンダー
       return;
     }
   }
   // 変更を反映済みだが座標は変わったので、次のフルレンダーで作り直させる
   if (_shapeRootCache) _shapeRootCache.sig = null;
-  // 選択ハンドルは #shape-root の外（_vp 直下）なので個別に更新
-  _vp.querySelector("#sel-handles")?.remove();
-  if (selIds.length > 0) renderSelectionHandles(selIds, page, getState().zoom);
+  // 移動ドラッグ中は、選択ハンドル全体も transform だけで追従させる。
+  if (_canLiveTransformSelectionHandles(ids, options)) {
+    if (_translateSelectionHandles(options.dxPaper, options.dyPaper)) return;
+  }
+  // それ以外は selection-root だけを差し替える。
+  if (selIds.length > 0) {
+    _replaceRenderRoot("selection-root", () =>
+      renderSelectionHandles(selIds, page, getState().zoom),
+    );
+  } else {
+    _clearRenderRoot("selection-root");
+  }
 }
 
 // ── ドラッグ中のライブ移動（transform のみ・DOM 非再生成）──────────
@@ -2174,7 +2685,7 @@ function renderSelectionHandles(selIds, page, zoom) {
         zoom,
         page.scale,
       );
-      _vp.appendChild(g);
+      _appendRenderNode(g);
       return;
     }
   }
@@ -2336,7 +2847,7 @@ function renderSelectionHandles(selIds, page, zoom) {
     }
     if (sg !== g) g.appendChild(sg);
   }
-  _vp.appendChild(g);
+  _appendRenderNode(g);
 }
 
 function renderPreview(shape) {
@@ -2354,10 +2865,10 @@ function renderPreview(shape) {
     if (shape.type !== "line" && shape.type !== "dimension")
       el.setAttribute("fill", "rgba(37,99,235,0.06)");
   }
-  _vp.appendChild(el);
+  _appendToRenderRoot("preview-root", el);
 }
 function removePreview() {
-  _svg && _svg.querySelector("#preview-shape")?.remove();
+  _clearRenderRoot("preview-root");
 }
 
 // ── スナップインジケーター ─────────────────────────────────────
@@ -2424,7 +2935,7 @@ function renderSnapIndicator(px, py, zoom, snapType) {
           r: sw * 1.5,
         }),
       );
-      _vp.appendChild(g);
+      _appendToRenderRoot("snap-root", g);
       return;
     }
     case "intersection": {
@@ -2450,7 +2961,7 @@ function renderSnapIndicator(px, py, zoom, snapType) {
           y2: py + s,
         }),
       );
-      _vp.appendChild(g);
+      _appendToRenderRoot("snap-root", g);
       return;
     }
     case "guide": {
@@ -2482,7 +2993,7 @@ function renderSnapIndicator(px, py, zoom, snapType) {
           y2: py + s * 0.6,
         }),
       );
-      _vp.appendChild(g);
+      _appendToRenderRoot("snap-root", g);
       return;
     }
     default: {
@@ -2491,8 +3002,8 @@ function renderSnapIndicator(px, py, zoom, snapType) {
       break;
     }
   }
-  _vp.appendChild(el);
+  _appendToRenderRoot("snap-root", el);
 }
 function removeSnapIndicator() {
-  _svg && _svg.querySelector("#snap-ind")?.remove();
+  _clearRenderRoot("snap-root");
 }

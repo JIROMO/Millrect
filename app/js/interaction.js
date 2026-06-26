@@ -398,12 +398,14 @@ function onMouseMove(e, svgEl) {
 
 function onMouseUp(e, svgEl) {
   if (e.button === 1 || _panning) {
+    removeSnapIndicator();
     _panning = false;
     _panStart = null;
     svgEl.style.cursor = "";
     return;
   }
   if (e.button !== 0) return;
+  removeSnapIndicator();
   if (
     typeof handleReferenceImagePointerUp === "function" &&
     handleReferenceImagePointerUp()
@@ -477,23 +479,29 @@ function onMouseUp(e, svgEl) {
     if (_ds.duplicated && typeof setLastDuplicateOffset === "function") {
       setLastDuplicateOffset(_ds.lastDxR || 0, _ds.lastDyR || 0);
     }
+    const movedIds = [...getState().selectedShapeIds];
     // ライブドラッグ（transform のみ）中は実座標を動かしていないので、ここで反映する。
-    // その後のフル render が transform 付きノードを素のノードへ作り直す。
+    // 確定時もフル render ではなく、動いたノードだけを差分更新する。
     if (_ds.fastActive) {
       const dxR = _ds.lastDxR || 0,
         dyR = _ds.lastDyR || 0;
       if (dxR || dyR) {
-        for (const id of getState().selectedShapeIds) {
+        for (const id of movedIds) {
           const res = findShapeById(id);
           if (res) shiftShape(res.shape, dxR, dyR);
         }
       }
     }
     if (typeof markShapeDirty === "function") {
-      for (const id of getState().selectedShapeIds) markShapeDirty(id);
+      for (const id of movedIds) markShapeDirty(id);
     }
     pushHistory();
-    if (_ds.fastActive) render();
+    if (_ds.fastActive) {
+      if (typeof clearLiveDragTransforms === "function")
+        clearLiveDragTransforms();
+      if (typeof liveUpdateShapes === "function") liveUpdateShapes(movedIds);
+      else render();
+    }
     _ds = null;
     svgEl.style.cursor = "default";
     document.body.classList.remove("dragging");
@@ -629,6 +637,7 @@ function onKeyDown(e) {
     _ds = null;
     cancelDim();
     removePreview();
+    removeSnapIndicator();
     render();
     return;
   }
@@ -1590,20 +1599,19 @@ function handleSelMove(pp, shiftKey) {
   _ds.lastDxR = dxR;
   _ds.lastDyR = dyR;
 
-  // 子が多いグループは毎フレームの座標書き換え＋サブツリー DOM 再生成が重い。
-  // 単一グループのドラッグは「既存ノードに translate を被せるだけ」で動かし、
+  // ドラッグ中は既存ノードに translate を被せるだけで動かし、
   // 実座標への反映は mouseup で一度だけ行う（liveDragByTransform / fastActive）。
+  // これにより通常図形・複数選択・子が多いグループの毎フレーム DOM 再生成を避ける。
   const fast =
     !_ds.duplicated &&
     typeof liveDragByTransform === "function" &&
-    state.selectedShapeIds.length === 1 &&
-    findShapeById(state.selectedShapeIds[0])?.shape.type === "group";
+    state.selectedShapeIds.length > 0;
   if (fast) {
     const dxP = realToPaperDist(dxR, scale);
     const dyP = realToPaperDist(dyR, scale);
     if (liveDragByTransform(state.selectedShapeIds, dxP, dyP)) {
       _ds.fastActive = true;
-      if (kp) renderSnapIndicator(kp.x, kp.y, state.zoom, kp.snapType);
+      removeSnapIndicator();
       return;
     }
   }
@@ -1661,9 +1669,11 @@ function handleSelMove(pp, shiftKey) {
       prev[id] = { x: dxR, y: dyR };
     }
   }
-  liveUpdateShapes(state.selectedShapeIds);
-  // ドラッグ中はオーバーレイが作り直されるため、インジケーターは後から描く
-  if (kp) renderSnapIndicator(kp.x, kp.y, state.zoom, kp.snapType);
+  liveUpdateShapes(state.selectedShapeIds, {
+    dxPaper: realToPaperDist(dxR, scale),
+    dyPaper: realToPaperDist(dyR, scale),
+  });
+  removeSnapIndicator();
   if (state.selectedShapeIds.length === 1) {
     const r = findShapeById(state.selectedShapeIds[0]);
     if (r) _updatePathSizeDisplay(r.shape);
@@ -1675,44 +1685,84 @@ function handleSelMove(pp, shiftKey) {
 // 補正後の移動量を返す。戻り値: { dxR, dyR, x, y, snapType } | null
 // 多頂点 path 等でドラッグ側の点が多すぎる場合は性能優先でスキップ
 const _KEYPOINT_SNAP_MAX_POINTS = 400;
+const _KEYPOINT_SNAP_RECALC_SCREEN_PX = 2;
 
 function _moveKeypointSnap(dxR, dyR, state, page, scale, shiftKey) {
   if (!state.snapEnabled) return null;
   const ids = state.selectedShapeIds;
   if (!ids.length || !_selOrig) return null;
-  const origShapes = [];
-  for (const id of ids) {
-    if (_selOrig[id]) origShapes.push(_selOrig[id]);
-  }
-  if (!origShapes.length) return null;
-  const pts = collectSnapPoints(origShapes, scale);
-  if (!pts.length || pts.length > _KEYPOINT_SNAP_MAX_POINTS) return null;
   const dxP = realToPaperDist(dxR, scale);
   const dyP = realToPaperDist(dyR, scale);
+  const zoom = state.zoom || 1;
+  const cache = (_ds.keypointSnap ||= {});
+  if (
+    cache.ready &&
+    cache.shiftKey === !!shiftKey &&
+    Math.hypot(dxP - cache.dxP, dyP - cache.dyP) * zoom <
+      _KEYPOINT_SNAP_RECALC_SCREEN_PX
+  ) {
+    return cache.result;
+  }
+
+  if (!cache.points || cache.idsKey !== ids.join(",") || cache.scale !== scale) {
+    const origShapes = [];
+    for (const id of ids) {
+      if (_selOrig[id]) origShapes.push(_selOrig[id]);
+    }
+    if (!origShapes.length) return null;
+    const points = collectSnapPoints(origShapes, scale);
+    if (!points.length || points.length > _KEYPOINT_SNAP_MAX_POINTS) {
+      cache.points = null;
+      cache.ready = true;
+      cache.dxP = dxP;
+      cache.dyP = dyP;
+      cache.shiftKey = !!shiftKey;
+      cache.result = null;
+      return null;
+    }
+    cache.points = points;
+    cache.idsKey = ids.join(",");
+    cache.scale = scale;
+    cache.targets = getAllShapesOnPage(page);
+    cache.excludeIds = new Set(ids);
+  }
+
+  const pts = cache.points.map((p) => ({ ...p }));
   for (const p of pts) {
     p.x += dxP;
     p.y += dyP;
   }
-  const threshold = SNAP_SCREEN_PX / (state.zoom || 1);
-  const best = snapDragPoints(pts, getAllShapesOnPage(page), scale, threshold, {
-    excludeIds: new Set(ids),
+  const threshold = SNAP_SCREEN_PX / zoom;
+  const best = snapDragPoints(pts, cache.targets, scale, threshold, {
+    excludeIds: cache.excludeIds,
   });
-  if (!best) return null;
+  cache.ready = true;
+  cache.dxP = dxP;
+  cache.dyP = dyP;
+  cache.shiftKey = !!shiftKey;
+  if (!best) {
+    cache.result = null;
+    return null;
+  }
   let adxR = paperToRealDist(best.dx, scale);
   let adyR = paperToRealDist(best.dy, scale);
   if (shiftKey) {
     // 軸拘束中は拘束されていない軸の補正のみ許可
     if (dyR === 0) adyR = 0;
     else adxR = 0;
-    if (adxR === 0 && adyR === 0) return null;
+    if (adxR === 0 && adyR === 0) {
+      cache.result = null;
+      return null;
+    }
   }
-  return {
+  cache.result = {
     dxR: dxR + adxR,
     dyR: dyR + adyR,
     x: best.x,
     y: best.y,
     snapType: best.snapType,
   };
+  return cache.result;
 }
 
 function handleVertexDrag(rp) {
