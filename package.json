@@ -1,6 +1,6 @@
 {
   "name": "millrect",
-  "version": "0.1.13",
+  "version": "0.1.14",
   "description": "Millrect",
   "license": "MIT",
   "author": "JIROMO",
@@ -25,7 +25,6 @@
     "test:unit": "node --test tests/unit/**/*.test.js",
     "test:integration": "node --test tests/integration/**/*.test.js",
     "test": "npm run verify:contours && npm run test:unit && npm run test:integration",
-
     "build": "npm run build:native && npm run build:text-engine && npm run build:stl-wasm && electron-builder",
     "release": "bash scripts/release-build.sh",
     "format": "npx prettier --write \"**/*.js\"",
