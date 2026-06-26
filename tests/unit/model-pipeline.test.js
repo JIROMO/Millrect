@@ -2,8 +2,6 @@
 
 const { describe, it } = require("node:test");
 const assert = require("node:assert/strict");
-const fs = require("node:fs");
-const path = require("node:path");
 
 const schema = require("../../packages/schema");
 const {
@@ -11,46 +9,92 @@ const {
 } = require("../../packages/model-generator");
 const { generateGeometryFromModelIr } = require("../../packages/geometry-core");
 
-const ROOT = path.resolve(__dirname, "../..");
-
-function readJson(relPath) {
-  return JSON.parse(fs.readFileSync(path.join(ROOT, relPath), "utf8"));
-}
-
 function stable(value) {
   return schema.stableStringify(value);
 }
 
+const MINIMAL_PROJECT = {
+  projectName: "test",
+  unit: "mm",
+  pages: [
+    {
+      id: "page-top",
+      name: "Top",
+      paper: "A4",
+      orientation: "landscape",
+      scale: { numerator: 1, denominator: 10 },
+      viewDefinition: { type: "top", normal: null, up: null },
+      dimensions: [],
+      layers: [
+        {
+          id: "layer-1",
+          name: "Layer 1",
+          visible: true,
+          locked: false,
+          shapes: [
+            {
+              id: "shape-rect",
+              type: "rect",
+              x: 0,
+              y: 0,
+              width: 1200,
+              height: 800,
+              stroke: "#1a1a2e",
+              fill: "#ffffff",
+              strokeWidth: "thin",
+            },
+          ],
+        },
+      ],
+    },
+    {
+      id: "page-front",
+      name: "Front",
+      paper: "A4",
+      orientation: "landscape",
+      scale: { numerator: 1, denominator: 10 },
+      viewDefinition: { type: "front", normal: null, up: null },
+      dimensions: [],
+      layers: [
+        {
+          id: "layer-2",
+          name: "Layer 1",
+          visible: true,
+          locked: false,
+          shapes: [
+            {
+              id: "shape-rect-2",
+              type: "rect",
+              x: 0,
+              y: 0,
+              width: 1200,
+              height: 500,
+              stroke: "#1a1a2e",
+              fill: "#ffffff",
+              strokeWidth: "thin",
+            },
+          ],
+        },
+      ],
+    },
+  ],
+};
+
 describe("model pipeline", () => {
-  it("loads every existing sample project JSON", () => {
-    const sampleDir = path.join(ROOT, "samples");
-    const sampleFiles = fs
-      .readdirSync(sampleDir)
-      .filter((file) => file.endsWith(".json") && file !== "catalog.json")
-      .sort();
-    assert.ok(sampleFiles.length > 0);
-    for (const file of sampleFiles) {
-      const project = readJson(`samples/${file}`);
-      assert.equal(
-        schema.isMillrectProjectJson(project),
-        true,
-        `${file} should be a Millrect project JSON`,
-      );
-    }
+  it("validates a minimal project JSON", () => {
+    assert.equal(schema.isMillrectProjectJson(MINIMAL_PROJECT), true);
   });
 
   it("generates the same Model IR from the same Project JSON", () => {
-    const project = readJson("samples/starter-box.json");
-    const first = generateModelIrFromProject(project);
-    const second = generateModelIrFromProject(project);
+    const first = generateModelIrFromProject(MINIMAL_PROJECT);
+    const second = generateModelIrFromProject(MINIMAL_PROJECT);
     assert.equal(first.ok, true);
     assert.equal(second.ok, true);
     assert.equal(stable(first.ir), stable(second.ir));
   });
 
   it("generates the same geometry data from the same Model IR", () => {
-    const project = readJson("samples/starter-box.json");
-    const ir = generateModelIrFromProject(project).ir;
+    const ir = generateModelIrFromProject(MINIMAL_PROJECT).ir;
     const first = generateGeometryFromModelIr(ir);
     const second = generateGeometryFromModelIr(ir);
     assert.equal(first.ok, true);

@@ -183,39 +183,6 @@
     "startup.deleteProjectConfirm": "「{name}」を削除しますか？",
     "page.addView.exists": "すでに追加済みです",
 
-    "samples.tag.2d": "2D",
-    "samples.tag.3d": "3D",
-    "samples.starterBox.name": "初めての直方体",
-    "samples.starterBox.desc": "120×80×50 mm · 上面＋正面",
-    "samples.starterBox.hint":
-      "上面図と正面図に直方体（120×80×50 mm）の図形が入ったサンプルです。3D プレビューで立体を確認できます。",
-    "samples.starterBox.defaultName": "初めての直方体",
-    "samples.mountingPlate.name": "穴付き取付板",
-    "samples.mountingPlate.desc": "100×60×20 mm · 2×2 穴",
-    "samples.mountingPlate.hint":
-      "上面に穴あけグリッド付きの直方体です。3D ボタンで立体を確認し、STL 出力まで試せます。",
-    "samples.mountingPlate.defaultName": "穴付き取付板",
-    "samples.lBracket.name": "L字ブラケット",
-    "samples.lBracket.desc": "80×60 mm · 板厚 5 mm",
-    "samples.lBracket.hint":
-      "上面の L 字輪郭と正面図から立体を作ります。板金・ブラケットの基本例です。",
-    "samples.lBracket.defaultName": "L字ブラケット",
-    "samples.enclosure.name": "3面筐体",
-    "samples.enclosure.desc": "120×80×50 mm · 上面＋正面＋右",
-    "samples.enclosure.hint":
-      "上面・正面・右側面の 3 ビューで直方体を作ります。多ビュー CSG の例です。",
-    "samples.enclosure.defaultName": "3面筐体",
-    "samples.laserPanel.name": "レーザー用パネル",
-    "samples.laserPanel.desc": "200×150 mm · 上面のみ",
-    "samples.laserPanel.hint":
-      "2D 図面のみの単板サンプルです。穴あけ付きの上面図 — レーザー切断向けの例（3D にはなりません）。",
-    "samples.laserPanel.defaultName": "レーザー用パネル",
-    "samples.moduleJoint1.name": "Module Joint 1",
-    "samples.moduleJoint1.desc": "24×100 mm · 板厚 2 mm",
-    "samples.moduleJoint1.hint":
-      "実プロダクト由来のジョイントプレートです。Ø6 穴、R2、切り込み線、板厚 2 mm の正面図ページを含みます。",
-    "samples.moduleJoint1.defaultName": "Module Joint 1",
-
     "status.xy": "XY",
     "status.tool": "Tool",
     "status.scale": "Scale",

@@ -12,22 +12,13 @@
 
 Millrect はブラウザまたは macOS デスクトップで使えます。**2D 図面**が本体で、上面・正面・側面などから **3D を再生成**します。
 
-## サンプルで試す
+## 試してみる
 
 1. **[millrect.com/app](https://millrect.com/app/)** を開く
-2. 起動画面でサンプルを選ぶ（例: **初めての直方体** 120×80×50 mm）
+2. 新規プロジェクトを作成
 3. ツールバーの **3D** をクリック
 4. 3D パネルで **STL出力**
 
-| サンプル | 内容 |
-|---------|------|
-| [初めての直方体](samples/starter-box.json) | 120×80×50 mm · 上面＋正面 |
-| [穴付き取付板](samples/mounting-plate.json) | 100×60×20 mm · 穴 grid |
-| [L字ブラケット](samples/l-bracket.json) | 板金 L 字 |
-| [3面筐体](samples/enclosure.json) | 上面＋正面＋右 |
-| [レーザー用パネル](samples/laser-panel.json) | 200×150 mm（2D のみ） |
-
-[`samples/`](samples/) の `.json` は起動画面の **JSON インポート** でも開けます。  
 手順付きガイド: [`docs/getting-started.html`](docs/getting-started.html#first-stl)
 
 ## ドキュメント

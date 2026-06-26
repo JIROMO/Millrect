@@ -15,19 +15,10 @@ Millrect is a lightweight CAD app (browser or macOS desktop). You edit **2D draw
 ## Try 3D
 
 1. Open **[millrect.com/app](https://millrect.com/app/)**
-2. Create a new project, or use startup **Import JSON** to open a sample
+2. Create a new project
 3. Click **3D** in the toolbar
 4. **Export STL** from the 3D panel
 
-| Sample | What you get |
-|--------|----------------|
-| [First box](samples/starter-box.json) | 120×80×50 mm — top + front |
-| [Mounting plate](samples/mounting-plate.json) | 100×60×20 mm with hole grid |
-| [L-bracket](samples/l-bracket.json) | Sheet-metal L — top path + front |
-| [3-view enclosure](samples/enclosure.json) | Top + front + right multiview |
-| [Laser-cut panel](samples/laser-panel.json) | 200×150 mm flat (2D only) |
-
-Import any `.json` from [`samples/`](samples/) via **Import JSON** on the startup dialog.  
 Step-by-step guide: [`docs/en/getting-started.html`](docs/en/getting-started.html#first-stl)
 
 ## Documentation

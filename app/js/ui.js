@@ -200,15 +200,6 @@ async function applyOpenedProject({
         throw e;
       }
     }
-  } else if (resolveSampleIdFromTemplate(template)) {
-    replaceState(
-      buildSampleProjectState(resolveSampleIdFromTemplate(template), {
-        projectName,
-        paper,
-        orientation,
-        scale,
-      }),
-    );
   } else {
     const state = typeof initState === "function" ? initState() : getState();
     if (projectName) state.projectName = projectName;
@@ -217,8 +208,7 @@ async function applyOpenedProject({
   }
   const id = projectId || genId("proj");
   setCurrentProjectId(id);
-  const isNewEmpty =
-    !projectId && !json && !resolveSampleIdFromTemplate(template);
+  const isNewEmpty = !projectId && !json && !template;
   if (isNewEmpty) {
     setAutosaveStatus("");
     if (typeof seedProjectBriefFromGlobal === "function") {
@@ -234,9 +224,7 @@ async function applyOpenedProject({
     await doAutosave();
   }
   if (typeof cancelDim === "function") cancelDim();
-  if (shouldFitMultiviewSampleView(template)) {
-    fitMultiviewStarterView();
-  } else if (typeof fitPage === "function") {
+  if (typeof fitPage === "function") {
     fitPage();
   }
   render();

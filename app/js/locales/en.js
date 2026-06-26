@@ -185,39 +185,6 @@
     "startup.deleteProjectConfirm": 'Delete "{name}"?',
     "page.addView.exists": "Already added",
 
-    "samples.tag.2d": "2D",
-    "samples.tag.3d": "3D",
-    "samples.starterBox.name": "First box",
-    "samples.starterBox.desc": "120×80×50 mm · top + front",
-    "samples.starterBox.hint":
-      "Top and front views with a 120×80×50 mm box. Open the 3D preview to see the solid right away.",
-    "samples.starterBox.defaultName": "First box",
-    "samples.mountingPlate.name": "Mounting plate",
-    "samples.mountingPlate.desc": "100×60×20 mm · 2×2 holes",
-    "samples.mountingPlate.hint":
-      "A box with a hole grid on the top view. Try 3D preview and STL export.",
-    "samples.mountingPlate.defaultName": "Mounting plate",
-    "samples.lBracket.name": "L-bracket",
-    "samples.lBracket.desc": "80×60 mm · 5 mm thick",
-    "samples.lBracket.hint":
-      "An L-shaped top contour plus front view — a basic sheet-metal bracket example.",
-    "samples.lBracket.defaultName": "L-bracket",
-    "samples.enclosure.name": "3-view enclosure",
-    "samples.enclosure.desc": "120×80×50 mm · top + front + right",
-    "samples.enclosure.hint":
-      "Three orthographic views for multiview CSG — top, front, and right side.",
-    "samples.enclosure.defaultName": "3-view enclosure",
-    "samples.laserPanel.name": "Laser-cut panel",
-    "samples.laserPanel.desc": "200×150 mm · top view only",
-    "samples.laserPanel.hint":
-      "A flat panel with holes — 2D only (no 3D solid). Good for laser-cut sheet examples.",
-    "samples.laserPanel.defaultName": "Laser-cut panel",
-    "samples.moduleJoint1.name": "Module Joint 1",
-    "samples.moduleJoint1.desc": "24×100 mm · 2 mm thick",
-    "samples.moduleJoint1.hint":
-      "A real-product joint plate specimen with Ø6 holes, R2 radii, cut-in guide lines, and a 2 mm front-view page.",
-    "samples.moduleJoint1.defaultName": "Module Joint 1",
-
     "status.xy": "XY",
     "status.tool": "Tool",
     "status.scale": "Scale",
