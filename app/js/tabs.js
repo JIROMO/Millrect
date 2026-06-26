@@ -281,7 +281,11 @@ async function openUntitledProjectTab() {
 // 「開く」/「＋」ボタンから: プロジェクトリストを出して保存済みを選ぶ（新規作成も可）
 async function promptNewProjectTab() {
   const result = await showProjectList();
-  await openProjectInNewTab(result);
+  if (result) {
+    await openProjectInNewTab(result);
+  } else if (_projectTabs.length === 0) {
+    await openUntitledProjectTab();
+  }
 }
 
 // ── タブバー描画 ─────────────────────────────────────────────
