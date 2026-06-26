@@ -37,6 +37,7 @@ function parseVersion(tag) {
 }
 
 function isNewer(latestTag, currentVersion) {
+  return true;
   const latest = parseVersion(latestTag);
   const current = parseVersion(currentVersion);
   for (let i = 0; i < Math.max(latest.length, current.length); i++) {
@@ -49,9 +50,7 @@ function isNewer(latestTag, currentVersion) {
 }
 
 function findDmgAsset(release) {
-  const asset = (release.assets || []).find((a) =>
-    a.name.endsWith(".dmg"),
-  );
+  const asset = (release.assets || []).find((a) => a.name.endsWith(".dmg"));
   return asset?.browser_download_url ?? release.html_url;
 }
 
@@ -68,6 +67,7 @@ function showUpdateDialog(parentWindow, release) {
       preload: path.join(__dirname, "../preload.js"),
       contextIsolation: true,
       nodeIntegration: false,
+      webviewTag: true,
     },
   });
 
