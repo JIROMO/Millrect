@@ -421,6 +421,9 @@ function bindToolbar() {
       if (typeof onActiveToolChanged === "function") {
         onActiveToolChanged(tool);
       }
+      if (typeof window.dataLayer !== "undefined") {
+        window.dataLayer.push({ event: "tool_selected", tool_name: tool });
+      }
       updateToolbar();
       updatePropertiesPanel();
       const el = document.getElementById("status-tool");
@@ -3051,6 +3054,9 @@ function bindKeyShortcuts() {
       getState().activeTool = tool;
       if (typeof onActiveToolChanged === "function") {
         onActiveToolChanged(tool);
+      }
+      if (typeof window.dataLayer !== "undefined") {
+        window.dataLayer.push({ event: "tool_selected", tool_name: tool });
       }
       updateToolbar();
       updatePropertiesPanel();
