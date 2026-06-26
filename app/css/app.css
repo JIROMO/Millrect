@@ -3033,6 +3033,28 @@ button.ctx-item {
   gap: 6px;
   margin-bottom: 20px;
   flex-shrink: 0;
+  position: relative;
+}
+.pl-btn-close {
+  position: absolute;
+  top: 0;
+  right: 0;
+  width: 28px;
+  height: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: none;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--color-text-muted, #888);
+  font-size: 14px;
+  cursor: pointer;
+  line-height: 1;
+}
+.pl-btn-close:hover {
+  background: var(--color-surface-hover, rgba(255,255,255,0.08));
+  color: var(--color-text, #fff);
 }
 .pl-header h2 {
   margin: 0;

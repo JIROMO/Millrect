@@ -285,7 +285,7 @@ function bindToolbar() {
     if (typeof openUntitledProjectTab === "function") {
       openUntitledProjectTab();
     } else {
-      showProjectList().then(applyOpenedProject);
+      showProjectList().then((result) => result && applyOpenedProject(result));
     }
   });
   document
@@ -296,7 +296,7 @@ function bindToolbar() {
     if (typeof promptNewProjectTab === "function") {
       promptNewProjectTab();
     } else {
-      showProjectList().then(applyOpenedProject);
+      showProjectList().then((result) => result && applyOpenedProject(result));
     }
   });
   document
@@ -3349,6 +3349,7 @@ function showProjectList() {
         <div class="pl-header">
           <h2>${t("startup.title")}</h2>
           <p class="pl-subtitle">${t("startup.subtitle")}</p>
+          <button id="pl-btn-close" class="pl-btn-close" aria-label="閉じる">✕</button>
         </div>
         <div class="pl-actions">
           <button id="pl-btn-new" class="startup-primary pl-action-primary">${t("startup.newProject")}</button>
@@ -3483,6 +3484,11 @@ function showProjectList() {
 
     renderGrid();
     search?.addEventListener("input", renderGrid);
+
+    overlay.querySelector("#pl-btn-close").addEventListener("click", () => {
+      overlay.remove();
+      resolve(null);
+    });
 
     overlay.querySelector("#pl-btn-new").addEventListener("click", () => {
       showNewProjectForm();
