@@ -3,8 +3,6 @@
 const _DB_NAME = "millrect";
 const _DB_VERSION = 2;
 const _STORE = "projects";
-const _TASTE_GLOBAL_ID = "global";
-const _TASTE_STORE = "tasteGlobal";
 
 function _openDB() {
   return new Promise((resolve, reject) => {
@@ -13,9 +11,6 @@ function _openDB() {
       const db = e.target.result;
       if (!db.objectStoreNames.contains(_STORE)) {
         db.createObjectStore(_STORE, { keyPath: "id" });
-      }
-      if (!db.objectStoreNames.contains(_TASTE_STORE)) {
-        db.createObjectStore(_TASTE_STORE, { keyPath: "id" });
       }
     };
     req.onsuccess = (e) => resolve(e.target.result);
@@ -69,34 +64,3 @@ async function dbDeleteProject(id) {
   });
 }
 
-/** ユーザー横断 Taste Memory（プロジェクト JSON とは別ストア） */
-async function dbLoadTasteGlobal() {
-  const db = await _openDB();
-  return new Promise((resolve, reject) => {
-    const req = db
-      .transaction(_TASTE_STORE, "readonly")
-      .objectStore(_TASTE_STORE)
-      .get(_TASTE_GLOBAL_ID);
-    req.onsuccess = () => {
-      const row = req.result;
-      resolve(row?.data ? normalizeGlobalTaste(row.data) : null);
-    };
-    req.onerror = () => reject(req.error);
-  });
-}
-
-async function dbSaveTasteGlobal(data) {
-  const normalized = normalizeGlobalTaste(data);
-  normalized.updatedAt = new Date().toISOString();
-  const db = await _openDB();
-  return new Promise((resolve, reject) => {
-    const tx = db.transaction(_TASTE_STORE, "readwrite");
-    tx.objectStore(_TASTE_STORE).put({
-      id: _TASTE_GLOBAL_ID,
-      data: normalized,
-      updatedAt: Date.now(),
-    });
-    tx.oncomplete = () => resolve(normalized);
-    tx.onerror = () => reject(tx.error);
-  });
-}

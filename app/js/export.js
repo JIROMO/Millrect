@@ -98,7 +98,6 @@ function _projectDataFromState(state) {
     pages: _pagesForExport(state.pages),
   };
   if (state.partIntent) data.partIntent = state.partIntent;
-  if (state.projectBrief) data.projectBrief = state.projectBrief;
   return data;
 }
 
@@ -136,10 +135,6 @@ function importProjectFromJsonString(jsonStr) {
   if (data.unit) state.unit = data.unit;
   state.fonts = Array.isArray(data.fonts) ? data.fonts : [];
   state.partIntent = data.partIntent !== undefined ? data.partIntent : null;
-  state.projectBrief =
-    data.projectBrief !== undefined
-      ? normalizeProjectBrief(data.projectBrief)
-      : null;
   state.currentPageId = data.pages?.[0]?.id || state.pages[0]?.id || "";
   state.currentLayerId = data.pages?.[0]?.layers?.[0]?.id || "";
   state.selectedShapeIds = [];

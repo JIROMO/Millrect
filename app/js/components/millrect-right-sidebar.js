@@ -239,15 +239,7 @@ class MillrectRightSidebar extends HTMLElement {
                 </div>
               </div>
             </div>
-            <div class="panel-collapse" data-section="panel.taste.title">
-              <button type="button" class="panel-collapse-trigger" data-default-open="true" aria-expanded="true">
-                <svg class="panel-collapse-chevron" width="10" height="10" viewBox="0 0 10 10" aria-hidden="true"><path d="M2 3l3 3 3-3" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
-                <span class="panel-collapse-title" data-i18n="panel.taste.title">制作メモ</span>
-              </button>
-              <div class="panel-collapse-body">
-                <div id="taste-brief-panel" class="taste-brief-panel" aria-live="polite"></div>
-              </div>
-            </div>
+
           </div>
         </div>
       </div>

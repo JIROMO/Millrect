@@ -428,7 +428,6 @@ function _projectJsonForModelPipeline() {
     fonts: state.fonts || [],
     pages: state.pages || [],
     ...(state.partIntent ? { partIntent: state.partIntent } : {}),
-    ...(state.projectBrief ? { projectBrief: state.projectBrief } : {}),
   };
 }
 

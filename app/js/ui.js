@@ -167,17 +167,6 @@ function _projectFontsSignature(state) {
   });
 }
 
-function _tasteBriefSignature(state) {
-  return JSON.stringify({
-    locale: _uiLocaleKey(),
-    brief: state.projectBrief || null,
-    requireBrief:
-      typeof getRequireBriefBeforeMake === "function"
-        ? getRequireBriefBeforeMake()
-        : false,
-  });
-}
-
 async function applyOpenedProject({
   projectId,
   json,
@@ -211,13 +200,7 @@ async function applyOpenedProject({
   const isNewEmpty = !projectId && !json && !template;
   if (isNewEmpty) {
     setAutosaveStatus("");
-    if (typeof seedProjectBriefFromGlobal === "function") {
-      try {
-        await seedProjectBriefFromGlobal();
-      } catch (e) {
-        console.warn("[taste-memory] seed failed:", e);
-      }
-    }
+
   } else if (projectId) {
     markProjectSaved(savedAt);
   } else {
@@ -254,10 +237,6 @@ function updateAll() {
   const layersSig = _layerListSignature(state, page);
   if (_uiCacheChanged("layers", layersSig) || !layersEl?.childElementCount) {
     updateLayersList();
-  }
-  const tasteSig = _tasteBriefSignature(state);
-  if (_uiCacheChanged("tasteBrief", tasteSig)) {
-    updateTasteBriefPanel();
   }
   const propertiesSig = _propertiesPanelSignature(state);
   if (_uiCacheChanged("properties", propertiesSig)) {
@@ -1264,142 +1243,6 @@ function initSidebarTabs() {
     },
     true,
   );
-}
-
-const TASTE_PHASE_LABELS = {
-  discover: "panel.taste.phase.discover",
-  taste: "panel.taste.phase.taste",
-  brief: "panel.taste.phase.brief",
-  make: "panel.taste.phase.make",
-  review: "panel.taste.phase.review",
-  learn: "panel.taste.phase.learn",
-  done: "panel.taste.phase.done",
-};
-
-function _tasteEscHtml(text) {
-  return String(text)
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;");
-}
-
-function updateTasteBriefPanel() {
-  updateTasteBriefPanelAsync().catch((e) =>
-    console.warn("[taste-memory] panel failed:", e),
-  );
-}
-
-async function updateTasteBriefPanelAsync() {
-  const el = document.getElementById("taste-brief-panel");
-  if (!el || typeof ensureGlobalTasteLoaded !== "function") return;
-
-  const brief = getState().projectBrief;
-  const sum = briefSummary(brief);
-  const global = await ensureGlobalTasteLoaded();
-  const gs = globalTasteSummary(global);
-  const requireBrief =
-    typeof getRequireBriefBeforeMake === "function"
-      ? getRequireBriefBeforeMake()
-      : false;
-  const promoteThreshold =
-    typeof PROMOTE_PROJECT_THRESHOLD === "number"
-      ? PROMOTE_PROJECT_THRESHOLD
-      : 2;
-
-  const parts = [];
-
-  if (!sum) {
-    parts.push(`<p class="taste-brief-empty">${t("panel.taste.empty")}</p>`);
-  } else {
-    const phaseLabel = sum.phase
-      ? t(TASTE_PHASE_LABELS[sum.phase] || "panel.taste.phase.unknown")
-      : t("panel.taste.phase.unset");
-    const intentHtml = sum.intent
-      ? _tasteEscHtml(sum.intent)
-      : `<span class="taste-brief-muted">${t("panel.taste.noIntent")}</span>`;
-    parts.push(
-      `<div class="taste-brief-row"><span class="taste-brief-label">${t("panel.taste.phase")}</span><span>${phaseLabel}</span></div>`,
-      `<div class="taste-brief-row"><span class="taste-brief-label">${t("panel.taste.intent")}</span><span class="taste-brief-intent">${intentHtml}</span></div>`,
-      `<div class="taste-brief-stats">`,
-      `<span>${t("panel.taste.principles", { count: sum.designPrincipleCount })}</span>`,
-      `<span>${t("panel.taste.decisions", { count: sum.decisionCount })}</span>`,
-      `</div>`,
-      `<p class="taste-brief-hint">${t("panel.taste.hint")}</p>`,
-    );
-  }
-
-  parts.push(
-    `<p class="taste-brief-global taste-brief-muted">${t(
-      "panel.taste.globalHint",
-      {
-        principles: gs.principleCount,
-        pending: gs.pendingCount,
-      },
-    )}</p>`,
-  );
-
-  if (global.pending?.length) {
-    parts.push(
-      `<div class="taste-pending-block">`,
-      `<div class="taste-pending-title">${t("panel.taste.pendingTitle")}</div>`,
-      `<ul class="taste-pending-list">`,
-    );
-    global.pending.forEach((p, idx) => {
-      const ready = p.projectIds.length >= promoteThreshold;
-      const meta = ready
-        ? t("panel.taste.pendingReady")
-        : t("panel.taste.pendingWaiting", { count: p.projectIds.length });
-      parts.push(
-        `<li class="taste-pending-item">`,
-        `<span class="taste-pending-text">${_tasteEscHtml(p.statement)}</span>`,
-        `<span class="taste-pending-meta">${meta}</span>`,
-        `<button type="button" class="taste-btn-promote" data-pending-idx="${idx}">${t("panel.taste.promoteBtn")}</button>`,
-        `</li>`,
-      );
-    });
-    parts.push(`</ul></div>`);
-  }
-
-  parts.push(
-    `<label class="taste-setting-row">`,
-    `<span>${t("panel.taste.requireBrief")}</span>`,
-    `<span class="custom-toggle taste-setting-toggle">`,
-    `<input type="checkbox" id="taste-require-brief"${requireBrief ? " checked" : ""}/>`,
-    `<span class="custom-toggle-track"></span>`,
-    `</span>`,
-    `</label>`,
-  );
-
-  el.innerHTML = parts.join("");
-  bindTasteBriefPanelEvents(el, global);
-}
-
-function bindTasteBriefPanelEvents(container, global) {
-  const requireEl = container.querySelector("#taste-require-brief");
-  if (requireEl && typeof setRequireBriefBeforeMake === "function") {
-    requireEl.addEventListener("change", (e) => {
-      setRequireBriefBeforeMake(e.target.checked);
-    });
-  }
-  container.querySelectorAll(".taste-btn-promote").forEach((btn) => {
-    btn.addEventListener("click", async () => {
-      const idx = Number(btn.dataset.pendingIdx);
-      const p = global.pending?.[idx];
-      if (!p || typeof promotePrinciple !== "function") return;
-      btn.disabled = true;
-      try {
-        await promotePrinciple({
-          statement: p.statement,
-          polarity: p.polarity,
-          scope: p.scope,
-        });
-        updateTasteBriefPanel();
-      } catch (err) {
-        console.warn("[taste-memory] promote failed:", err);
-        btn.disabled = false;
-      }
-    });
-  });
 }
 
 function updatePropertiesPanel() {
@@ -2900,15 +2743,23 @@ function bindReferenceImageSettings() {
     const file = fileInput.files?.[0];
     if (!file) return;
     const reader = new FileReader();
-    reader.onload = async () => {
-      await setReferenceImage(null, {
-        dataUrl: reader.result,
-        widthMm: 120,
-        heightMm: 80,
-        opacity: parseFloat(opacityInput?.value) || 0.45,
-      });
-      fileInput.value = "";
-      updateReferenceImagePanel();
+    reader.onload = () => {
+      const dataUrl = reader.result;
+      const img = new Image();
+      img.onload = async () => {
+        const widthMm = 120;
+        const aspect = img.naturalHeight / Math.max(1, img.naturalWidth);
+        const heightMm = Math.max(1, widthMm * aspect);
+        await setReferenceImage(null, {
+          dataUrl,
+          widthMm,
+          heightMm,
+          opacity: parseFloat(opacityInput?.value) || 0.45,
+        });
+        fileInput.value = "";
+        updateReferenceImagePanel();
+      };
+      img.src = dataUrl;
     };
     reader.readAsDataURL(file);
   });
@@ -3542,11 +3393,6 @@ function showProjectList() {
 document.addEventListener("DOMContentLoaded", () => {
   initMillrectI18n();
   if (window.lucide) window.lucide.createIcons();
-  if (typeof initTasteMemory === "function") {
-    initTasteMemory().catch((e) =>
-      console.warn("[taste-memory] init failed:", e),
-    );
-  }
   loadSystemFonts().then(() => {
     const state = getState();
     if (state.selectedShapeIds.length) updatePropertiesPanel();

@@ -88,7 +88,6 @@ const DOC_KEYS = [
   "fonts",
   "pages",
   "partIntent",
-  "projectBrief",
 ];
 
 // ── 参照画像の de-dup ────────────────────────────────────────
@@ -425,7 +424,6 @@ function defaultState() {
     unit: "mm",
     fonts: [],
     partIntent: null,
-    projectBrief: null,
     currentPageId: "page-1",
     currentLayerId: "layer-1",
     selectedShapeIds: [],
