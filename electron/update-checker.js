@@ -37,7 +37,6 @@ function parseVersion(tag) {
 }
 
 function isNewer(latestTag, currentVersion) {
-  return true;
   const latest = parseVersion(latestTag);
   const current = parseVersion(currentVersion);
   for (let i = 0; i < Math.max(latest.length, current.length); i++) {
