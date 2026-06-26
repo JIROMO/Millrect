@@ -19,15 +19,7 @@ For schemas, coordinates, and drawing rules, read `agent-manual` first.
 
 | MCP tool | WS action | Description |
 |----------|-----------|-------------|
-| `get_project_context` | `getProjectContext` | **Call first** — shapes, profiles, viewDefinition, `briefSummary` |
-| `get_taste_context` | `getTasteContext` | `projectBrief` + Global taste (IndexedDB) |
-| `update_project_brief` | `updateProjectBrief` | Partial update to `projectBrief` (Undo) |
-| `record_decision` | `recordDecision` | Append judgment to `projectBrief.decisions` |
-| `set_project_phase` | `setProjectPhase` | `discover` … `done` workflow phase |
-| `append_session_learnings` | `appendSessionLearnings` | Batch principles / decisions (Learn phase) |
-| `list_global_principles` | `listGlobalPrinciples` | User-wide taste (IndexedDB `tasteGlobal`) |
-| `promote_principle` | `promotePrinciple` | Manually add/reinforce global principle |
-| `append_artifact_log` | `appendArtifactLog` | Append `projectBrief.artifactLog` entry |
+| `get_project_context` | `getProjectContext` | **Call first** — shapes, profiles, viewDefinition |
 | `get_state` | `getState` | Current page shapes / dimensions / profiles |
 | `validate_3d_readiness` | `validate3DReadiness` | Structured 3D readiness check |
 | `compile_part_dsl` | `compilePartDsl` | Part DSL dry-run |

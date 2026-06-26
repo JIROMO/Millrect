@@ -48,7 +48,6 @@
           <li><a href="#architecture">アーキテクチャ</a></li>
           <li><a href="#coordinates">座標系</a></li>
           <li><a href="#schemas">データスキーマ</a></li>
-          <li><a href="#taste-memory">Taste Memory（設計）</a></li>
           <li><a href="#api">グローバル API</a></li>
           <li><a href="#mcp">MCP / WebSocket</a></li>
           <li><a href="#electron">Electron</a></li>
@@ -163,7 +162,7 @@ Three.js 表示</code></pre>
       <h3>State の分離</h3>
       <pre><code>_state = {
   // ドキュメント（Undo 対象・エクスポート対象）
-  projectName, unit, fonts, pages, partIntent, projectBrief,
+  projectName, unit, fonts, pages, partIntent,
 
   // UI（Undo 対象外）
   zoom, panX, panY, activeTool,
@@ -304,20 +303,6 @@ group:   { children: Shape[] }</code></pre>
       <p>対応: <code>rect / circle / bezier(closed) / path</code>。<code>group</code> は子図形を再帰的に展開して Profile 化します。非対応: <code>line / text / dimension / bezier(open)</code>。</p>
       <p><code>findShapeById(id)</code> → <code>{ shape, layer, page, isDimension }</code>（<code>isDimension === true</code> のとき <code>layer</code> は null）。</p>
 
-      <h2 id="taste-memory">Taste Memory（設計）</h2>
-      <p>
-        ユーザーの美意識・判断を 3 層（Global / Project / Artifact）で記録する拡張仕様です。
-        Project 層（<code>state.projectBrief</code>）、Global 層（IndexedDB <code>tasteGlobal</code>）、
-        Artifact 層（<code>projectBrief.artifactLog</code>）は実装済みです。幾何の <code>partIntent</code> とは分離します。
-        人間向けの確認 UI は右パネルの <strong>Pages タブ → 制作メモ</strong> にあります。
-      </p>
-      <ul>
-        <li><code>docs/TASTE-MEMORY.md</code> — スキーマ、ワークフロー、MCP/API、昇格ルール</li>
-        <li><code>docs/adr/0001-taste-memory-three-layer-model.md</code> — アーキテクチャ判断の要約</li>
-        <li><code>get_taste_context</code> / <code>update_project_brief</code> / <code>record_decision</code> / <code>append_artifact_log</code> — MCP から利用可能</li>
-        <li><code>captures/</code> を含む ZIP export は未実装（プロジェクト JSON には相対パスのみを保存）</li>
-      </ul>
-
       <h2 id="api">グローバル API</h2>
       <p>すべてグローバルスコープに公開されています（<code>window.xxx()</code> または DevTools コンソールから直接呼び出し可能）。</p>
 
@@ -417,15 +402,7 @@ exportSTL()</code></pre>
       <table>
         <thead><tr><th>MCP ツール</th><th>WS action</th><th>説明</th></tr></thead>
         <tbody>
-          <tr><td><code>get_project_context</code></td><td><code>getProjectContext</code></td><td>プロジェクト概要（shapes / profiles / viewDefinition / briefSummary）</td></tr>
-          <tr><td><code>get_taste_context</code></td><td><code>getTasteContext</code></td><td><code>projectBrief</code> + Global taste</td></tr>
-          <tr><td><code>update_project_brief</code></td><td><code>updateProjectBrief</code></td><td><code>projectBrief</code> 部分更新</td></tr>
-          <tr><td><code>record_decision</code></td><td><code>recordDecision</code></td><td>採用・却下・修正理由を追加</td></tr>
-          <tr><td><code>set_project_phase</code></td><td><code>setProjectPhase</code></td><td>discover / taste / brief / make / review / learn / done</td></tr>
-          <tr><td><code>append_session_learnings</code></td><td><code>appendSessionLearnings</code></td><td>セッションの学びを batch 追記</td></tr>
-          <tr><td><code>list_global_principles</code></td><td><code>listGlobalPrinciples</code></td><td>Global principles 一覧</td></tr>
-          <tr><td><code>promote_principle</code></td><td><code>promotePrinciple</code></td><td>Project principle を Global へ昇格</td></tr>
-          <tr><td><code>append_artifact_log</code></td><td><code>appendArtifactLog</code></td><td>レビュー・キャプチャ等の artifactLog 追記</td></tr>
+          <tr><td><code>get_project_context</code></td><td><code>getProjectContext</code></td><td>プロジェクト概要（shapes / profiles / viewDefinition）</td></tr>
           <tr><td><code>get_state</code></td><td><code>getState</code></td><td>現在ページの shapes / dimensions / profiles</td></tr>
           <tr><td><code>apply_commands</code></td><td><code>applyCommands</code></td><td>バッチ図面操作（下表参照）</td></tr>
           <tr><td><code>clear_canvas</code></td><td><code>clearCanvas</code></td><td>現レイヤーの shapes を空に</td></tr>

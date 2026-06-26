@@ -50,7 +50,6 @@
           <li><a href="#architecture">Architecture</a></li>
           <li><a href="#coordinates">Coordinates</a></li>
           <li><a href="#schemas">Data schemas</a></li>
-          <li><a href="#taste-memory">Taste Memory (design)</a></li>
           <li><a href="#api">Global API</a></li>
           <li><a href="#mcp">MCP / WebSocket</a></li>
           <li><a href="#electron">Electron</a></li>
@@ -165,7 +164,7 @@ Three.js display</code></pre>
       <h3>State separation</h3>
       <pre><code>_state = {
   // Document (Undo / export)
-  projectName, unit, fonts, pages, partIntent, projectBrief,
+  projectName, unit, fonts, pages, partIntent,
 
   // UI (not Undo)
   zoom, panX, panY, activeTool,
@@ -306,20 +305,6 @@ group:   { children: Shape[] }</code></pre>
       <p>Supported: <code>rect / circle / bezier(closed) / path</code>. <code>group</code> is recursively expanded into child shapes for Profile extraction. Not supported: <code>line / text / dimension / bezier(open)</code>.</p>
       <p><code>findShapeById(id)</code> → <code>{ shape, layer, page, isDimension }</code> (<code>layer</code> is null when <code>isDimension === true</code>).</p>
 
-      <h2 id="taste-memory">Taste Memory (design)</h2>
-      <p>
-        Extension spec for recording user aesthetic judgments in three layers (Global / Project / Artifact).
-        The Project layer (<code>state.projectBrief</code>), Global layer (IndexedDB <code>tasteGlobal</code>),
-        and Artifact layer (<code>projectBrief.artifactLog</code>) are implemented. Separate from geometric <code>partIntent</code>.
-        The human-facing UI lives in the right panel under <strong>Pages tab → Taste brief</strong>.
-      </p>
-      <ul>
-        <li><code>docs/TASTE-MEMORY.md</code> — schemas, workflow, MCP/API, promotion rules</li>
-        <li><code>docs/adr/0001-taste-memory-three-layer-model.md</code> — architecture decision summary</li>
-        <li><code>get_taste_context</code> / <code>update_project_brief</code> / <code>record_decision</code> / <code>append_artifact_log</code> — available via MCP</li>
-        <li><code>captures/</code> ZIP export is not implemented yet (project JSON stores relative paths only)</li>
-      </ul>
-
       <h2 id="api">Global API</h2>
       <p>All functions are exposed in the global scope (<code>window.xxx()</code> or DevTools console).</p>
 
@@ -421,15 +406,7 @@ exportSTL()</code></pre>
       <table>
         <thead><tr><th>MCP tool</th><th>WS action</th><th>Description</th></tr></thead>
         <tbody>
-          <tr><td><code>get_project_context</code></td><td><code>getProjectContext</code></td><td>Project summary (shapes / profiles / viewDefinition / briefSummary)</td></tr>
-          <tr><td><code>get_taste_context</code></td><td><code>getTasteContext</code></td><td><code>projectBrief</code> + Global taste</td></tr>
-          <tr><td><code>update_project_brief</code></td><td><code>updateProjectBrief</code></td><td>Partial update to <code>projectBrief</code></td></tr>
-          <tr><td><code>record_decision</code></td><td><code>recordDecision</code></td><td>Append accept / reject / revise reason</td></tr>
-          <tr><td><code>set_project_phase</code></td><td><code>setProjectPhase</code></td><td>discover / taste / brief / make / review / learn / done</td></tr>
-          <tr><td><code>append_session_learnings</code></td><td><code>appendSessionLearnings</code></td><td>Batch append session learnings</td></tr>
-          <tr><td><code>list_global_principles</code></td><td><code>listGlobalPrinciples</code></td><td>List Global principles</td></tr>
-          <tr><td><code>promote_principle</code></td><td><code>promotePrinciple</code></td><td>Promote Project principle to Global</td></tr>
-          <tr><td><code>append_artifact_log</code></td><td><code>appendArtifactLog</code></td><td>Append review / capture artifact log entry</td></tr>
+          <tr><td><code>get_project_context</code></td><td><code>getProjectContext</code></td><td>Project summary (shapes / profiles / viewDefinition)</td></tr>
           <tr><td><code>get_state</code></td><td><code>getState</code></td><td>Current page shapes / dimensions / profiles</td></tr>
           <tr><td><code>apply_commands</code></td><td><code>applyCommands</code></td><td>Batch drawing ops (see table below)</td></tr>
           <tr><td><code>clear_canvas</code></td><td><code>clearCanvas</code></td><td>Clear shapes on current layer</td></tr>

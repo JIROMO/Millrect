@@ -127,7 +127,7 @@
       <h2 id="part-dsl-workflow">AI に頼みやすい作業単位</h2>
       <p>
         Millrect の AI 連携は、画面クリックを自動化するよりも、図面・部品・判断を構造化して渡すための API を中心にしています。
-        まず状況を読み、必要なら Taste Memory の brief を確認し、mm 指定で図面を生成してから 3D と製造ルールを検証する流れが基本です。
+        mm 指定で図面を生成してから 3D と製造ルールを検証する流れが基本です。
       </p>
       <table>
         <thead><tr><th>レイヤー</th><th>主なツール</th><th>向いている依頼</th></tr></thead>
@@ -148,33 +148,11 @@
           <tr><td>ページ・レイヤー操作</td><td>上面図ページの追加、viewDefinition の設定</td></tr>
           <tr><td>スケッチ取り込み</td><td>参照画像の配置、スケール校正、<code>digitize_sketch</code> によるゴースト提案</td></tr>
           <tr><td>Part / 多ビュー生成</td><td><code>create_multiview_box</code>、Part DSL（<code>apply_part_dsl</code>）など mm 指定 API</td></tr>
-          <tr><td>Taste Memory</td><td>意図、制約、好み、採否理由、レビュー履歴を <code>projectBrief</code> に記録</td></tr>
           <tr><td>整列・合成</td><td>図形の整列、Boolean 合成・くり抜き</td></tr>
           <tr><td>3D 確認</td><td>3D 再生成、生成状態の確認</td></tr>
           <tr><td>Undo / Redo</td><td>操作の巻き戻し</td></tr>
         </tbody>
       </table>
-
-      <h2 id="taste-memory">Taste Memory（判断の記録）</h2>
-      <p>
-        Taste Memory は、AI が「なぜその形にするのか」を参照できるようにするための記録レイヤーです。
-        会話全文ではなく、案件の意図、制約、参考、設計方針、採用・却下の理由、レビュー結果を構造化して保存します。
-        アプリ上では右パネルの <strong>Pages タブ → 制作メモ</strong> で状態を確認できます。
-      </p>
-      <table>
-        <thead><tr><th>保存先</th><th>内容</th><th>用途</th></tr></thead>
-        <tbody>
-          <tr><td><code>projectBrief</code></td><td>案件ごとの intent / constraints / designPrinciples / decisions / artifactLog</td><td>このプロジェクトで AI が守る判断基準</td></tr>
-          <tr><td>Global Memory</td><td>複数プロジェクトで繰り返し確認された好み</td><td>新規プロジェクト開始時の初期 brief</td></tr>
-          <tr><td>Artifact Log</td><td>キャプチャ、3D 状態、評価、採否</td><td>レビュー後の修正理由を残す</td></tr>
-        </tbody>
-      </table>
-      <p>
-        関連ツール: <code>get_taste_context</code>, <code>update_project_brief</code>, <code>record_decision</code>,
-        <code>set_project_phase</code>, <code>append_session_learnings</code>, <code>list_global_principles</code>,
-        <code>promote_principle</code>, <code>append_artifact_log</code>。
-        詳細は <a href="developer.html#taste-memory">開発者ガイド — Taste Memory</a> と <code>docs/TASTE-MEMORY.md</code> を参照してください。
-      </p>
 
       <h2 id="sketch-digitize">スケッチ digitize（参照画像 + ゴースト）</h2>
       <p>

@@ -126,7 +126,7 @@
       <h2 id="part-dsl-workflow">Useful levels of AI work</h2>
       <p>
         Millrect’s AI integration is centered on structured drawing, part, and judgment APIs rather than UI clicking.
-        The usual flow is to inspect the current document, read the Taste Memory brief when needed, generate drawings from millimeter specs,
+        The usual flow is to inspect the current document, generate drawings from millimeter specs,
         then validate 3D readiness and manufacturing constraints.
       </p>
       <table>
@@ -148,34 +148,11 @@
           <tr><td>Pages &amp; layers</td><td>Add top view pages, set viewDefinition</td></tr>
           <tr><td>Sketch import</td><td>Reference underlay, scale calibration, <code>digitize_sketch</code> ghost proposals</td></tr>
           <tr><td>Parts / multiview</td><td><code>create_multiview_box</code>, Part DSL (<code>apply_part_dsl</code>), and other mm-based APIs</td></tr>
-          <tr><td>Taste Memory</td><td>Record intent, constraints, preferences, design decisions, and review history in <code>projectBrief</code></td></tr>
-          <tr><td>Align &amp; combine</td><td>Align shapes, Boolean union / subtract</td></tr>
+<tr><td>Align &amp; combine</td><td>Align shapes, Boolean union / subtract</td></tr>
           <tr><td>3D verification</td><td>Regenerate 3D, check generation status</td></tr>
           <tr><td>Undo / Redo</td><td>Roll back or replay operations</td></tr>
         </tbody>
       </table>
-
-      <h2 id="taste-memory">Taste Memory (design judgment)</h2>
-      <p>
-        Taste Memory lets agents understand why a shape should move in a certain direction.
-        It stores structured project intent, constraints, references, design principles, accept/reject reasons, and review outcomes,
-        not full conversation logs.
-        In the app, check it in the right panel under <strong>Pages tab → Taste brief</strong>.
-      </p>
-      <table>
-        <thead><tr><th>Store</th><th>Contents</th><th>Use</th></tr></thead>
-        <tbody>
-          <tr><td><code>projectBrief</code></td><td>Project intent / constraints / designPrinciples / decisions / artifactLog</td><td>The brief an agent should follow in this project</td></tr>
-          <tr><td>Global Memory</td><td>Preferences reinforced across multiple projects</td><td>Seed new project briefs</td></tr>
-          <tr><td>Artifact Log</td><td>Captures, 3D status, evaluation, outcomes</td><td>Keep review reasons attached to revisions</td></tr>
-        </tbody>
-      </table>
-      <p>
-        Related tools: <code>get_taste_context</code>, <code>update_project_brief</code>, <code>record_decision</code>,
-        <code>set_project_phase</code>, <code>append_session_learnings</code>, <code>list_global_principles</code>,
-        <code>promote_principle</code>, <code>append_artifact_log</code>.
-        See <a href="developer.html#taste-memory">Developer Guide — Taste Memory</a> and <code>docs/TASTE-MEMORY.md</code>.
-      </p>
 
       <h2 id="sketch-digitize">Sketch digitize (reference image + ghosts)</h2>
       <p>
