@@ -401,6 +401,50 @@ millrect-3d-panel {
   }
 }
 
+/* ── Boot loading overlay (初回描画完了まで表示) ── */
+#boot-loading {
+  position: fixed;
+  inset: 0;
+  z-index: 9999;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--surface);
+  opacity: 1;
+  visibility: visible;
+  transition:
+    opacity 0.3s ease,
+    visibility 0s linear 0.3s;
+}
+#boot-loading.hidden {
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+}
+/* デスクトップ版（Electron）では初回ペイント前から非表示にしてチラつきを防ぐ */
+html.is-desktop #boot-loading {
+  display: none !important;
+}
+.boot-loading-inner {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 18px;
+}
+.boot-loading-mark {
+  width: 150px;
+  height: auto;
+  opacity: 0.95;
+}
+.boot-loading-spinner {
+  width: 30px;
+  height: 30px;
+  border: 3px solid rgba(255, 255, 255, 0.16);
+  border-top-color: var(--accent);
+  border-radius: 50%;
+  animation: tab-spin 0.7s linear infinite;
+}
+
 /* ════════════════════════════════════════════════════
    WORKSPACE
    ════════════════════════════════════════════════════ */

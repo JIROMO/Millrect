@@ -55,3 +55,20 @@ contextBridge.exposeInMainWorld("electronAPI", {
   downloadUpdate: (url) => ipcRenderer.invoke("update:download", url),
   skipUpdate: () => ipcRenderer.invoke("update:skip"),
 });
+
+// 起動ローダーはデスクトップ版では不要（ローカル読み込みが速く、一瞬映るだけ）。
+// 初回ペイント前に <html> へ印を付け、CSS で非表示にする（チラつきゼロ）。
+function markDesktopApp() {
+  document.documentElement.classList.add("is-desktop");
+}
+if (document.documentElement) {
+  markDesktopApp();
+} else {
+  // <html> 未生成なら、生成され次第すぐ付与する。
+  new MutationObserver((_records, obs) => {
+    if (document.documentElement) {
+      markDesktopApp();
+      obs.disconnect();
+    }
+  }).observe(document, { childList: true });
+}

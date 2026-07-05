@@ -28,15 +28,54 @@
       content="https://millrect.com/site/images/ogp.jpg"
     />
     <link rel="stylesheet" href="css/app.css" />
-    <script src="js/dependencies.js"></script>
-    <script src="vendor/lucide.min.js"></script>
-    <script src="vendor/polygon-clipping.umd.js"></script>
-    <script src="../packages/schema/index.js"></script>
-    <script src="../packages/model-generator/index.js"></script>
-    <script src="../packages/geometry-core/index.js"></script>
-    <script src="js/text-engine-browser.js"></script>
   </head>
   <body>
+    <div id="boot-loading" aria-hidden="true">
+      <div class="boot-loading-inner">
+        <svg
+          class="boot-loading-mark"
+          viewBox="0 0 631 96"
+          fill="none"
+          xmlns="http://www.w3.org/2000/svg"
+          role="img"
+          aria-label="Millrect"
+        >
+          <path
+            d="M562.248 12.52V1H630.472V12.52H602.696V93.544H590.152V12.52H562.248Z"
+            fill="white"
+          />
+          <path
+            d="M510.152 95.488C483.784 95.488 466.248 76.544 466.248 47.872C466.248 19.328 484.296 0 510.792 0C531.656 0 547.656 12.416 551.112 31.36H537.672C534.216 19.328 523.848 12.032 510.408 12.032C491.72 12.032 479.432 26.112 479.432 47.744C479.432 69.376 491.72 83.456 510.408 83.456C523.976 83.456 534.728 76.16 538.184 64.768H551.496C547.528 83.2 531.016 95.488 510.152 95.488Z"
+            fill="white"
+          />
+          <path
+            d="M455.544 93.544H399.096V1H455.544V12.52H411.64V41.448H451.192V52.584H411.64V81.896H455.544V93.544Z"
+            fill="white"
+          />
+          <path
+            d="M326.792 93.544H314.248V1H349.192C369.032 1 380.808 11.496 380.808 28.776C380.808 41.576 374.408 50.792 362.888 54.504L381.704 93.544H367.752L350.472 56.936H326.792V93.544ZM326.792 12.264V45.8H349.32C360.968 45.8 367.624 39.528 367.624 28.904C367.624 18.152 360.712 12.264 349.192 12.264H326.792Z"
+            fill="white"
+          />
+          <path
+            d="M245.469 1.45605V82.3521H286.173V94.0001H232.925V1.45605H245.469Z"
+            fill="white"
+          />
+          <path
+            d="M172.994 1.45605V82.3521H213.698V94.0001H160.45V1.45605H172.994Z"
+            fill="white"
+          />
+          <path
+            d="M132.269 1.45605V94.0001H119.725V1.45605H132.269Z"
+            fill="white"
+          />
+          <path
+            d="M12.288 94.0001H0V1.45605H12.288L44.16 79.2801L76.032 1.45605H88.576V94.0001H76.288V57.3921C76.288 40.1121 76.416 33.8401 77.056 27.3121L50.048 94.0001H38.272L11.392 27.5681C12.032 32.0481 12.288 41.5201 12.288 54.4481V94.0001Z"
+            fill="white"
+          />
+        </svg>
+        <div class="boot-loading-spinner"></div>
+      </div>
+    </div>
     <div id="app">
       <millrect-toolbar id="toolbar"></millrect-toolbar>
       <div id="project-tabs"></div>
@@ -53,16 +92,38 @@
         <millrect-3d-panel id="panel-3d-wrap"></millrect-3d-panel>
       </div>
     </div>
+    <!-- Bootstrap -->
+    <script src="js/dependencies.js"></script>
+
+    <!-- Vendor -->
+    <script src="vendor/lucide.min.js"></script>
+    <script src="vendor/polygon-clipping.umd.js"></script>
     <script src="vendor/svg.min.js"></script>
+
+    <!-- Core packages (schema → model/geometry generators) -->
+    <script src="../packages/schema/index.js"></script>
+    <script src="../packages/model-generator/index.js"></script>
+    <script src="../packages/geometry-core/index.js"></script>
+
+    <!-- Text engine bootstrap (async WASM HarfBuzz) -->
+    <script src="js/text-engine-browser.js"></script>
+
+    <!-- i18n -->
     <script src="js/i18n.js"></script>
     <script src="js/locales/ja.js"></script>
     <script src="js/locales/en.js"></script>
+
+    <!-- Web Components -->
     <script src="js/components/millrect-toolbar.js"></script>
     <script src="js/components/millrect-left-sidebar.js"></script>
     <script src="js/components/millrect-canvas.js"></script>
     <script src="js/components/millrect-right-sidebar.js"></script>
     <script src="js/components/millrect-3d-panel.js"></script>
+
+    <!-- Persistence -->
     <script src="js/db.js"></script>
+
+    <!-- Shared packages (standalone libraries) -->
     <script src="../packages/multiview-starter-box.js"></script>
     <script src="../packages/docs-box-scenario.js"></script>
     <script src="../packages/module-joint-1-scenario.js"></script>
@@ -74,11 +135,15 @@
     <script src="../packages/part-solver.js"></script>
     <script src="../packages/project-json.js"></script>
     <script src="../packages/viewport-culling.js"></script>
-
+    <script src="../packages/text-contour-grouping.js"></script>
+    <script src="../packages/model-viewer/index.js"></script>
+    <!-- fonts -->
     <script src="../packages/builtin-fonts.js"></script>
     <script src="../packages/google-fonts.js"></script>
     <script src="../packages/fontsource-api.js"></script>
     <script src="../packages/docs-scenarios-registry.js"></script>
+
+    <!-- App core (load order matters: later files depend on earlier) -->
     <script src="js/state.js"></script>
     <script src="js/font-library.js"></script>
     <script src="js/project-fonts.js"></script>
@@ -90,7 +155,6 @@
     <script src="js/commands.js"></script>
     <script src="js/export.js"></script>
     <script src="js/interaction.js"></script>
-    <script src="../packages/text-contour-grouping.js"></script>
     <script src="js/text-outline.js"></script>
     <script src="js/multiview-template.js"></script>
     <script src="js/part-builders.js"></script>
@@ -100,9 +164,9 @@
     <script src="js/ui.js"></script>
     <script src="js/path-editor.js"></script>
     <script src="js/3d-view.js"></script>
-    <script src="../packages/model-viewer/index.js"></script>
     <script src="js/agent-api.js"></script>
 
+    <!-- App features -->
     <script src="js/part-compiler.js"></script>
     <script src="js/reference-image.js"></script>
     <script src="js/digitize-sketch.js"></script>

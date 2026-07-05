@@ -3406,13 +3406,21 @@ document.addEventListener("DOMContentLoaded", () => {
 
   // 起動時はモーダルを出さず、名称未設定プロジェクト（A4・横・1/1）を直接開く。
   // 保存済みを開くにはツールバーの「開く」かタブの「＋」を使う。
-  openUntitledProjectTab().then(() => {
-    requestAnimationFrame(() => {
-      fitPage();
-      render();
-      updateAll();
-    });
-  });
+  const hideBootLoader = () =>
+    document.getElementById("boot-loading")?.classList.add("hidden");
+  // フェイルセーフ: 初回描画が何らかの理由で完了しなくてもローダーで固まらないよう、
+  // 最大8秒で必ず消す（Web 版向け。デスクトップ版は CSS で最初から非表示）。
+  setTimeout(hideBootLoader, 8000);
+  openUntitledProjectTab()
+    .then(() => {
+      requestAnimationFrame(() => {
+        fitPage();
+        render();
+        updateAll();
+        hideBootLoader();
+      });
+    })
+    .catch(hideBootLoader);
 
   svgEl.addEventListener("mousedown", (e) => onMouseDown(e, svgEl));
   svgEl.addEventListener("mousemove", (e) => onMouseMove(e, svgEl));
