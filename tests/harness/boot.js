@@ -67,6 +67,24 @@ const PRELUDE = `
   var updateUI = function () {};
   var Worker = undefined;
   var t = function (key) { return key; }; // i18n。defaultState 等が typeof ガードで参照
+
+  // ── getShapeBBox の最小実装（本体は renderer.js＝DOM 層にありハーネス未ロード）──
+  // align/distribute のテスト用。_ID_SCALE（real units 恒等スケール）前提で、
+  // 回転・グループ・テキスト計測は扱わない（必要になったら boot-dom.js 側で本物を使う）。
+  var getShapeBBox = function (shape) {
+    if (shape.type === "line") {
+      return {
+        x: Math.min(shape.x1, shape.x2),
+        y: Math.min(shape.y1, shape.y2),
+        w: Math.abs(shape.x2 - shape.x1),
+        h: Math.abs(shape.y2 - shape.y1),
+      };
+    }
+    if (typeof shape.width === "number" && typeof shape.height === "number") {
+      return { x: shape.x, y: shape.y, w: shape.width, h: shape.height };
+    }
+    return null;
+  };
 `;
 
 // 起動後に Node 側へ公開する関数名（存在しないものは黙ってスキップ）。
@@ -87,6 +105,7 @@ const EXPORT_NAMES = [
   "getCurrentPage",
   "getCurrentLayer",
   "getShapeBBox",
+  "getPageCanvasMM",
   // history
   "undo",
   "redo",

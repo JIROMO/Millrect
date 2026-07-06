@@ -1435,15 +1435,12 @@ function alignShapes(dir) {
   if (!items.length) return false;
   let minX, maxX, minY, maxY;
   if (items.length === 1) {
-    // 単一選択時は用紙（getPaperDimensions）を基準に揃える
-    const page = getCurrentPage();
-    const { width: pw, height: ph } = getPaperDimensions(page);
-    const s = page.scale || { numerator: 1, denominator: 1 };
-    const toReal = (v) => (v * s.denominator) / s.numerator;
+    // 単一選択時は用紙（ページ実寸）を基準に揃える
+    const { w: pw, h: ph } = getPageCanvasMM(getCurrentPage());
     minX = 0;
-    maxX = toReal(pw);
+    maxX = pw;
     minY = 0;
-    maxY = toReal(ph);
+    maxY = ph;
   } else {
     const all = items.map((i) => i.bb);
     minX = Math.min(...all.map((b) => b.x));
