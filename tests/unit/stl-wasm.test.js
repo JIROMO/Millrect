@@ -22,7 +22,9 @@ function writeBinaryStl(instance, positions) {
   const requiredBytes = outputPtr + outputBytes;
   const pageSize = 64 * 1024;
   if (requiredBytes > memory.buffer.byteLength) {
-    memory.grow(Math.ceil((requiredBytes - memory.buffer.byteLength) / pageSize));
+    memory.grow(
+      Math.ceil((requiredBytes - memory.buffer.byteLength) / pageSize),
+    );
   }
   new Float32Array(memory.buffer, inputPtr, positions.length).set(positions);
   const written = write_stl_binary(

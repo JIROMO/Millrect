@@ -107,7 +107,10 @@ test("selection move fast path is not limited to single groups", () => {
 
 test("fast selection move finalizes with a live update instead of full render", () => {
   const mouseUpBody = functionBody(interactionSource, "onMouseUp");
-  assert.match(mouseUpBody, /const movedIds = \[\.\.\.getState\(\)\.selectedShapeIds\]/);
+  assert.match(
+    mouseUpBody,
+    /const movedIds = \[\.\.\.getState\(\)\.selectedShapeIds\]/,
+  );
   assert.match(mouseUpBody, /clearLiveDragTransforms\(\)/);
   assert.match(mouseUpBody, /liveUpdateShapes\(movedIds\)/);
   assert.doesNotMatch(mouseUpBody, /if \(_ds\.fastActive\) render\(\)/);
@@ -117,7 +120,10 @@ test("keypoint snapping caches drag candidates and skips tiny recalculations", (
   assert.match(interactionSource, /const _KEYPOINT_SNAP_RECALC_SCREEN_PX = 2/);
   const snapBody = functionBody(interactionSource, "_moveKeypointSnap");
   assert.match(snapBody, /const cache = \(_ds\.keypointSnap \|\|= \{\}\)/);
-  assert.match(snapBody, /Math\.hypot\(dxP - cache\.dxP, dyP - cache\.dyP\) \* zoom/);
+  assert.match(
+    snapBody,
+    /Math\.hypot\(dxP - cache\.dxP, dyP - cache\.dyP\) \* zoom/,
+  );
   assert.match(snapBody, /return cache\.result/);
   assert.match(snapBody, /cache\.points = points/);
   assert.match(snapBody, /cache\.targets = getAllShapesOnPage\(page\)/);
@@ -125,7 +131,10 @@ test("keypoint snapping caches drag candidates and skips tiny recalculations", (
 });
 
 test("renderer delegates viewport culling decisions to the shared package", () => {
-  assert.match(rendererSource, /const ViewportCulling = globalThis\.ViewportCulling/);
+  assert.match(
+    rendererSource,
+    /const ViewportCulling = globalThis\.ViewportCulling/,
+  );
   assert.match(rendererSource, /ViewportCulling\.boxIntersects/);
   assert.match(rendererSource, /ViewportCulling\.isShapeVisibleInCull/);
   assert.match(rendererSource, /ViewportCulling\.visibleShapesForRender/);
