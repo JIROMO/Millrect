@@ -35,6 +35,7 @@ class MillrectToolbar extends HTMLElement {
 
       <div class="toolbar-group">
         <button id="btn-export-svg" class="toolbar-icon-btn" data-i18n-title="toolbar.exportSvg.title"><i data-lucide="file-code"></i></button>
+        <button id="btn-export-dxf" class="toolbar-icon-btn" data-i18n-title="toolbar.exportDxf.title"><i data-lucide="ruler"></i></button>
         <button id="btn-export-pdf" class="toolbar-icon-btn" data-i18n-title="toolbar.exportPdf.title"><i data-lucide="file-text"></i></button>
         <button id="btn-print-mode" class="toolbar-icon-btn" data-i18n-title="toolbar.print.title" aria-pressed="false"><i data-lucide="printer"></i></button>
         <button id="btn-export-json" class="toolbar-icon-btn" data-i18n-title="toolbar.exportJson.title"><i data-lucide="file-json"></i></button>

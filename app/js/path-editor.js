@@ -107,7 +107,10 @@ function _bezierAngleSnap(from, pt) {
   // 15° increments (0/15/30/45…) — fine enough to hit 45° corners precisely.
   const step = Math.PI / 12;
   const snapped = Math.round(Math.atan2(dy, dx) / step) * step;
-  return { x: from.x + len * Math.cos(snapped), y: from.y + len * Math.sin(snapped) };
+  return {
+    x: from.x + len * Math.cos(snapped),
+    y: from.y + len * Math.sin(snapped),
+  };
 }
 
 // Smart guides: snap the cursor so it lines up (same x or same y) with an
@@ -699,7 +702,10 @@ function handleBezierEditMove(rp, shiftKey, altKey) {
   } else {
     // Shift → constrain handle direction to a 15° increment from its anchor.
     if (shiftKey) {
-      const snapped = _bezierAngleSnap(orig, { x: orig[type].x + dx, y: orig[type].y + dy });
+      const snapped = _bezierAngleSnap(orig, {
+        x: orig[type].x + dx,
+        y: orig[type].y + dy,
+      });
       dx = snapped.x - orig[type].x;
       dy = snapped.y - orig[type].y;
     }

@@ -233,6 +233,10 @@
       if (typeof exportSTL === "function") exportSTL();
     });
 
+    document.getElementById("btn-export-3mf")?.addEventListener("click", () => {
+      if (typeof export3MF === "function") export3MF();
+    });
+
     document.getElementById("btn-3d-reset")?.addEventListener("click", () => {
       if (typeof reset3DViewCamera === "function") {
         reset3DViewCamera();

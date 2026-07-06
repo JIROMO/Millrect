@@ -17,6 +17,8 @@
     "toolbar.save.title": "Save (Ctrl+S)",
     "toolbar.exportSvg": "Export SVG",
     "toolbar.exportSvg.title": "Export SVG",
+    "toolbar.exportDxf": "Export DXF",
+    "toolbar.exportDxf.title": "Export DXF (for laser cutters / CNC)",
     "toolbar.exportPdf": "Export PDF",
     "toolbar.exportPdf.title": "Export PDF (all pages)",
     "toolbar.print": "Print",
@@ -53,6 +55,9 @@
     "tools.text.title": "Text (T)",
     "tools.dimension": "DIM",
     "tools.dimension.title": "Dimension (D)",
+    "tools.measure": "MEASURE",
+    "tools.measure.title":
+      "Measure (M) — check distance/angle without placing a dimension",
     "tools.dragHandle.title": "Drag to move",
 
     "panel.tab.design": "Design",
@@ -164,6 +169,7 @@
 
     "status.xy": "XY",
     "status.tool": "Tool",
+    "status.measure": "Measure",
     "status.scale": "Scale",
     "status.zoom": "Zoom",
     "status.coords": "x: {x}  y: {y} mm",
@@ -171,6 +177,10 @@
     "status.autosave.saved": "Saved {time}",
     "status.autosave.unsaved": "Unsaved…",
     "status.autosave.error": "Save failed",
+
+    "toast.boolean.failed":
+      "Boolean operation failed (check that the shapes overlap)",
+    "toast.fillet.failed": "Fillet/chamfer failed (check the radius)",
 
     "help.title": "Shortcuts",
     "help.button.title": "Shortcut list",
@@ -184,7 +194,10 @@
     "help.tool.circle": "Circle",
     "help.tool.text": "Text",
     "help.tool.dimension": "Dimension",
+    "help.tool.measure": "Measure",
     "help.tool.hand": "Pan",
+    "help.tool.bezier": "Pen",
+    "help.tool.pencil": "Pencil",
     "help.edit.undo": "Undo",
     "help.edit.redo": "Redo",
     "help.edit.copy": "Copy",
@@ -221,6 +234,7 @@
     "panel3d.title": "3D PREVIEW",
     "panel3d.resetCamera": "Reset camera",
     "panel3d.exportStl": "Export STL",
+    "panel3d.export3mf": "Export 3MF (with units)",
     "panel3d.close": "Close",
 
     "props.selectShape": "Select a shape",
@@ -337,6 +351,9 @@
     "props.ymm": "Y mm",
     "props.widthMm": "Width mm",
     "props.heightMm": "Height mm",
+    "props.filletRadiusMm": "Fillet radius mm",
+    "props.applyFillet": "Apply fillet",
+    "props.applyChamfer": "Apply chamfer",
     "props.cxMm": "CX mm",
     "props.cyMm": "CY mm",
     "props.rxMm": "RX mm",

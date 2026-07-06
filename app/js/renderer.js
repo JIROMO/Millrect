@@ -974,10 +974,8 @@ function _doRender() {
     _clearLayer(roots["reference-scale-root"]);
   }
   if (state.showGrid && !printMode) {
-    _renderLayer(
-      roots["grid-root"],
-      `grid|${pw}|${ph}|${renderZoom}`,
-      () => renderGrid(pw, ph, renderZoom),
+    _renderLayer(roots["grid-root"], `grid|${pw}|${ph}|${renderZoom}`, () =>
+      renderGrid(pw, ph, renderZoom),
     );
   } else {
     _clearLayer(roots["grid-root"]);

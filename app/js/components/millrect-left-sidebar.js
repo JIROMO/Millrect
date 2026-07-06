@@ -39,6 +39,9 @@ class MillrectLeftSidebar extends HTMLElement {
           <button class="tool-btn" data-tool="dimension" data-i18n-title="tools.dimension.title">
             <span class="tool-icon"><i data-lucide="ruler"></i></span>
           </button>
+          <button class="tool-btn" data-tool="measure" data-i18n-title="tools.measure.title">
+            <span class="tool-icon"><i data-lucide="move-diagonal"></i></span>
+          </button>
         </div>
       </div>
     `;

@@ -19,35 +19,39 @@ describe("derived profiles (golden)", () => {
   });
 
   it("rect + circle → Profile rings/bbox スナップショット", () => {
-    app.applyDrawingCommands([
-      {
-        action: "addShape",
-        shape: {
-          id: "r1",
-          type: "rect",
-          x: 10,
-          y: 20,
-          width: 100,
-          height: 60,
-          stroke: "#000",
-          fill: "#000",
-          strokeWidth: "thin",
+    // placement:"none" — このテストは座標を固定してプロファイル抽出を検証する
+    app.applyDrawingCommands(
+      [
+        {
+          action: "addShape",
+          shape: {
+            id: "r1",
+            type: "rect",
+            x: 10,
+            y: 20,
+            width: 100,
+            height: 60,
+            stroke: "#000",
+            fill: "#000",
+            strokeWidth: "thin",
+          },
         },
-      },
-      {
-        action: "addShape",
-        shape: {
-          id: "c1",
-          type: "circle",
-          cx: 200,
-          cy: 100,
-          r: 30,
-          stroke: "#000",
-          fill: "#000",
-          strokeWidth: "thin",
+        {
+          action: "addShape",
+          shape: {
+            id: "c1",
+            type: "circle",
+            cx: 200,
+            cy: 100,
+            r: 30,
+            stroke: "#000",
+            fill: "#000",
+            strokeWidth: "thin",
+          },
         },
-      },
-    ]);
+      ],
+      { placement: "none" },
+    );
 
     const profiles = app
       .extractProfilesFromPage(app.getCurrentPage())

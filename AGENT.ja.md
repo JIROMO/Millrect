@@ -36,6 +36,10 @@ MCP サーバー（`mcp/server.js`）経由で操作する場合、本書は Res
 
 Part DSL 系: `compile_part_dsl` / `apply_part_dsl` / `update_part_param` / `validate_manufacturability` — 詳細は [AGENT.md](AGENT.md) の Part DSL 章。
 
+### `apply_commands` の自動配置
+
+追加した図形バッチは既定で自動配置される（`placement: "auto"`）。空ページなら用紙中央、既存図形と重なる・原点付近に離れて置かれた場合は空きスペースへ再配置。既存図形の内側に完全に収まるバッチ（穴あけ・ブーリアン用の重ね）や 20mm 以内の隣接（接続線・注記）は動かさない。寸法線だけのバッチも動かない。**新しい部品は (0,0) 起点の相対座標で描けばよい** — 用紙上の位置は自動配置が決める。厳密な絶対座標が必要なら `placement: "none"`、常に中央なら `"center"`。
+
 ### スケッチ取り込み（参照画像 + ゴースト図形）
 
 **目的:** 手書きスケッチ/写真 → **編集可能な下書き**。Millrect 内に Vision はない — 外部 LLM が **proposals**（mm）を生成する。

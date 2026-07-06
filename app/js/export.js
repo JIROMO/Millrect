@@ -807,6 +807,8 @@ async function dl(content, filename, mime) {
   if (window.electronAPI) {
     if (mime === "image/svg+xml") {
       await window.electronAPI.saveSvg(filename, content);
+    } else if (mime === "application/dxf" && window.electronAPI.saveDxf) {
+      await window.electronAPI.saveDxf(filename, content);
     } else {
       await window.electronAPI.saveProjectJson(filename, content);
     }

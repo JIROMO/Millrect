@@ -41,7 +41,10 @@ class MillrectCanvas extends HTMLElement {
           <div class="help-row"><kbd>C</kbd><span data-i18n="help.tool.circle">円</span></div>
           <div class="help-row"><kbd>T</kbd><span data-i18n="help.tool.text">テキスト</span></div>
           <div class="help-row"><kbd>D</kbd><span data-i18n="help.tool.dimension">寸法</span></div>
+          <div class="help-row"><kbd>M</kbd><span data-i18n="help.tool.measure">計測</span></div>
           <div class="help-row"><kbd>H</kbd><span data-i18n="help.tool.hand">移動</span></div>
+          <div class="help-row"><kbd>B</kbd><span data-i18n="help.tool.bezier">ペン</span></div>
+          <div class="help-row"><kbd>P</kbd><span data-i18n="help.tool.pencil">鉛筆</span></div>
           <div class="help-section-title" data-i18n="help.section.edit">編集</div>
           <div class="help-row"><kbd>⌘Z</kbd><span data-i18n="help.edit.undo">元に戻す</span></div>
           <div class="help-row"><kbd>⌘⇧Z</kbd><span data-i18n="help.edit.redo">やり直し</span></div>
@@ -73,6 +76,10 @@ class MillrectCanvas extends HTMLElement {
         <span>
           <span class="status-label" data-i18n="status.tool">Tool</span>
           <span id="status-tool">SELECT</span>
+        </span>
+        <span id="status-measure-wrap" hidden>
+          <span class="status-label" data-i18n="status.measure">Measure</span>
+          <span id="status-measure"></span>
         </span>
         <span>
           <span class="status-label" data-i18n="status.scale">Scale</span>

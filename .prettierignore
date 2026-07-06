@@ -1,0 +1,7 @@
+# minified vendor libraries — do not reformat
+app/vendor/
+# build outputs
+dist/
+playwright-report/
+test-results/
+node_modules/

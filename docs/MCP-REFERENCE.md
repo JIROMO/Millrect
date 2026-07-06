@@ -76,6 +76,22 @@ For schemas, coordinates, and drawing rules, read `agent-manual` first.
 | `removeConstraint` | Remove constraint |
 | `applyConstraints` | Apply all constraints immediately |
 
+### Placement (auto-positioning of added shapes)
+
+`apply_commands` takes an optional top-level `placement` parameter that controls where the
+batch of newly added shapes lands on the paper:
+
+| value | Behavior |
+|-------|----------|
+| `auto` (default) | Empty page → centered on paper. Overlapping existing shapes or placed far away from them → moved to free space. Fully inside an existing shape (hole / boolean overlay) or within 20 mm of one (connector lines, annotations) → kept as-is. |
+| `center` | Always centered on paper. |
+| `none` | Use coordinates exactly as given. |
+
+Shapes and dimensions added in the same batch shift together, so relative coordinates
+within a batch are preserved — draw new parts starting at the origin `(0,0)` and let
+placement decide where they go. Dimension-only batches never move. 3D generation is
+bbox-based per page, so placement does not affect CSG output.
+
 ## More for contributors
 
 Repository layout, architecture, Electron APIs: [developer.html](developer.html) (JA) · [en/developer.html](en/developer.html) (EN)

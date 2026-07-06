@@ -118,6 +118,12 @@ function updateShape(id, values) {
   if (!res.isDimension && res.layer?.locked) return false;
   if (!res.isDimension && res.shape.locked) return false;
   const trackTextPreview = res.shape.type === "text";
+  const dimValueEdit =
+    res.isDimension &&
+    Object.prototype.hasOwnProperty.call(values, "value") &&
+    typeof values.value === "number" &&
+    !isNaN(values.value);
+  const prevRealDistance = dimValueEdit ? dimensionRealDistance(res.shape) : 0;
   for (const [key, val] of Object.entries(values)) {
     if (key.includes(".")) {
       const parts = key.split(".");
@@ -132,6 +138,9 @@ function updateShape(id, values) {
     }
   }
   if (res.isDimension) normalizeDimensionGeometry(res.shape);
+  if (dimValueEdit) {
+    _applyDimensionValueToGeometry(res.shape, res.page, prevRealDistance);
+  }
   // 拘束を再適用して幾何的整合性を保つ
   applyConstraints(res.page);
   if (trackTextPreview) {
@@ -141,6 +150,201 @@ function updateShape(id, values) {
   pushHistory("図形更新");
   return true;
 }
+
+// ── 寸法値ドリブン編集 ───────────────────────────────────────
+// 寸法線のオーバーライド値を編集すると、その寸法の "to" 端点が実際の図形の
+// 頂点と一致している場合に限り、その頂点を新しい距離に合わせて動かす。
+// "from" 側は常にアンカーとして固定する。一致する頂点が見つからない場合は
+// 従来どおり表示上の上書き値のままになる（幾何は変わらない）。
+const DIM_GEOMETRY_MATCH_TOL = 0.5; // real units（≈0.05mm）
+
+function _applyDimensionValueToGeometry(dim, page, prevRealDistance) {
+  const newRealDistance = mmToReal(dim.value);
+  if (!isFinite(newRealDistance)) return;
+  const deltaDistance = newRealDistance - prevRealDistance;
+  if (Math.abs(deltaDistance) < 1e-6) return;
+  const axis = dim.dimensionType === "horizontal" ? "x" : "y";
+  const sign = Math.sign(dim.to[axis] - dim.from[axis]) || 1;
+  const deltaCoord = sign * deltaDistance;
+  const targetPoint = { x: dim.to.x, y: dim.to.y };
+  const anchorPoint = { x: dim.from.x, y: dim.from.y };
+  const moved = _moveVertexNear(
+    page,
+    targetPoint,
+    anchorPoint,
+    axis,
+    deltaCoord,
+  );
+  if (moved) dim.to[axis] += deltaCoord;
+}
+
+function _moveVertexNear(page, pt, anchorPt, axis, delta) {
+  for (const layer of page.layers) {
+    if (layer.locked) continue;
+    for (const shape of layer.shapes) {
+      if (shape.locked) continue;
+      if (_tryMoveShapeVertex(shape, pt, anchorPt, axis, delta)) return true;
+    }
+  }
+  return false;
+}
+
+// shape の "to" 側頂点を動かす。ただし移動後に "from"（アンカー）側が一致していた
+// 頂点の位置がずれてしまう場合は、幾何的整合性が壊れるため何もしない（false を返す）。
+// 例: 円の直径を両象限点で寸法指定している場合、半径だけを動かすと反対側の象限点が
+// 動いてしまい "from" と食い違う → その場合は表示上の上書き値のままにフォールバックする。
+function _tryMoveShapeVertex(shape, pt, anchorPt, axis, delta) {
+  // アンカーがこの shape の頂点と(移動前から)一致していた場合のみ、移動後も
+  // 一致し続けているかを検証する。無関係な shape ならチェック不要。
+  const anchorWasCoincident = anchorPt
+    ? _findVertexNear(shape, anchorPt)
+    : false;
+  const before = anchorWasCoincident ? JSON.stringify(shape) : null;
+  const ok = _mutateShapeVertex(shape, pt, axis, delta);
+  if (!ok) return false;
+  if (anchorWasCoincident && !_findVertexNear(shape, anchorPt)) {
+    Object.assign(shape, JSON.parse(before));
+    return false;
+  }
+  return true;
+}
+
+// anchorPt 近傍に一致する頂点が現在の shape 上に存在するかを確認する
+// （_tryMoveShapeVertex の整合性チェック用）。
+function _findVertexNear(shape, anchorPt) {
+  const near = (x, y) =>
+    Math.hypot(x - anchorPt.x, y - anchorPt.y) <= DIM_GEOMETRY_MATCH_TOL;
+  if (shape.type === "line") {
+    return near(shape.x1, shape.y1) || near(shape.x2, shape.y2);
+  }
+  if (shape.type === "bezier" && shape.nodes?.length) {
+    const first = shape.nodes[0];
+    const last = shape.nodes[shape.nodes.length - 1];
+    return near(first.x, first.y) || near(last.x, last.y);
+  }
+  if (shape.type === "rect") {
+    const { x, y, width: w, height: h } = shape;
+    return near(x, y) || near(x + w, y) || near(x, y + h) || near(x + w, y + h);
+  }
+  if (shape.type === "circle") {
+    const { cx, cy, r } = shape;
+    return (
+      near(cx, cy) ||
+      near(cx + r, cy) ||
+      near(cx - r, cy) ||
+      near(cx, cy - r) ||
+      near(cx, cy + r)
+    );
+  }
+  return false;
+}
+
+function _mutateShapeVertex(shape, pt, axis, delta) {
+  const near = (x, y) =>
+    Math.hypot(x - pt.x, y - pt.y) <= DIM_GEOMETRY_MATCH_TOL;
+  if (shape.type === "line") {
+    if (near(shape.x1, shape.y1)) {
+      if (axis === "x") shape.x1 += delta;
+      else shape.y1 += delta;
+      return true;
+    }
+    if (near(shape.x2, shape.y2)) {
+      if (axis === "x") shape.x2 += delta;
+      else shape.y2 += delta;
+      return true;
+    }
+    return false;
+  }
+  if (shape.type === "bezier" && shape.nodes?.length) {
+    const first = shape.nodes[0];
+    const last = shape.nodes[shape.nodes.length - 1];
+    if (near(first.x, first.y)) {
+      if (axis === "x") first.x += delta;
+      else first.y += delta;
+      return true;
+    }
+    if (near(last.x, last.y)) {
+      if (axis === "x") last.x += delta;
+      else last.y += delta;
+      return true;
+    }
+    return false;
+  }
+  if (shape.type === "rect") {
+    const { x, y, width: w, height: h } = shape;
+    // アンカー角（x,y）: 常に平行移動として扱う
+    if (near(x, y)) {
+      if (axis === "x") shape.x += delta;
+      else shape.y += delta;
+      return true;
+    }
+    // 右上角: x 軸編集は幅、y 軸はアンカーと共有のため対象外
+    if (near(x + w, y)) {
+      if (axis === "x") shape.width = Math.max(0.01, w + delta);
+      else return false;
+      return true;
+    }
+    // 左下角: y 軸編集は高さ、x 軸はアンカーと共有のため対象外
+    if (near(x, y + h)) {
+      if (axis === "y") shape.height = Math.max(0.01, h + delta);
+      else return false;
+      return true;
+    }
+    // 右下角: 幅・高さともに編集可能
+    if (near(x + w, y + h)) {
+      if (axis === "x") shape.width = Math.max(0.01, w + delta);
+      else shape.height = Math.max(0.01, h + delta);
+      return true;
+    }
+    return false;
+  }
+  if (shape.type === "circle") {
+    const { cx, cy, r } = shape;
+    if (near(cx, cy)) {
+      if (axis === "x") shape.cx += delta;
+      else shape.cy += delta;
+      return true;
+    }
+    // 象限点: 中心と共有しない軸のみ半径編集として扱う
+    if (near(cx + r, cy)) {
+      if (axis === "x") shape.r = Math.max(0.01, r + delta);
+      else return false;
+      return true;
+    }
+    if (near(cx - r, cy)) {
+      if (axis === "x") shape.r = Math.max(0.01, r - delta);
+      else return false;
+      return true;
+    }
+    if (near(cx, cy - r)) {
+      if (axis === "y") shape.r = Math.max(0.01, r - delta);
+      else return false;
+      return true;
+    }
+    if (near(cx, cy + r)) {
+      if (axis === "y") shape.r = Math.max(0.01, r + delta);
+      else return false;
+      return true;
+    }
+    return false;
+  }
+  return false;
+}
+
+// path shape の全頂点にフィレット/チャンファーを焼き込む一発コマンド。
+// radiusMm: mm 単位。mode: "round" | "chamfer"
+function applyFilletToPath(id, radiusMm, mode) {
+  const res = findShapeById(id);
+  if (!res || res.isDimension || res.shape.type !== "path") return false;
+  if (res.layer?.locked || res.shape.locked) return false;
+  const radius = mmToReal(radiusMm);
+  const ok = applyFilletToPathShape(res.shape, radius, mode);
+  if (!ok) return false;
+  if (typeof markShapeDirty === "function") markShapeDirty(id);
+  pushHistory(mode === "chamfer" ? "面取り" : "フィレット");
+  return true;
+}
+
 function deleteShape(id) {
   invalidateTextNativePreview(id);
   const res = findShapeById(id);
@@ -901,8 +1105,168 @@ function updateLayer(pageId, layerId, values) {
   pushHistory("レイヤー更新");
   return true;
 }
-function applyDrawingCommands(commands) {
+// ── 自動配置（MCP/エージェント作図向け） ─────────────────────
+// エージェントは原点 (0,0) 起点で作図しがちで、毎回ページ左上に張り付く。
+// applyDrawingCommands のバッチで「追加された」図形だけを一括シフトする。
+//   auto   : ページが空 → 用紙中央。既存図形あり →
+//            - バッチ全体が既存図形の bbox 内に完全に収まる（穴あけ・重ね）→ そのまま
+//            - 既存図形から 20mm 以内に隣接（接続線・注記等の相対配置）→ そのまま
+//            - それ以外（重なる / 遠く離れた原点起点など）→ 空きスペースへ再配置
+//   center : 常に用紙中央へ。
+//   none   : 座標そのまま（従来動作）。
+// 3D 生成はページごとのプロファイル bbox 基準（_profileFrameForPage）なので、
+// ページ内の一括シフトは 3D 出力に影響しない。
+const AUTO_PLACE_MARGIN = 50; // real units（5mm）— 回避配置時の最小間隔
+const AUTO_PLACE_PROXIMITY = 200; // real units（20mm）— これ以内なら意図的な隣接とみなす
+
+function _shapeRealBBox(shape) {
+  const pts = collectWorldPointsReal(shape);
+  return pts.length ? aabbFromPoints(pts) : null;
+}
+
+function _boxesOverlap(a, b, margin = 0) {
+  return (
+    a.x < b.x + b.w + margin &&
+    a.x + a.w + margin > b.x &&
+    a.y < b.y + b.h + margin &&
+    a.y + a.h + margin > b.y
+  );
+}
+
+function _boxContains(outer, inner) {
+  return (
+    inner.x >= outer.x &&
+    inner.y >= outer.y &&
+    inner.x + inner.w <= outer.x + outer.w &&
+    inner.y + inner.h <= outer.y + outer.h
+  );
+}
+
+// 2 つの bbox 間のギャップ（重なり・接触なら 0）
+function _boxGap(a, b) {
+  const gx = Math.max(b.x - (a.x + a.w), a.x - (b.x + b.w), 0);
+  const gy = Math.max(b.y - (a.y + a.h), a.y - (b.y + b.h), 0);
+  return Math.hypot(gx, gy);
+}
+
+// 空きスペース探索: 既存コンテンツの右→下→左→上の順に試し、
+// だめなら粗いグリッド走査。用紙に収まらなければ null（動かさない）。
+function _findFreePlacement(bb, existingBoxes, paperW, paperH) {
+  const m = AUTO_PLACE_MARGIN;
+  const fits = (x, y) =>
+    x >= 0 &&
+    y >= 0 &&
+    x + bb.w <= paperW &&
+    y + bb.h <= paperH &&
+    !existingBoxes.some((e) => _boxesOverlap({ x, y, w: bb.w, h: bb.h }, e, m));
+
+  const ex = {
+    x: Math.min(...existingBoxes.map((b) => b.x)),
+    y: Math.min(...existingBoxes.map((b) => b.y)),
+  };
+  ex.w = Math.max(...existingBoxes.map((b) => b.x + b.w)) - ex.x;
+  ex.h = Math.max(...existingBoxes.map((b) => b.y + b.h)) - ex.y;
+
+  const candidates = [
+    [(paperW - bb.w) / 2, (paperH - bb.h) / 2], // 中央（空いていれば最優先）
+    [ex.x + ex.w + m, ex.y], // 既存コンテンツの右
+    [ex.x, ex.y + ex.h + m], // 下
+    [ex.x - bb.w - m, ex.y], // 左
+    [ex.x, ex.y - bb.h - m], // 上
+  ];
+  for (const [x, y] of candidates) {
+    if (fits(x, y)) return { x, y };
+  }
+  const step = Math.max(100, Math.min(bb.w, bb.h) / 2 || 100);
+  for (let y = 0; y + bb.h <= paperH; y += step) {
+    for (let x = 0; x + bb.w <= paperW; x += step) {
+      if (fits(x, y)) return { x, y };
+    }
+  }
+  return null;
+}
+
+function _placeAddedBatch(page, addedShapes, addedDims, placement) {
+  if (placement === "none") return;
+  // 寸法線だけのバッチは既存図形への注記なので動かさない
+  if (!addedShapes.length) return;
+
+  const boxes = addedShapes.map(_shapeRealBBox).filter(Boolean);
+  for (const d of addedDims) {
+    boxes.push(
+      aabbFromPoints([
+        [d.from.x, d.from.y],
+        [d.to.x, d.to.y],
+      ]),
+    );
+  }
+  if (!boxes.length) return;
+  const bb = aabbFromPoints(
+    boxes.flatMap((b) => [
+      [b.x, b.y],
+      [b.x + b.w, b.y + b.h],
+    ]),
+  );
+
+  // ページが表す実世界の範囲（real units）— getPageCanvasMM は state.js の既存ヘルパー
+  const paper = getPageCanvasMM(page);
+  const centerX = (paper.w - bb.w) / 2;
+  const centerY = (paper.h - bb.h) / 2;
+
+  let target = null;
+  if (placement === "center") {
+    target = { x: centerX, y: centerY };
+  } else {
+    // auto
+    const addedSet = new Set(addedShapes);
+    const existingBoxes = [];
+    for (const layer of page.layers) {
+      for (const sh of layer.shapes) {
+        if (addedSet.has(sh)) continue;
+        const b = _shapeRealBBox(sh);
+        if (b) existingBoxes.push(b);
+      }
+    }
+    if (!existingBoxes.length) {
+      target = { x: centerX, y: centerY };
+    } else {
+      // 意図的な重ね（穴あけ・ブーリアン用）→ そのまま
+      if (existingBoxes.some((e) => _boxContains(e, bb))) return;
+      // 既存図形に近接（接続線・注記などの相対配置）→ そのまま
+      const overlaps = existingBoxes.some((e) => _boxesOverlap(bb, e));
+      if (
+        !overlaps &&
+        existingBoxes.some((e) => _boxGap(bb, e) <= AUTO_PLACE_PROXIMITY)
+      ) {
+        return;
+      }
+      // 重なっている / 既存から遠く離れている（原点起点の描き直し等）→ 空きへ
+      target = _findFreePlacement(bb, existingBoxes, paper.w, paper.h);
+      if (!target) return; // 置き場がない → そのまま
+    }
+  }
+
+  const dx = target.x - bb.x;
+  const dy = target.y - bb.y;
+  if (Math.abs(dx) < 1e-9 && Math.abs(dy) < 1e-9) return;
+  for (const sh of addedShapes) {
+    shiftShape(sh, dx, dy);
+    if (typeof markShapeDirty === "function") markShapeDirty(sh.id);
+  }
+  for (const d of addedDims) {
+    d.from.x += dx;
+    d.from.y += dy;
+    d.to.x += dx;
+    d.to.y += dy;
+    if (typeof markShapeDirty === "function") markShapeDirty(d.id);
+  }
+}
+
+function applyDrawingCommands(commands, options = {}) {
   const state = getState();
+  const placement = options.placement || "auto";
+  const addedShapes = [];
+  const addedDims = [];
   for (const cmd of commands) {
     if (cmd.action === "addShape") {
       // ID重複チェック
@@ -918,9 +1282,13 @@ function applyDrawingCommands(commands) {
         const page = getCurrentPage();
         if (!page.dimensions) page.dimensions = [];
         page.dimensions.push(cmd.shape);
+        addedDims.push(cmd.shape);
       } else {
         const l = getCurrentLayer();
-        if (!l.locked && cmd.shape) l.shapes.push(cmd.shape);
+        if (!l.locked && cmd.shape) {
+          l.shapes.push(cmd.shape);
+          addedShapes.push(cmd.shape);
+        }
       }
     } else if (cmd.action === "addDimension") {
       // MCP の addDimension アクション（意味的に明示）
@@ -937,6 +1305,7 @@ function applyDrawingCommands(commands) {
         const newDim = { type: "dimension", ...dim };
         normalizeDimensionGeometry(newDim);
         page.dimensions.push(newDim);
+        addedDims.push(newDim);
       }
     } else if (
       cmd.action === "updateShape" ||
@@ -995,6 +1364,7 @@ function applyDrawingCommands(commands) {
       if (cmd.state) replaceState(cmd.state);
     }
   }
+  _placeAddedBatch(getCurrentPage(), addedShapes, addedDims, placement);
   if (typeof markDocumentDirty === "function") markDocumentDirty();
   pushHistory("コマンド適用");
 }
@@ -1002,7 +1372,7 @@ function applyDrawingCommands(commands) {
 function groupSelectedShapes() {
   const state = getState();
   const ids = [...state.selectedShapeIds];
-  if (ids.length < 2) return;
+  if (ids.length < 2) return false;
   const page = getCurrentPage();
 
   // collect shapes in layer order (preserve z-order)
@@ -1012,7 +1382,7 @@ function groupSelectedShapes() {
       if (ids.includes(shape.id)) children.push(shape);
     }
   }
-  if (children.length < 2) return;
+  if (children.length < 2) return false;
 
   // remove children from their layers
   for (const child of children) {
@@ -1028,13 +1398,14 @@ function groupSelectedShapes() {
   state.selectedShapeIds = [group.id];
   if (typeof markShapeDirty === "function") markShapeDirty(group.id);
   pushHistory("グループ化");
+  return true;
 }
 
 function ungroupSelectedShapes() {
   const state = getState();
-  if (state.selectedShapeIds.length !== 1) return;
+  if (state.selectedShapeIds.length !== 1) return false;
   const res = findShapeById(state.selectedShapeIds[0]);
-  if (!res || res.shape.type !== "group") return;
+  if (!res || res.shape.type !== "group") return false;
   const { shape, layer } = res;
   const idx = layer.shapes.indexOf(shape);
   const newIds = shape.children.map((c) => c.id);
@@ -1042,6 +1413,7 @@ function ungroupSelectedShapes() {
   state.selectedShapeIds = newIds;
   if (typeof markDocumentDirty === "function") markDocumentDirty();
   pushHistory("グループ解除");
+  return true;
 }
 
 // identity scale for align/distribute — bbox in real units (same as shape coordinates)
@@ -1060,7 +1432,7 @@ function _selectedBBoxes() {
 
 function alignShapes(dir) {
   const items = _selectedBBoxes();
-  if (!items.length) return;
+  if (!items.length) return false;
   let minX, maxX, minY, maxY;
   if (items.length === 1) {
     // 単一選択時は用紙（getPaperDimensions）を基準に揃える
@@ -1093,11 +1465,12 @@ function alignShapes(dir) {
     if (dx || dy) shiftShape(shape, dx, dy);
   }
   pushHistory();
+  return true;
 }
 
 function distributeShapes(axis) {
   const items = _selectedBBoxes();
-  if (items.length < 3) return;
+  if (items.length < 3) return false;
   if (axis === "h") {
     items.sort((a, b) => a.bb.x - b.bb.x);
     const totalW = items.reduce((s, i) => s + i.bb.w, 0);
@@ -1126,6 +1499,7 @@ function distributeShapes(axis) {
     }
   }
   pushHistory();
+  return true;
 }
 
 function moveShapeToPosition(id, newX, newY) {

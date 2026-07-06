@@ -46,6 +46,16 @@ apply_commands                 → only for fine edits (holes, offsets, etc.)
 
 Global functions (scripts / WS): `createMultiviewBox()`, `createPart()`, `layoutRectOnPageMm()`, `validate3DReadiness()`, `runDocsScenario()`, `setReferenceImage()`, `applyDigitizeProposals()`, `confirmDigitizeProposals()`.
 
+### Auto-placement in `apply_commands`
+
+Newly added shapes are auto-placed by default (`placement: "auto"`): an empty page centers
+the batch on the paper; a batch overlapping existing shapes (or dropped far away at the
+origin) is moved to free space. Batches fully inside an existing shape (holes / boolean
+overlays) or within 20 mm of one (connector lines, annotations) are left untouched, and
+dimension-only batches never move. Draw new parts starting at `(0,0)` with relative
+coordinates — placement decides the paper position. Pass `placement: "none"` for exact
+absolute coordinates, or `"center"` to force centering.
+
 ### Sketch digitization (reference image + ghost shapes)
 
 **Goal:** Rough sketch/photo → editable drawing, not pixel-perfect CAD. Millrect does **not** run Vision internally — an external LLM produces **proposals** in mm.

@@ -82,13 +82,7 @@ function getState() {
 // UI state (zoom, pan, tool, selection) is intentionally excluded:
 //   - Undo should never revert the viewport or the active tool.
 //   - Export only needs document fields.
-const DOC_KEYS = [
-  "projectName",
-  "unit",
-  "fonts",
-  "pages",
-  "partIntent",
-];
+const DOC_KEYS = ["projectName", "unit", "fonts", "pages", "partIntent"];
 
 // ── 参照画像の de-dup ────────────────────────────────────────
 // referenceImage.dataUrl（base64 の下絵）は読み込み後に内容が変わらないのに、

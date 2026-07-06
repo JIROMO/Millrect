@@ -19,6 +19,10 @@
 //   fixed        — shape の位置を固定する（移動不可）
 //   coincident   — 2つの端点を一致させる
 //   symmetric    — 2点を指定軸に対して対称にする
+//   distance     — 2つの端点間の距離を固定する（params: { point1, point2, value }）
+//   radius       — circle の半径を固定する（params: { value }）
+//   angle        — 2本の line が成す角度を固定する（度・params: { value }）
+//   concentric   — 2つの円（または円/rect）の中心を一致させる
 
 // ── 拘束の追加・削除 ─────────────────────────────────────────
 
@@ -103,6 +107,14 @@ function _applyOneConstraint(c, page) {
       return _cstCoincident(shapes[0], shapes[1], c.params);
     case "symmetric":
       return _cstSymmetric(shapes[0], shapes[1], c.params, page);
+    case "distance":
+      return _cstDistance(shapes[0], shapes[1], c.params);
+    case "radius":
+      return _cstRadius(shapes[0], c.params);
+    case "angle":
+      return _cstAngle(shapes[0], shapes[1], c.params);
+    case "concentric":
+      return _cstConcentric(shapes[0], shapes[1]);
     default:
       return 0;
   }
@@ -275,6 +287,14 @@ function _cstSymmetric(s1, s2, params, page) {
 // ── 端点ヘルパー ─────────────────────────────────────────────
 
 function _getEndpoint(s, which) {
+  if (which === "center") {
+    if (s.type === "circle" || s.type === "ellipse")
+      return { x: s.cx, y: s.cy };
+    if (s.type === "rect") {
+      return { x: s.x + s.width / 2, y: s.y + s.height / 2 };
+    }
+    return null;
+  }
   if (s.type === "line") {
     return which === "start" ? { x: s.x1, y: s.y1 } : { x: s.x2, y: s.y2 };
   }
@@ -295,6 +315,16 @@ function _getEndpoint(s, which) {
 }
 
 function _setEndpoint(s, which, x, y) {
+  if (which === "center") {
+    if (s.type === "circle" || s.type === "ellipse") {
+      s.cx = x;
+      s.cy = y;
+    } else if (s.type === "rect") {
+      s.x = x - s.width / 2;
+      s.y = y - s.height / 2;
+    }
+    return;
+  }
   if (s.type === "line") {
     if (which === "start") {
       s.x1 = x;
@@ -308,6 +338,86 @@ function _setEndpoint(s, which, x, y) {
     node.x = x;
     node.y = y;
   }
+}
+
+// distance: 2つの端点の距離を params.value（real units）に固定する。
+// 中点を固定したまま、その距離になるよう両端を対称に押し引きする（equal_length と同じ考え方）。
+// params: { point1: "start"|"end"|"center", point2: "start"|"end"|"center", value }
+function _cstDistance(s1, s2, params) {
+  if (!s1 || !s2 || !params || typeof params.value !== "number") return 0;
+  const p1key = params.point1 || "end";
+  const p2key = params.point2 || "start";
+  const pt1 = _getEndpoint(s1, p1key);
+  const pt2 = _getEndpoint(s2, p2key);
+  if (!pt1 || !pt2) return 0;
+
+  const dx = pt2.x - pt1.x,
+    dy = pt2.y - pt1.y;
+  const cur = Math.hypot(dx, dy);
+  const target = Math.max(0, params.value);
+  if (cur < 1e-6) return 0;
+  const scale = target / cur;
+  const mx = (pt1.x + pt2.x) / 2,
+    my = (pt1.y + pt2.y) / 2;
+  const newX1 = mx - (dx * scale) / 2;
+  const newY1 = my - (dy * scale) / 2;
+  const newX2 = mx + (dx * scale) / 2;
+  const newY2 = my + (dy * scale) / 2;
+
+  const residual =
+    Math.hypot(pt1.x - newX1, pt1.y - newY1) +
+    Math.hypot(pt2.x - newX2, pt2.y - newY2);
+  _setEndpoint(s1, p1key, newX1, newY1);
+  _setEndpoint(s2, p2key, newX2, newY2);
+  return residual;
+}
+
+// radius: circle の半径を params.value（real units）に固定する
+function _cstRadius(s, params) {
+  if (!s || s.type !== "circle" || !params || typeof params.value !== "number")
+    return 0;
+  const target = Math.max(0.01, params.value);
+  const residual = Math.abs(s.r - target);
+  s.r = target;
+  return residual;
+}
+
+// angle: 2本の line の成す角度を params.value（度）に固定する
+// s1 の向きを基準に、s2 を「その角度だけ回転した向き」へ揃える（長さ・中心は保持）
+function _cstAngle(s1, s2, params) {
+  if (!s1 || !s2 || s1.type !== "line" || s2.type !== "line" || !params)
+    return 0;
+  if (typeof params.value !== "number") return 0;
+  const dx1 = s1.x2 - s1.x1,
+    dy1 = s1.y2 - s1.y1;
+  const len1 = Math.hypot(dx1, dy1);
+  if (len1 < 1e-6) return 0;
+  const baseAngle = Math.atan2(dy1, dx1);
+  const targetAngle = baseAngle + (params.value * Math.PI) / 180;
+  const nx = Math.cos(targetAngle),
+    ny = Math.sin(targetAngle);
+
+  const len2 = Math.hypot(s2.x2 - s2.x1, s2.y2 - s2.y1);
+  const cx2 = (s2.x1 + s2.x2) / 2,
+    cy2 = (s2.y1 + s2.y2) / 2;
+  const newX1 = cx2 - (nx * len2) / 2;
+  const newY1 = cy2 - (ny * len2) / 2;
+  const newX2 = cx2 + (nx * len2) / 2;
+  const newY2 = cy2 + (ny * len2) / 2;
+
+  const residual =
+    Math.hypot(s2.x1 - newX1, s2.y1 - newY1) +
+    Math.hypot(s2.x2 - newX2, s2.y2 - newY2);
+  s2.x1 = newX1;
+  s2.y1 = newY1;
+  s2.x2 = newX2;
+  s2.y2 = newY2;
+  return residual;
+}
+
+// concentric: 2つの円（または円/rect）の中心を一致させる（coincident の center 版）
+function _cstConcentric(s1, s2) {
+  return _cstCoincident(s1, s2, { point1: "center", point2: "center" });
 }
 
 // ── 拘束の検証（矛盾チェック） ────────────────────────────────

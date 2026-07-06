@@ -1403,8 +1403,22 @@ server.tool(
 - setProjectName  : プロジェクト名を変更
 - addPage         : 新規ページを追加
 
-shape/dimension オブジェクトは必ず id フィールドを含めること（例: "rect-001"）。`,
+shape/dimension オブジェクトは必ず id フィールドを含めること（例: "rect-001"）。
+
+配置（placement）: 追加した図形バッチは既定で自動配置される（auto）。
+- auto   : ページが空なら用紙中央へ。既存図形と重なる・遠く離れている場合は空きスペースへ再配置。
+           バッチ全体が既存図形の内側に完全に収まる（穴あけ・ブーリアン用の重ね）、
+           または既存図形から 20mm 以内に隣接する（接続線・注記）場合は動かさない。
+- center : 常に用紙中央へ。
+- none   : 座標をそのまま使う。厳密な絶対座標配置をしたいときに指定する。
+新しい部品を描くときは座標を原点 (0,0) 起点で相対的に書けばよい（自動配置が用紙上の位置を決める）。`,
   {
+    placement: z
+      .enum(["auto", "center", "none"])
+      .optional()
+      .describe(
+        "追加図形の自動配置。auto=空なら中央/重なれば回避（既定）, center=常に中央, none=座標そのまま",
+      ),
     commands: z
       .array(
         z.object({
@@ -1470,7 +1484,7 @@ shape/dimension オブジェクトは必ず id フィールドを含めること
       )
       .describe("実行するコマンドの配列"),
   },
-  async ({ commands }) => {
+  async ({ commands, placement }) => {
     try {
       // 各アクションを内部形式に正規化
       const normalized = commands.map((cmd) => {
@@ -1497,7 +1511,10 @@ shape/dimension オブジェクトは必ず id フィールドを含めること
         }
         return n;
       });
-      const result = await call("applyCommands", { commands: normalized });
+      const result = await call("applyCommands", {
+        commands: normalized,
+        placement,
+      });
       return {
         content: [
           {

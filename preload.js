@@ -33,6 +33,8 @@ contextBridge.exposeInMainWorld("electronAPI", {
   openImageFile: () => ipcRenderer.invoke("dialog:openImageFile"),
   saveSvg: (defaultName, content) =>
     ipcRenderer.invoke("dialog:saveSvg", { defaultName, content }),
+  saveDxf: (defaultName, content) =>
+    ipcRenderer.invoke("dialog:saveDxf", { defaultName, content }),
   savePdf: (defaultName, buffer) =>
     ipcRenderer.invoke("dialog:savePdf", { defaultName, buffer }),
   readFont: (family, style) =>
@@ -50,8 +52,7 @@ contextBridge.exposeInMainWorld("electronAPI", {
   openHelpTopic: (page, anchor) =>
     ipcRenderer.invoke("help:openTopic", { page, anchor }),
   setAppLocale: (locale) => ipcRenderer.invoke("app:setLocale", locale),
-  onUpdateInfo: (cb) =>
-    ipcRenderer.on("update-info", (_, info) => cb(info)),
+  onUpdateInfo: (cb) => ipcRenderer.on("update-info", (_, info) => cb(info)),
   downloadUpdate: (url) => ipcRenderer.invoke("update:download", url),
   skipUpdate: () => ipcRenderer.invoke("update:skip"),
 });

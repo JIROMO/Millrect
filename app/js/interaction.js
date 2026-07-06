@@ -4,6 +4,7 @@ let _ds = null,
   _panning = false,
   _panStart = null,
   _dimState = null,
+  _measureState = null,
   _lastPP = null;
 let _vertexEditId = null;
 let _textClickState = null;
@@ -195,6 +196,7 @@ function onMouseDown(e, svgEl) {
   else if (tool === "circle") _ds = { tool, sp: pp, sr: rp };
   else if (tool === "text") handleTextToolDown(e, rp);
   else if (tool === "dimension") handleDimDown(pp, rp);
+  else if (tool === "measure") handleMeasureDown(rp);
   else if (tool === "bezier") {
     handleBezierDown(rp, pp, e.shiftKey, e.altKey);
   } else if (tool === "pencil") {
@@ -389,6 +391,18 @@ function onMouseMove(e, svgEl) {
           offset,
         });
       }
+    } else if (tool === "measure" && _measureState) {
+      renderPreview({
+        id: "__prev__",
+        type: "line",
+        x1: _measureState.fr.x,
+        y1: _measureState.fr.y,
+        x2: rp.x,
+        y2: rp.y,
+        stroke: "#f59e0b",
+        strokeWidth: "thin",
+      });
+      updateMeasureStatus(_measureState.fr, rp);
     }
     return;
   }
@@ -636,6 +650,7 @@ function onKeyDown(e) {
     }
     _ds = null;
     cancelDim();
+    cancelMeasure();
     removePreview();
     removeSnapIndicator();
     render();
@@ -1704,7 +1719,11 @@ function _moveKeypointSnap(dxR, dyR, state, page, scale, shiftKey) {
     return cache.result;
   }
 
-  if (!cache.points || cache.idsKey !== ids.join(",") || cache.scale !== scale) {
+  if (
+    !cache.points ||
+    cache.idsKey !== ids.join(",") ||
+    cache.scale !== scale
+  ) {
     const origShapes = [];
     for (const id of ids) {
       if (_selOrig[id]) origShapes.push(_selOrig[id]);
@@ -2317,6 +2336,35 @@ function openTextEditModal(shape, onCommit) {
     const len = textarea.value.length;
     textarea.setSelectionRange(len, len);
   });
+}
+
+// ── Measure（計測。寸法線を置かず 2 点間距離・角度をその場で確認する） ──
+// 状態は非永続（page/state に一切書き込まない）。Undo 対象外・自動保存対象外。
+function handleMeasureDown(rp) {
+  if (!_measureState) {
+    _measureState = { fr: rp };
+    return;
+  }
+  updateMeasureStatus(_measureState.fr, rp, true);
+  _measureState = null;
+  removePreview();
+  render();
+}
+
+function cancelMeasure() {
+  _measureState = null;
+  removePreview();
+}
+
+function updateMeasureStatus(fr, to, finalResult = false) {
+  const el = document.getElementById("status-measure");
+  if (!el) return;
+  const dx = to.x - fr.x,
+    dy = to.y - fr.y;
+  const distMM = realToMM(Math.hypot(dx, dy));
+  const angleDeg = (Math.atan2(dy, dx) * 180) / Math.PI;
+  el.textContent = `${fmtNum(distMM)} mm  ∠ ${fmtNum(angleDeg)}°`;
+  el.dataset.state = finalResult ? "final" : "live";
 }
 
 // ── Dimension (3-click) ───────────────────────────────────────

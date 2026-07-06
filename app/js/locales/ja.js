@@ -17,6 +17,8 @@
     "toolbar.save.title": "保存 (Ctrl+S)",
     "toolbar.exportSvg": "SVG出力",
     "toolbar.exportSvg.title": "SVG出力",
+    "toolbar.exportDxf": "DXF出力",
+    "toolbar.exportDxf.title": "DXF出力（レーザー/CNC向け）",
     "toolbar.exportPdf": "PDF出力",
     "toolbar.exportPdf.title": "PDF出力（全ページ）",
     "toolbar.print": "印刷",
@@ -53,6 +55,8 @@
     "tools.text.title": "テキスト (T)",
     "tools.dimension": "DIM",
     "tools.dimension.title": "寸法線 (D)",
+    "tools.measure": "MEASURE",
+    "tools.measure.title": "計測 (M) — 寸法線を置かず距離・角度を確認",
     "tools.dragHandle.title": "ドラッグで移動",
 
     "panel.tab.design": "デザイン",
@@ -162,6 +166,7 @@
 
     "status.xy": "XY",
     "status.tool": "Tool",
+    "status.measure": "計測",
     "status.scale": "Scale",
     "status.zoom": "Zoom",
     "status.coords": "x: {x}  y: {y} mm",
@@ -169,6 +174,11 @@
     "status.autosave.saved": "保存済 {time}",
     "status.autosave.unsaved": "未保存…",
     "status.autosave.error": "保存失敗",
+
+    "toast.boolean.failed":
+      "ブール演算に失敗しました（図形の重なりを確認してください）",
+    "toast.fillet.failed":
+      "フィレット/面取りに失敗しました（半径を確認してください）",
 
     "help.title": "ショートカット",
     "help.button.title": "ショートカット一覧",
@@ -182,7 +192,10 @@
     "help.tool.circle": "円",
     "help.tool.text": "テキスト",
     "help.tool.dimension": "寸法",
+    "help.tool.measure": "計測",
     "help.tool.hand": "移動",
+    "help.tool.bezier": "ペン",
+    "help.tool.pencil": "鉛筆",
     "help.edit.undo": "元に戻す",
     "help.edit.redo": "やり直し",
     "help.edit.copy": "コピー",
@@ -219,6 +232,7 @@
     "panel3d.title": "3D PREVIEW",
     "panel3d.resetCamera": "カメラをリセット",
     "panel3d.exportStl": "STL出力",
+    "panel3d.export3mf": "3MF出力（単位情報付き）",
     "panel3d.close": "閉じる",
 
     "props.selectShape": "図形を選択してください",
@@ -335,6 +349,9 @@
     "props.ymm": "Y mm",
     "props.widthMm": "幅 mm",
     "props.heightMm": "高さ mm",
+    "props.filletRadiusMm": "フィレット半径 mm",
+    "props.applyFillet": "フィレット適用",
+    "props.applyChamfer": "面取り適用",
     "props.cxMm": "CX mm",
     "props.cyMm": "CY mm",
     "props.rxMm": "RX mm",

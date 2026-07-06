@@ -149,10 +149,11 @@ function startWebSocketServer(port = WS_PORT) {
           `);
         } else if (action === "applyCommands") {
           const cmds = JSON.stringify(msg.commands);
+          const cmdOpts = JSON.stringify({ placement: msg.placement });
           result = await _win.webContents.executeJavaScript(`
             (() => {
               try {
-                applyDrawingCommands(${cmds});
+                applyDrawingCommands(${cmds}, ${cmdOpts});
                 render(); uiUpdate();
                 return { ok: true };
               } catch(e) { return { ok: false, error: e.message }; }
@@ -175,12 +176,22 @@ function startWebSocketServer(port = WS_PORT) {
         } else if (action === "alignShapes") {
           const dir = JSON.stringify(msg.direction);
           result = await _win.webContents.executeJavaScript(`
-            (() => { alignShapes(${dir}); render(); uiUpdate(); return { ok: true }; })()
+            (() => {
+              const ok = alignShapes(${dir});
+              if (!ok) return { ok: false, error: "no shapes selected" };
+              render(); uiUpdate();
+              return { ok: true };
+            })()
           `);
         } else if (action === "distributeShapes") {
           const axis = JSON.stringify(msg.axis);
           result = await _win.webContents.executeJavaScript(`
-            (() => { distributeShapes(${axis}); render(); uiUpdate(); return { ok: true }; })()
+            (() => {
+              const ok = distributeShapes(${axis});
+              if (!ok) return { ok: false, error: "need at least 3 shapes selected" };
+              render(); uiUpdate();
+              return { ok: true };
+            })()
           `);
         } else if (action === "undo") {
           result = await _win.webContents.executeJavaScript(`
@@ -201,7 +212,8 @@ function startWebSocketServer(port = WS_PORT) {
         } else if (action === "groupShapes") {
           result = await _win.webContents.executeJavaScript(`
             (() => {
-              groupSelectedShapes();
+              const ok = groupSelectedShapes();
+              if (!ok) return { ok: false, error: "need at least 2 shapes selected" };
               render(); uiUpdate();
               return { ok: true, groupId: getState().selectedShapeIds[0] ?? null };
             })()
@@ -209,7 +221,8 @@ function startWebSocketServer(port = WS_PORT) {
         } else if (action === "ungroupShapes") {
           result = await _win.webContents.executeJavaScript(`
             (() => {
-              ungroupSelectedShapes();
+              const ok = ungroupSelectedShapes();
+              if (!ok) return { ok: false, error: "select exactly one group shape" };
               render(); uiUpdate();
               return { ok: true };
             })()
@@ -466,7 +479,8 @@ function startWebSocketServer(port = WS_PORT) {
           const pageId = JSON.stringify(msg.pageId);
           result = await _win.webContents.executeJavaScript(`
             (() => {
-              switchPage(${pageId});
+              const ok = switchPage(${pageId});
+              if (!ok) return { ok: false, error: "page not found: " + ${pageId} };
               render(); uiUpdate();
               return { ok: true, pageId: getCurrentPage().id, name: getCurrentPage().name };
             })()
@@ -975,6 +989,16 @@ ipcMain.handle("dialog:saveSvg", async (_, { defaultName, content }) => {
   const { filePath } = await dialog.showSaveDialog({
     defaultPath: path.join(app.getPath("downloads"), defaultName),
     filters: [{ name: "SVG", extensions: ["svg"] }],
+  });
+  if (!filePath) return null;
+  fs.writeFileSync(filePath, content, "utf-8");
+  return filePath;
+});
+
+ipcMain.handle("dialog:saveDxf", async (_, { defaultName, content }) => {
+  const { filePath } = await dialog.showSaveDialog({
+    defaultPath: path.join(app.getPath("downloads"), defaultName),
+    filters: [{ name: "DXF", extensions: ["dxf"] }],
   });
   if (!filePath) return null;
   fs.writeFileSync(filePath, content, "utf-8");
