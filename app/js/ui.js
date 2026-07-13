@@ -2611,7 +2611,8 @@ function bindKeyShortcuts() {
       _updateMeasureStatusVisibility(tool);
       return;
     }
-    if ((e.ctrlKey || e.metaKey) && e.key === "z") {
+    // Shift 併用時は e.key が "Z" になるため小文字化して比較（⌘⇧Z の Redo）
+    if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "z") {
       e.preventDefault();
       e.shiftKey
         ? redo() && (cancelDim(), render(), updateAll())

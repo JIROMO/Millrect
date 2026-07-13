@@ -489,6 +489,11 @@ function onMouseUp(e, svgEl) {
     return;
   }
   if (tool === "select" && _ds?.action === "move") {
+    // 1px も動いていない Alt+クリックは複製として確定させない。見えない複製が
+    // 同座標に積み重なり、直後の Undo が「何も起きない」ように見えてしまう。
+    if (_ds.duplicated && !(_ds.lastDxR || _ds.lastDyR)) {
+      cancelAltDuplicate();
+    }
     // Alt+ドラッグ複製の確定時は変位を記録し、⌘D が同じ複製を繰り返せるようにする
     if (_ds.duplicated && typeof setLastDuplicateOffset === "function") {
       setLastDuplicateOffset(_ds.lastDxR || 0, _ds.lastDyR || 0);
@@ -898,7 +903,11 @@ function handleSelDown(e, svgEl, pp, rp) {
       }
       _ds = { action: "move", startPP: pp };
       svgEl.style.cursor = "move";
-      if (e.altKey) _beginDuplicate([...state.selectedShapeIds]);
+      if (e.altKey) {
+        // _lastPP は直前の mousemove の残骸のことがある。複製の初期変位は 0 にする
+        _lastPP = pp;
+        _beginDuplicate([...state.selectedShapeIds]);
+      }
       render();
       uiUpdate();
       return;
@@ -963,6 +972,8 @@ function handleSelDown(e, svgEl, pp, rp) {
     _ds = { action: "move", startPP: pp };
     svgEl.style.cursor = "move";
     if (e.altKey) {
+      // _lastPP は直前の mousemove の残骸のことがある。複製の初期変位は 0 にする
+      _lastPP = pp;
       _beginDuplicate([...state.selectedShapeIds]);
     }
   } else {
@@ -1684,10 +1695,19 @@ function handleSelMove(pp, shiftKey) {
       prev[id] = { x: dxR, y: dyR };
     }
   }
-  liveUpdateShapes(state.selectedShapeIds, {
-    dxPaper: realToPaperDist(dxR, scale),
-    dyPaper: realToPaperDist(dyR, scale),
-  });
+  // 複製ドラッグ中はハンドルの translate 追従を使わない。複製開始時に
+  // ハンドルがフル再描画され「ドラッグ開始位置」基準が失われているため、
+  // 総移動量の translate を被せると Alt 押下時点の移動量ぶんズレる。
+  // dxPaper/dyPaper を渡さなければ liveUpdateShapes が state から描き直す。
+  liveUpdateShapes(
+    state.selectedShapeIds,
+    _ds.duplicated
+      ? {}
+      : {
+          dxPaper: realToPaperDist(dxR, scale),
+          dyPaper: realToPaperDist(dyR, scale),
+        },
+  );
   removeSnapIndicator();
   if (state.selectedShapeIds.length === 1) {
     const r = findShapeById(state.selectedShapeIds[0]);
@@ -2786,11 +2806,16 @@ function cancelAltDuplicate() {
   }
   // Remove clone entries from _selOrig — orig entries remain untouched
   for (const id of cloneIds) delete _selOrig[id];
+  // クローンは state から消したが DOM ノードが残る。dirty を立ててフル再描画で
+  // 回収させる（sig が変わらないと reconcile がスキップされ孤児ノードが残る）
+  if (typeof markShapeDirty === "function") {
+    for (const id of cloneIds) markShapeDirty(id);
+  }
   state.selectedShapeIds = origIds;
   _ds.duplicated = false;
   delete _ds.origIds;
+  render();
   if (_lastPP) handleSelMove(_lastPP);
-  else render();
 }
 
 function updateStatusCoords(rp) {

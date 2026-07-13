@@ -88,7 +88,10 @@ test("selection move updates handles without drawing snap residue", () => {
   );
 
   const handleMoveBody = functionBody(interactionSource, "handleSelMove");
-  assert.match(handleMoveBody, /liveUpdateShapes\(state\.selectedShapeIds, \{/);
+  assert.match(handleMoveBody, /liveUpdateShapes\(\s*state\.selectedShapeIds,/);
+  // 複製ドラッグ中は translate 追従を使わず state から描き直す
+  // （複製開始時のフル再描画でハンドルの基準がずれるため）
+  assert.match(handleMoveBody, /_ds\.duplicated\s*\?\s*\{\}/);
   assert.match(handleMoveBody, /removeSnapIndicator\(\)/);
   assert.doesNotMatch(handleMoveBody, /renderSnapIndicator\(/);
 });
