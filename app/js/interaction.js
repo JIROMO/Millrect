@@ -328,6 +328,14 @@ function onMouseMove(e, svgEl) {
     handleRotate(paperToReal(rawPP.x, rawPP.y), e.shiftKey);
     return;
   }
+  if (tool === "select" && _ds?.action === "multi-rotate") {
+    document.body.classList.add("dragging");
+    removeSnapIndicator();
+    // スナップ済み rp ではなく生ポインタ座標で角度を取る
+    const rawPP = svgToPaper(sv.x, sv.y);
+    handleMultiRotate(paperToReal(rawPP.x, rawPP.y), e.shiftKey);
+    return;
+  }
   if (tool === "select" && _ds?.action === "multi-resize") {
     document.body.classList.add("dragging");
     handleMultiResize(rp, e.shiftKey);
@@ -457,6 +465,17 @@ function onMouseUp(e, svgEl) {
   }
   if (tool === "select" && _ds?.action === "rotate") {
     if (typeof markShapeDirty === "function") markShapeDirty(_ds.shapeId);
+    pushHistory();
+    _ds = null;
+    svgEl.style.cursor = "default";
+    document.body.classList.remove("dragging");
+    uiUpdate();
+    return;
+  }
+  if (tool === "select" && _ds?.action === "multi-rotate") {
+    if (typeof markShapeDirty === "function") {
+      for (const id of _ds.shapeIds) markShapeDirty(id);
+    }
     pushHistory();
     _ds = null;
     svgEl.style.cursor = "default";
@@ -790,13 +809,53 @@ function handleSelDown(e, svgEl, pp, rp) {
   const rotEl = e.target.closest("[data-rotate-handle]");
   if (rotEl && !e.target.closest("[data-handle]")) {
     const sid = rotEl.getAttribute("data-sid");
-    const res = findShapeById(sid);
-    if (!res) return;
-    state.selectedShapeIds = [sid];
     // 回転はスナップ無しの生ポインタ座標で角度を取る
     const sv = screenToSVG(e, svgEl);
     const rawPP = svgToPaper(sv.x, sv.y);
     const raw = paperToReal(rawPP.x, rawPP.y);
+    const isMultiRotate =
+      rotEl.getAttribute("data-multi-rotate") === "1" ||
+      (state.selectedShapeIds.length > 1 &&
+        state.selectedShapeIds.includes(sid));
+    if (isMultiRotate) {
+      // 複数選択の一括回転: 一番大きい図形（ワールドAABB面積）の中心をピボットにする
+      const page = getCurrentPage();
+      const origShapes = {};
+      const origPivots = {};
+      let pivotShape = null;
+      let bestScore = -1;
+      for (const id of state.selectedShapeIds) {
+        const r = findShapeById(id);
+        if (!r || r.isDimension) continue; // 寸法線は回転非対応
+        origShapes[id] = JSON.parse(JSON.stringify(r.shape));
+        origPivots[id] = getShapePivotReal(r.shape);
+        const bb = getShapeBBox(r.shape, page.scale);
+        // 面積ゼロ（直線など）同士は長さで比較
+        const score = bb ? bb.w * bb.h || Math.hypot(bb.w, bb.h) * 1e-6 : 0;
+        if (score > bestScore) {
+          bestScore = score;
+          pivotShape = r.shape;
+        }
+      }
+      const rotIds = Object.keys(origShapes);
+      if (!pivotShape || !rotIds.length) return;
+      const pivot = getShapePivotReal(pivotShape);
+      _ds = {
+        action: "multi-rotate",
+        shapeIds: rotIds,
+        pivot,
+        startAngle: Math.atan2(raw.y - pivot.y, raw.x - pivot.x),
+        origShapes,
+        origPivots,
+      };
+      svgEl.style.cursor = ROTATE_CURSOR;
+      render();
+      uiUpdate();
+      return;
+    }
+    const res = findShapeById(sid);
+    if (!res) return;
+    state.selectedShapeIds = [sid];
     const pivot = getShapePivotReal(res.shape);
     _ds = {
       action: "rotate",
@@ -828,7 +887,21 @@ function handleSelDown(e, svgEl, pp, rp) {
           const s = layer.shapes.find((sh) => sh.id === sid);
           if (s) {
             origShapes[sid] = JSON.parse(JSON.stringify(s));
-            const bb = getShapeBBox(s, page.scale);
+            // multi-resize は real units のみで計算する（handleMultiResize 参照）。
+            // getShapeBBox は paper units を返すため使わない。
+            let bb = null;
+            if (s.type === "rect" || s.type === "image") {
+              bb = { x: s.x, y: s.y, w: s.width, h: s.height };
+            } else if (s.type === "circle") {
+              bb = { x: s.cx - s.r, y: s.cy - s.r, w: s.r * 2, h: s.r * 2 };
+            } else if (s.type === "ellipse") {
+              bb = {
+                x: s.cx - s.rx,
+                y: s.cy - s.ry,
+                w: s.rx * 2,
+                h: s.ry * 2,
+              };
+            }
             if (bb) {
               if (bb.x < minX) minX = bb.x;
               if (bb.y < minY) minY = bb.y;
@@ -1118,7 +1191,6 @@ function handleMultiResize(rp, shiftKey) {
   if (!_ds || _ds.action !== "multi-resize") return;
   const { hi, startRP, origShapes, origBB } = _ds;
   const page = getCurrentPage();
-  const scale = page.scale;
   const dx = rp.x - startRP.x;
   const dy = rp.y - startRP.y;
   const MIN = 1;
@@ -1172,25 +1244,19 @@ function handleMultiResize(rp, shiftKey) {
     if (!shape) continue;
 
     if (shape.type === "rect" || shape.type === "image") {
-      const ox = realToPaper(orig.x, scale),
-        oy = realToPaper(orig.y, scale);
-      const relX = (ox - origBB.x) / (origBB.w || 1);
-      const relY = (oy - origBB.y) / (origBB.h || 1);
-      const newPX = nx + relX * nw,
-        newPY = ny + relY * nh;
-      shape.x = paperToRealDist(newPX, scale);
-      shape.y = paperToRealDist(newPY, scale);
+      const relX = (orig.x - origBB.x) / (origBB.w || 1);
+      const relY = (orig.y - origBB.y) / (origBB.h || 1);
+      shape.x = nx + relX * nw;
+      shape.y = ny + relY * nh;
       shape.width = Math.max(MIN, orig.width * scaleX);
       shape.height = Math.max(MIN, orig.height * scaleY);
     } else if (shape.type === "circle" || shape.type === "ellipse") {
       const origRx = orig.type === "circle" ? orig.r : orig.rx;
       const origRy = orig.type === "circle" ? orig.r : orig.ry;
-      const ocx = realToPaper(orig.cx, scale),
-        ocy = realToPaper(orig.cy, scale);
-      const relX = (ocx - origBB.x) / (origBB.w || 1);
-      const relY = (ocy - origBB.y) / (origBB.h || 1);
-      shape.cx = paperToRealDist(nx + relX * nw, scale);
-      shape.cy = paperToRealDist(ny + relY * nh, scale);
+      const relX = (orig.cx - origBB.x) / (origBB.w || 1);
+      const relY = (orig.cy - origBB.y) / (origBB.h || 1);
+      shape.cx = nx + relX * nw;
+      shape.cy = ny + relY * nh;
       if (shiftKey) {
         const s = Math.min(scaleX, scaleY);
         shape.type = "circle";
@@ -1223,6 +1289,39 @@ function handleRotate(rp, shiftKey) {
   liveUpdateShapes([_ds.shapeId]);
   const rotInput = document.getElementById("rot-angle");
   if (rotInput) rotInput.value = `${res.shape.rotation}°`;
+}
+
+// 複数選択の一括回転: 各図形は自身のピボット周りに delta 回転し、
+// ピボット自体は共通ピボット（一番大きい図形の中心）の周りを公転する
+function handleMultiRotate(rp, shiftKey) {
+  if (!_ds || _ds.action !== "multi-rotate") return;
+  const { pivot, startAngle, origShapes, origPivots, shapeIds } = _ds;
+  const a = Math.atan2(rp.y - pivot.y, rp.x - pivot.x);
+  // デルタを (-180, 180] に正規化して ±180° 境界での値ジャンプを防ぐ
+  let delta = ((a - startAngle) * 180) / Math.PI;
+  delta = (((delta % 360) + 540) % 360) - 180;
+  // rotation は normalizeRotationDeg で整数度になるため、公転側も同じ丸めで剛体を保つ
+  delta = shiftKey ? Math.round(delta / 15) * 15 : Math.round(delta);
+  const rad = (delta * Math.PI) / 180;
+  const cos = Math.cos(rad),
+    sin = Math.sin(rad);
+  for (const sid of shapeIds) {
+    const res = findShapeById(sid);
+    if (!res) continue;
+    const orig = origShapes[sid];
+    const p0 = origPivots[sid];
+    const nx = pivot.x + (p0.x - pivot.x) * cos - (p0.y - pivot.y) * sin;
+    const ny = pivot.y + (p0.x - pivot.x) * sin + (p0.y - pivot.y) * cos;
+    const fresh = JSON.parse(JSON.stringify(orig));
+    shiftShape(fresh, nx - p0.x, ny - p0.y);
+    // 片方向フリップ済みの図形は見かけの回転方向が反転する
+    const mirrored = !!orig.flipH !== !!orig.flipV;
+    fresh.rotation = normalizeRotationDeg(
+      (orig.rotation || 0) + (mirrored ? -delta : delta),
+    );
+    Object.assign(res.shape, fresh);
+  }
+  liveUpdateShapes(shapeIds);
 }
 
 function handleResize(rp, shiftKey) {

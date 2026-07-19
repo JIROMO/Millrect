@@ -45,6 +45,15 @@ struct AnchorPaper: Codable {
     let y: Double
 }
 
+// フォント実体の参照。path はローカルファイル、data は TTF バイト列（0-255）。
+// fontFiles: Electron 側が付与する同梱フォント / projectFontFiles: プロジェクトフォント
+struct FontFilePayload: Codable {
+    let family: String?
+    let bold: Bool?
+    let path: String?
+    let data: [UInt8]?
+}
+
 struct InputPayload: Codable {
     let mode: String?
     let shape: ShapePayload
@@ -54,6 +63,8 @@ struct InputPayload: Codable {
     let lines: [LinePayload]?
     let fontCandidates: [String]?
     let paperWidth: Double?
+    let fontFiles: [FontFilePayload]?
+    let projectFontFiles: [FontFilePayload]?
 }
 
 struct LayoutResultPayload: Codable {
@@ -115,6 +126,24 @@ private func ringCenter(_ ring: [[Double]]) -> (Double, Double) {
     return (x / n, y / n)
 }
 
+// inner の頂点のうち outer に含まれる割合（0..1）
+private func ringContainmentFraction(_ inner: [[Double]], _ outer: [[Double]]) -> Double {
+    guard !inner.isEmpty else { return 0 }
+    var count = 0
+    for pt in inner where pointInRing(pt[0], pt[1], outer) {
+        count += 1
+    }
+    return Double(count) / Double(inner.count)
+}
+
+// ネスト判定: 頂点の過半数が親の内側にあること。中心点 1 点判定は交差 stroke
+// （例: 「切」）を counter と誤認して重なり部分を穴として抜いてしまう。
+private let ringNestFraction = 0.5
+
+private func ringMostlyInside(_ inner: [[Double]], _ outer: [[Double]]) -> Bool {
+    return ringContainmentFraction(inner, outer) >= ringNestFraction
+}
+
 private func normalizeRingByDepth(_ ring: [[Double]], depth: Int) -> [[Double]] {
     let ccw = ringSignedArea(ring) > 0
     let wantCcw = depth % 2 == 0
@@ -135,12 +164,11 @@ private func groupRingsIntoPolygons(_ rings: [[[Double]]]) -> [[[[Double]]]] {
     var parent = Array(repeating: -1, count: rings.count)
 
     for i in 0..<rings.count {
-        let (cx, cy) = ringCenter(rings[i])
         var best = -1
         var bestArea = Double.infinity
         for j in 0..<rings.count where j != i {
             if meta[j].area <= meta[i].area { continue }
-            if pointInRing(cx, cy, rings[j]) {
+            if ringMostlyInside(rings[i], rings[j]) {
                 if meta[j].area < bestArea {
                     bestArea = meta[j].area
                     best = j
@@ -300,8 +328,51 @@ private func expandCandidates(_ shape: ShapePayload, explicit: [String]?) -> [St
     return out
 }
 
-private func resolveFont(candidates: [String], size: CGFloat, bold: Bool) -> CTFont {
+// payload で渡されたフォントファイル（同梱 Gen Interface JP / プロジェクトフォント）を
+// family 名で引けるようにする。CTFontCreateWithName は OS 未インストールの family を
+// Helvetica 系へ無言置換するため、ファイル実体があるものはこちらを優先する。
+private final class FontFileRegistry {
+    private var entries: [(family: String, bold: Bool, data: Data)] = []
+
+    init(_ input: InputPayload) {
+        var refs: [FontFilePayload] = []
+        refs.append(contentsOf: input.fontFiles ?? [])
+        refs.append(contentsOf: input.projectFontFiles ?? [])
+        for ref in refs {
+            guard let family = ref.family, !family.isEmpty else { continue }
+            var data: Data?
+            if let bytes = ref.data, !bytes.isEmpty {
+                data = Data(bytes)
+            } else if let p = ref.path, !p.isEmpty {
+                data = try? Data(contentsOf: URL(fileURLWithPath: p))
+            }
+            guard let d = data else { continue }
+            entries.append((family: family.lowercased(), bold: ref.bold ?? false, data: d))
+        }
+    }
+
+    func font(family: String, size: CGFloat, bold: Bool) -> CTFont? {
+        let key = family.lowercased()
+        let match = entries.first { $0.family == key && $0.bold == bold }
+            ?? entries.first { $0.family == key }
+        guard let entry = match,
+              let provider = CGDataProvider(data: entry.data as CFData),
+              let cgFont = CGFont(provider) else { return nil }
+        return CTFontCreateWithGraphicsFont(cgFont, size, nil, nil)
+    }
+}
+
+private func resolveFont(
+    candidates: [String],
+    size: CGFloat,
+    bold: Bool,
+    registry: FontFileRegistry? = nil
+) -> CTFont {
     for name in candidates {
+        // ファイル実体を持つ family はそのまま使う（bold は専用ファイルを選択済み）
+        if let custom = registry?.font(family: name, size: size, bold: bold) {
+            return custom
+        }
         let base = CTFontCreateWithName(name as CFString, size, nil)
         if CTFontCopyPostScriptName(base) as String? == ".LastResort" { continue }
         if bold {
@@ -385,7 +456,8 @@ private func computeTextLayout(_ input: InputPayload) throws -> LayoutResultPayl
     let font = resolveFont(
         candidates: candidates,
         size: CGFloat(fontSize),
-        bold: shape.fontWeight == "bold"
+        bold: shape.fontWeight == "bold",
+        registry: FontFileRegistry(input)
     )
 
     if text.isEmpty {
@@ -468,7 +540,12 @@ private func outlinePayload(_ input: InputPayload) throws -> OutputPayload {
     let realScale = input.scale
 
     let candidates = expandCandidates(shape, explicit: input.fontCandidates)
-    let font = resolveFont(candidates: candidates, size: fontSize, bold: bold)
+    let font = resolveFont(
+        candidates: candidates,
+        size: fontSize,
+        bold: bold,
+        registry: FontFileRegistry(input)
+    )
     let ascent = CTFontGetAscent(font)
 
     var children: [PathChild] = []
@@ -497,12 +574,10 @@ private func outlinePayload(_ input: InputPayload) throws -> OutputPayload {
         for run in runs {
             let runAttrs = CTRunGetAttributes(run) as NSDictionary
             let runFont = runAttrs[kCTFontAttributeName] as! CTFont
-            let runBaseline: Double
-            if line.yTopPaper != nil {
-                runBaseline = line.yTopPaper! + Double(CTFontGetAscent(runFont))
-            } else {
-                runBaseline = yBaseline
-            }
+            // 混植行（Latin + CJK フォールバック）でも全 run は行のベースラインを
+            // 共有する。run ごとの CTFontGetAscent(runFont) でベースラインを取ると
+            // ascent の異なるフォント間でグリフの上下位置がずれる
+            let runBaseline = yBaseline
             let glyphCount = CTRunGetGlyphCount(run)
             var glyphs = [CGGlyph](repeating: 0, count: glyphCount)
             var positions = [CGPoint](repeating: .zero, count: glyphCount)
@@ -513,8 +588,10 @@ private func outlinePayload(_ input: InputPayload) throws -> OutputPayload {
                 guard let glyphPath = CTFontCreatePathForGlyph(runFont, glyphs[i], nil) else {
                     continue
                 }
+                // positions は行座標系（y-up）。CT が run にベースラインシフトを
+                // 適用した場合も追従できるよう y を反転して反映する
                 let px = xStart + Double(positions[i].x)
-                let py = runBaseline
+                let py = runBaseline - Double(positions[i].y)
                 let transform = CGAffineTransform(a: 1, b: 0, c: 0, d: -1, tx: px, ty: py)
                 let rings = flattenPath(glyphPath, transform: transform)
                 guard !rings.isEmpty else { continue }

@@ -2040,12 +2040,11 @@ function renderShape(shape, scale, selIds) {
       preview = null;
     }
 
-    const showForeignObject =
-      typeof shouldShowTextForeignObject === "function"
-        ? shouldShowTextForeignObject(shape)
-        : !preview?.length;
-
-    if (!preview?.length && showForeignObject) {
+    // native glyph path が無い間（初回生成中・アウトライン失敗時）は
+    // foreignObject の DOM テキストで代替表示する。以前は native 有効時に
+    // 常に抑止していたため、アウトライン失敗がキャッシュされると図形が
+    // 完全に不可視（選択枠だけ）になっていた
+    if (!preview?.length) {
       const px = layoutBox.x;
       const py = layoutBox.y;
       const fo = se("foreignObject", {
@@ -2655,6 +2654,24 @@ function renderSelectionHandles(selIds, page, zoom) {
           "pointer-events": "none",
         }),
       );
+      // 回転ホットゾーン: 合成bboxコーナーの外周（ハンドルより先に追加して下層に置く）
+      const rz = hs * 3;
+      for (const i of [0, 2, 4, 6]) {
+        const [hx, hy] = pts[i];
+        g.appendChild(
+          se("rect", {
+            x: hx - rz / 2,
+            y: hy - rz / 2,
+            width: rz,
+            height: rz,
+            fill: "none",
+            "pointer-events": "all",
+            "data-rotate-handle": i,
+            "data-multi-rotate": "1",
+            cursor: ROTATE_CURSOR,
+          }),
+        );
+      }
       for (let i = 0; i < pts.length; i++) {
         const [hx, hy] = pts[i];
         g.appendChild(

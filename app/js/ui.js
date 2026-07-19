@@ -1173,10 +1173,25 @@ function updatePropertiesPanel() {
         uiUpdate();
         return;
       }
+      if (key === "circle-diameter") {
+        const newVal = parseFloat(inp.value);
+        if (isNaN(newVal) || newVal <= 0) return;
+        updateShape(sid, { r: mmToReal(newVal) / 2 });
+        // 半径フィールドを直径に追従させる（パネルは再構築しない方針）
+        const rInp = c.querySelector('[data-key="r"]');
+        if (rInp) rInp.value = fmtNum(newVal / 2);
+        render();
+        return;
+      }
       let raw = inp.type === "number" ? parseFloat(inp.value) : inp.value;
       if (inp.type === "number" && isNaN(raw)) return;
       if (inp.dataset.unit === "mm") raw = mmToReal(raw);
       updateShape(sid, { [key]: raw });
+      // 半径を編集したら直径フィールドを追従させる
+      if (key === "r") {
+        const dInp = c.querySelector('[data-key="circle-diameter"]');
+        if (dInp && !isNaN(raw)) dInp.value = fmtNum(realToMM(raw) * 2);
+      }
       render();
       // role 切り替えは条件付きフィールド（切り込み幅）の表示を更新するため再描画
       if (key === "role") uiUpdate();
@@ -1796,7 +1811,13 @@ function buildPropsHTML(s) {
       pRowMm(t("props.cxMm"), "cx", s.cx),
       pRowMm(t("props.cyMm"), "cy", s.cy),
       pRowMm(t("props.radiusMm"), "r", s.r),
-      pRO(t("props.diameter"), fmtNum(realToMM(s.r) * 2) + " mm"),
+      // 直径でもリサイズできる（半径と相互連動。circle-diameter で特別処理）
+      pRowUnit(
+        t("props.diameter"),
+        "circle-diameter",
+        fmtNum(realToMM(s.r) * 2),
+        "mm",
+      ),
     );
   } else if (s.type === "ellipse") {
     geometry.push(

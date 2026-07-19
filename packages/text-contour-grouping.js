@@ -42,7 +42,27 @@ function normalizeRingByDepth(ring, depth) {
   return ccw === wantCcw ? ring : ring.slice().reverse();
 }
 
-/** リング中心 + 最小包含親でネスト（第一頂点が外周外でも counter を穴にできる） */
+/** inner の頂点のうち outer に含まれる割合（0..1） */
+function ringContainmentFraction(inner, outer) {
+  if (!inner?.length) return 0;
+  let count = 0;
+  for (const [x, y] of inner) {
+    if (pointInRing(x, y, outer)) count++;
+  }
+  return count / inner.length;
+}
+
+// ネスト判定: 頂点の過半数が親の内側にあること。
+// 中心点 1 点だけの判定は、交差する stroke（例: 「切」「必」の画の交差）を
+// counter と誤認して重なり部分を穴として抜いてしまう。真の counter は
+// ほぼ全頂点が内側（spur アーティファクトがあっても過半数は内側）に来る。
+const RING_NEST_FRACTION = 0.5;
+
+function ringMostlyInside(inner, outer) {
+  return ringContainmentFraction(inner, outer) >= RING_NEST_FRACTION;
+}
+
+/** 頂点内包率 + 最小包含親でネスト（第一頂点が外周外でも counter を穴にできる） */
 function groupRingsIntoPolygons(rings) {
   if (!rings.length) return [];
   if (rings.length === 1) {
@@ -56,13 +76,12 @@ function groupRingsIntoPolygons(rings) {
   const parent = new Array(rings.length).fill(-1);
 
   for (let i = 0; i < rings.length; i++) {
-    const [cx, cy] = ringCenter(rings[i]);
     let best = -1;
     let bestArea = Infinity;
     for (let j = 0; j < rings.length; j++) {
       if (i === j) continue;
       if (meta[j].area <= meta[i].area) continue;
-      if (pointInRing(cx, cy, rings[j])) {
+      if (ringMostlyInside(rings[i], rings[j])) {
         if (meta[j].area < bestArea) {
           bestArea = meta[j].area;
           best = j;
@@ -119,15 +138,16 @@ function flattenRings(contours) {
   return rings;
 }
 
-/** 正方向リングが重なるだけでネストしていない（例: 「4」の stroke 交差）→ union 対象 */
+/** 正方向リングが重なるだけでネストしていない（例: 「4」「切」の stroke 交差）→ union 対象 */
 function shouldUnionOverlappingPositiveRings(rings) {
   if (rings.length <= 1) return false;
   if (rings.some((r) => ringSignedArea(r) < 0)) return false;
   for (let i = 0; i < rings.length; i++) {
-    const [cx, cy] = ringCenter(rings[i]);
     for (let j = 0; j < rings.length; j++) {
       if (i === j) continue;
-      if (pointInRing(cx, cy, rings[j])) return false;
+      // 過半数の頂点が他リング内 = 真のネスト（counter）とみなし union しない。
+      // 中心点 1 点判定だと交差 stroke を counter と誤認する（「切」の重なり抜け）
+      if (ringMostlyInside(rings[i], rings[j])) return false;
     }
   }
   return true;
@@ -141,6 +161,8 @@ const api = {
   ringSignedArea,
   ringCenter,
   pointInRing,
+  ringContainmentFraction,
+  ringMostlyInside,
   normalizeRingByDepth,
   groupRingsIntoPolygons,
   countNegativeRings,

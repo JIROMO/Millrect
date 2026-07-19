@@ -14,23 +14,33 @@ const forbiddenPatterns = [
     label: "Swift 第一頂点でのネスト判定",
     re: /pointInRing\s*\(\s*first\[0\]/,
   },
+  {
+    // 中心点 1 点でのネスト判定は交差 stroke を counter と誤認する（「切」の重なり抜け）
+    label: "リング中心点でのネスト判定",
+    re: /pointInRing\s*\(\s*cx\s*,\s*cy\s*,\s*rings\[j\]/,
+  },
 ];
 
 const requiredSnippets = [
   {
     file: "packages/text-contour-grouping.js",
     label: "共有 contour grouping",
-    snippets: ["ringCenter", "groupRingsIntoPolygons"],
+    snippets: ["ringContainmentFraction", "groupRingsIntoPolygons"],
   },
   {
     file: "app/vendor/millrect-text-engine.mjs",
     label: "browser text-engine bundle",
-    snippets: ["ringCenter(rings[i])", "groupRingsIntoPolygons"],
+    snippets: ["ringContainmentFraction", "groupRingsIntoPolygons"],
   },
   {
     file: "native/macos/outline-text/main.swift",
     label: "Core Text outline binary",
-    snippets: ["ringCenter", "normalizeRingByDepth", "parent[i] = best"],
+    snippets: [
+      "ringContainmentFraction",
+      "ringMostlyInside(rings[i], rings[j])",
+      "normalizeRingByDepth",
+      "parent[i] = best",
+    ],
   },
 ];
 

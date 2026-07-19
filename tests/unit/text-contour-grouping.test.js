@@ -87,6 +87,28 @@ describe("text-contour-grouping", () => {
     assert.equal(shouldUnionStrokeFragments(compound), false);
   });
 
+  it("交差する stroke（中心が他リング内でも頂点は外）は穴にしない（「切」の重なり抜け回帰）", () => {
+    // 縦棒 × 横棒の十字交差: 縦棒の中心 (50,50) は横棒の内側だが、
+    // 頂点はすべて外側 → ネストではなく交差。穴化すると重なり部分が抜ける
+    const vBar = rectRing(40, 0, 60, 100, true);
+    const hBar = rectRing(0, 40, 100, 60, true);
+    const [cx, cy] = ringCenter(vBar);
+    assert.equal(pointInRing(cx, cy, hBar), true); // 旧ロジックの誤認条件
+
+    // hBar の方が大面積になるよう幅を広げたケースも含めて両方向を確認
+    const wide = rectRing(0, 40, 200, 60, true);
+    const polysWide = groupRingsIntoPolygons([vBar, wide]);
+    assert.equal(polysWide.length, 2); // ネストせず独立 compound path
+    for (const poly of polysWide) {
+      assert.equal(poly.length, 1);
+      assert.ok(ringSignedArea(poly[0]) > 0); // 負リング（穴）を作らない
+    }
+
+    // union ゲートも交差として通す
+    assert.equal(shouldUnionOverlappingPositiveRings([vBar, wide]), true);
+    assert.equal(glyphFillRule([[vBar], [wide]]), "nonzero");
+  });
+
   it("重なる正方向リングは union、ネスト counter は union しない", () => {
     const leftBar = rectRing(0, 0, 10, 100, true);
     const topBar = rectRing(0, 90, 60, 100, true);

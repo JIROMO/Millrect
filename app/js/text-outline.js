@@ -15,13 +15,6 @@ function isTextNativePreviewEnabled() {
   return isTextOutlineAvailable();
 }
 
-/** native path プレビュー有効時は CSS foreignObject を出さない */
-function shouldShowTextForeignObject(shape) {
-  if (!isTextNativePreviewEnabled()) return true;
-  if (!shape?.text || !/\S/.test(shape.text)) return true;
-  return false;
-}
-
 function isTextNativeLayoutEnabled() {
   return Boolean(
     window.electronAPI?.measureTextLayout ||
@@ -49,6 +42,28 @@ const _textPreviewFailures = new Map();
 const _textLayoutCache = new Map();
 const _textLayoutTimers = new Map();
 const _textLiveTransformIds = new Set();
+
+// アウトライン失敗のリトライ制御。以前は同一キーの失敗を恒久ブロックしていた
+// ため、起動直後などフォント未ロードで一度失敗すると図形サイズを変える
+// （キーが変わる）まで文字が描画されなかった。失敗は時間付きで記録し、
+// 数回まで自動リトライ、それ以降も再レンダー時に間隔を空けて再試行する。
+const _TEXT_PREVIEW_RETRY_MS = 2000;
+const _TEXT_PREVIEW_AUTO_RETRIES = 3;
+
+function _previewFailureBlocked(shapeId, key) {
+  const f = _textPreviewFailures.get(shapeId);
+  if (!f || f.key !== key) return false;
+  return Date.now() - f.at < _TEXT_PREVIEW_RETRY_MS;
+}
+
+function _recordPreviewFailure(shapeId, key) {
+  const prev = _textPreviewFailures.get(shapeId);
+  const n = prev?.key === key ? (prev.n || 0) + 1 : 1;
+  _textPreviewFailures.set(shapeId, { key, at: Date.now(), n });
+  if (n <= _TEXT_PREVIEW_AUTO_RETRIES) {
+    scheduleTextNativePreview(shapeId, _TEXT_PREVIEW_RETRY_MS);
+  }
+}
 
 // テキストレイアウトは非同期（HarfBuzz）で後から確定する。renderer.js の
 // #shape-root キャッシュはこのバージョンを署名に含めることで、図形 JSON が
@@ -632,8 +647,8 @@ function scheduleTextNativePreview(shapeId, delay = 120) {
   if (_textLiveTransformIds.has(shapeId)) return;
   const located = findShapeById(shapeId);
   if (!located || located.shape.type !== "text") return;
-  const key = _textPreviewKey(located.shape, getCurrentPage().scale);
-  if (_textPreviewFailures.get(shapeId) === key) return;
+  // 失敗ブロックの判定は refreshTextNativePreview 側で行う
+  //（リトライ予約時はまだブロック期間内のためここでは弾かない）
   const prev = _textPreviewTimers.get(shapeId);
   if (prev) clearTimeout(prev);
   _textPreviewTimers.set(
@@ -662,7 +677,7 @@ async function refreshTextNativePreview(shapeId) {
 
   const scale = getCurrentPage().scale;
   const key = _textPreviewKey(shape, scale);
-  if (_textPreviewFailures.get(shapeId) === key) return;
+  if (_previewFailureBlocked(shapeId, key)) return;
   const cached = _textPreviewCache.get(shapeId);
   if (cached?.key === key && cached.children?.length) return;
 
@@ -678,7 +693,7 @@ async function refreshTextNativePreview(shapeId) {
     render();
   } catch (err) {
     console.warn("[text-preview] failed", err);
-    _textPreviewFailures.set(shapeId, key);
+    _recordPreviewFailure(shapeId, key);
     render();
   }
 }

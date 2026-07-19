@@ -134,6 +134,18 @@ var require_text_contour_grouping = __commonJS({
       const wantCcw = depth % 2 === 0;
       return ccw === wantCcw ? ring : ring.slice().reverse();
     }
+    function ringContainmentFraction(inner, outer) {
+      if (!inner?.length) return 0;
+      let count = 0;
+      for (const [x, y] of inner) {
+        if (pointInRing(x, y, outer)) count++;
+      }
+      return count / inner.length;
+    }
+    var RING_NEST_FRACTION = 0.5;
+    function ringMostlyInside(inner, outer) {
+      return ringContainmentFraction(inner, outer) >= RING_NEST_FRACTION;
+    }
     function groupRingsIntoPolygons(rings) {
       if (!rings.length) return [];
       if (rings.length === 1) {
@@ -145,13 +157,12 @@ var require_text_contour_grouping = __commonJS({
       }));
       const parent = new Array(rings.length).fill(-1);
       for (let i = 0; i < rings.length; i++) {
-        const [cx, cy] = ringCenter(rings[i]);
         let best = -1;
         let bestArea = Infinity;
         for (let j = 0; j < rings.length; j++) {
           if (i === j) continue;
           if (meta[j].area <= meta[i].area) continue;
-          if (pointInRing(cx, cy, rings[j])) {
+          if (ringMostlyInside(rings[i], rings[j])) {
             if (meta[j].area < bestArea) {
               bestArea = meta[j].area;
               best = j;
@@ -205,10 +216,9 @@ var require_text_contour_grouping = __commonJS({
       if (rings.length <= 1) return false;
       if (rings.some((r) => ringSignedArea(r) < 0)) return false;
       for (let i = 0; i < rings.length; i++) {
-        const [cx, cy] = ringCenter(rings[i]);
         for (let j = 0; j < rings.length; j++) {
           if (i === j) continue;
-          if (pointInRing(cx, cy, rings[j])) return false;
+          if (ringMostlyInside(rings[i], rings[j])) return false;
         }
       }
       return true;
@@ -220,6 +230,8 @@ var require_text_contour_grouping = __commonJS({
       ringSignedArea,
       ringCenter,
       pointInRing,
+      ringContainmentFraction,
+      ringMostlyInside,
       normalizeRingByDepth,
       groupRingsIntoPolygons,
       countNegativeRings,
