@@ -77,28 +77,6 @@
     document.documentElement.lang = getLocale();
   }
 
-  function translateHistoryLabel(label) {
-    if (!label || getLocale() === "ja") return label;
-    const rules = [
-      [/^読み込み$/, "history.loaded"],
-      [/^操作$/, "history.action"],
-      [/^編集$/, "history.edit"],
-      [/^寸法線追加$/, "history.dimAdd"],
-      [/^寸法線削除$/, "history.dimDelete"],
-      [/^図形追加 \((\d+)個\)$/, "history.shapeAdd"],
-      [/^図形削除 \((\d+)個\)$/, "history.shapeDelete"],
-    ];
-    for (const rule of rules) {
-      const m = label.match(rule[0]);
-      if (!m) continue;
-      if (m.length > 1) {
-        return t(rule[1], { count: m[1] });
-      }
-      return t(rule[1]);
-    }
-    return label;
-  }
-
   function syncDocsLocale(locale) {
     try {
       localStorage.setItem(DOCS_STORAGE_KEY, locale);
@@ -150,6 +128,5 @@
   g.t = t;
   g.applyI18nToRoot = applyI18nToRoot;
   g.applyI18nToDocument = applyI18nToDocument;
-  g.translateHistoryLabel = translateHistoryLabel;
   g.initMillrectI18n = initMillrectI18n;
 })(typeof window !== "undefined" ? window : globalThis);

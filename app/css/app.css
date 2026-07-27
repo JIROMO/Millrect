@@ -834,12 +834,6 @@ html.is-desktop #boot-loading {
 #sidebar-right .add-btn:hover {
   color: var(--sidebar-fg);
 }
-#sidebar-right .history-item {
-  color: var(--sidebar-fg);
-}
-#sidebar-right .history-item.history-current {
-  color: var(--sidebar-fg-strong);
-}
 
 /* Tabs */
 .panel-tabs {
@@ -927,8 +921,7 @@ html.is-desktop #boot-loading {
 .shapes-section-header,
 .prop-section-label,
 .prop-section-title,
-.prop-transform-header,
-.history-header {
+.prop-transform-header {
   display: flex;
   align-items: center;
   padding: 0 var(--panel-pad) 4px;
@@ -3341,63 +3334,6 @@ button.ctx-item {
   width: 12px;
   height: 12px;
   cursor: pointer;
-}
-
-/* ── History Panel ───────────────────────────────────────────── */
-.panel-history {
-  padding: 0;
-}
-.history-list {
-  display: flex;
-  flex-direction: column;
-  gap: 1px;
-  padding: var(--panel-pad);
-}
-.history-item {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  width: 100%;
-  padding: 0 8px;
-  min-height: var(--panel-row-h);
-  border: none;
-  border-radius: var(--panel-input-radius);
-  cursor: pointer;
-  font-size: 11px;
-  color: var(--text-2);
-  background: transparent;
-  font-family: inherit;
-  text-align: left;
-  transition: background 0.1s;
-  user-select: none;
-}
-.history-item:hover {
-  background: var(--hover-bg);
-  color: var(--text);
-}
-.history-item.history-current {
-  background: var(--accent-dim);
-  color: var(--text);
-}
-.history-item.history-future {
-  opacity: 0.45;
-}
-.history-badge {
-  display: inline-block;
-  width: 5px;
-  height: 5px;
-  border-radius: 50%;
-  background: var(--accent);
-  flex-shrink: 0;
-}
-.history-badge.history-badge-hidden {
-  visibility: hidden;
-}
-.history-label {
-  flex: 1;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
 }
 
 /* ── prop-btn-sm ─────────────────────────────────────────────── */

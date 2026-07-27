@@ -9,19 +9,11 @@ class MillrectRightSidebar extends HTMLElement {
       <div class="panel-split-top" id="panel-split-top">
         <div class="panel-tabs">
           <button class="panel-tab active" data-tab="design" data-i18n="panel.tab.design">デザイン</button>
-          <button class="panel-tab" data-tab="history" data-i18n="panel.tab.history">履歴</button>
         </div>
         <div class="tab-pane active" data-pane="design">
           <div class="tab-pane-scroll">
             <div id="properties-panel" class="panel-props">
               <p class="prop-empty" data-i18n="props.selectShape">図形を選択してください</p>
-            </div>
-          </div>
-        </div>
-        <div class="tab-pane" data-pane="history">
-          <div class="tab-pane-scroll">
-            <div id="history-panel" class="panel-history">
-              <p class="prop-empty" data-i18n="props.noHistory">履歴なし</p>
             </div>
           </div>
         </div>

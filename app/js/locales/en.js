@@ -61,7 +61,6 @@
     "tools.dragHandle.title": "Drag to move",
 
     "panel.tab.design": "Design",
-    "panel.tab.history": "History",
     "panel.tab.layers": "Layers",
     "panel.tab.pages": "Pages",
     "panel.splitHandle.title": "Drag to resize split",
@@ -239,7 +238,6 @@
 
     "props.selectShape": "Select a shape",
     "props.multiSelect": "{count} selected",
-    "props.noHistory": "No history",
     "props.groupCount": "Group ({count} items)",
     "props.group": "Group",
     "props.groupShortcut": "Group (⌘G)",
@@ -409,18 +407,6 @@
     "layers.sendBackward": "Send backward",
     "layers.shapeEmptyText": "(empty)",
 
-    "history.none": "No history",
-    "history.header": "History ({current} / {total})",
-    "history.initial": "Initial state",
-    "history.loaded": "Loaded",
-    "history.action": "Action",
-    "history.edit": "Edit",
-    "history.dimAdd": "Dimension added",
-    "history.dimDelete": "Dimension removed",
-    "history.shapeAdd": "Shapes added ({count})",
-    "history.shapeDelete": "Shapes removed ({count})",
-    "history.fontRegister": "Font registered: {family}",
-    "history.fontRemove": "Font removed: {family}",
 
     "context.paste": "Paste",
     "context.selectAll": "Select all",

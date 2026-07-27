@@ -1388,12 +1388,6 @@ function handleResize(rp, shiftKey) {
         if (Math.abs(dy) > Math.abs(dx / ratio))
           ((ndy = dy), (ndx = -dy * ratio));
       }
-      if (hi === 3 || hi === 7) {
-        ndy = ndx / ratio;
-      }
-      if (hi === 1 || hi === 5) {
-        ndx = dy * ratio;
-      }
     }
     if (hi === 0) {
       shape.x = o.x + ndx;
@@ -1428,6 +1422,20 @@ function handleResize(rp, shiftKey) {
     if (hi === 7) {
       shape.x = o.x + ndx;
       shape.width = Math.max(MIN, o.width - ndx);
+    }
+    // Shift: 辺ハンドルは軸が1つしかないため、もう一方の辺を中心基準で
+    // 比例スケールしてアスペクト比を保つ（コーナーハンドルは既存ロジックで対応済み）
+    if (shiftKey && (hi === 1 || hi === 5)) {
+      const scale = shape.height / (o.height || 1);
+      const newWidth = Math.max(MIN, o.width * scale);
+      shape.width = newWidth;
+      shape.x = o.x + (o.width - newWidth) / 2;
+    }
+    if (shiftKey && (hi === 3 || hi === 7)) {
+      const scale = shape.width / (o.width || 1);
+      const newHeight = Math.max(MIN, o.height * scale);
+      shape.height = newHeight;
+      shape.y = o.y + (o.height - newHeight) / 2;
     }
     if (shape.width === MIN && (hi === 0 || hi === 2 || hi === 6))
       shape.x = o.x + o.width - MIN;

@@ -62,7 +62,6 @@ function initState() {
   _state = defaultState();
   _imageStore.clear();
   _history = [_serializeDoc()]; // _state が確定した後に呼ぶ
-  _historyLabels = ["初期状態"];
   _histIdx = 0;
   _resetRenderableVersions(_history[0]);
   return _state;
@@ -218,10 +217,7 @@ function _restoreDoc(snapOrStr) {
   for (const k of DOC_KEYS) _state[k] = deepClone(snap[k]);
 }
 
-// _historyLabels: 各 history エントリの説明ラベル
-let _historyLabels = ["初期状態"];
-
-function pushHistory(label) {
+function pushHistory() {
   // 履歴はずっと文字列で保持するので、ここで構造化クローンする必要はない。
   // ドキュメント部分への浅い参照を一度だけ JSON 化すれば足りる（毎編集の
   // structuredClone をまるごと省く）。画像 dataUrl は _historyReplacer で除外。
@@ -233,58 +229,13 @@ function pushHistory(label) {
   }
   const prevStr = _histIdx >= 0 ? _history[_histIdx] : null;
   _history = _history.slice(0, _histIdx + 1);
-  _historyLabels = _historyLabels.slice(0, _histIdx + 1);
   _history.push(snapStr);
   _syncRenderableVersions(prevStr, snapStr);
-  _historyLabels.push(label || _inferHistoryLabel(JSON.parse(snapStr)));
   if (_history.length > MAX_HISTORY) {
     _history.shift();
-    _historyLabels.shift();
   }
   _histIdx = _history.length - 1;
   if (typeof onStateChanged === "function") onStateChanged();
-}
-
-// 直前の操作からラベルを自動推定
-function _inferHistoryLabel(cur) {
-  // state のページ・シェイプ数の変化で大まかに推定
-  if (!_history.length) return "操作";
-  const prev = JSON.parse(_history[_histIdx]);
-  const prevShapes =
-    prev.pages?.flatMap(
-      (p) => p.layers?.flatMap((l) => l.shapes || []) || [],
-    ) || [];
-  const curShapes =
-    cur.pages?.flatMap((p) => p.layers?.flatMap((l) => l.shapes || []) || []) ||
-    [];
-  const prevDims = prev.pages?.flatMap((p) => p.dimensions || []) || [];
-  const curDims = cur.pages?.flatMap((p) => p.dimensions || []) || [];
-  if (curShapes.length > prevShapes.length)
-    return `図形追加 (${curShapes.length}個)`;
-  if (curShapes.length < prevShapes.length)
-    return `図形削除 (${prevShapes.length - curShapes.length}個)`;
-  if (curDims.length > prevDims.length) return "寸法線追加";
-  if (curDims.length < prevDims.length) return "寸法線削除";
-  return "編集";
-}
-
-function getHistoryLabels() {
-  return _historyLabels.slice();
-}
-
-function getHistoryIndex() {
-  return _histIdx;
-}
-
-function jumpToHistory(idx) {
-  if (idx < 0 || idx >= _history.length) return false;
-  const prevStr = _histIdx >= 0 ? _history[_histIdx] : null;
-  const nextStr = _history[idx];
-  _histIdx = idx;
-  _syncRenderableVersions(prevStr, nextStr);
-  _restoreDoc(_history[_histIdx]);
-  if (typeof onStateChanged === "function") onStateChanged();
-  return true;
 }
 
 function undo() {
@@ -320,7 +271,6 @@ function replaceState(newState) {
   _state = newState;
   _imageStore.clear(); // 履歴を作り直すので古い画像参照は破棄
   _history = [_serializeDoc()]; // ドキュメント部分のみ保存（画像 dataUrl は除外）
-  _historyLabels = ["読み込み"];
   _histIdx = 0;
   _resetRenderableVersions(_history[0]);
 }

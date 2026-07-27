@@ -443,6 +443,18 @@ function shiftShape(shape, dx, dy) {
   }
 }
 
+// group は children も独立した shape として ID を持つため、複製時は
+// トップレベルだけでなく子孫すべてを再採番しないと元図形と ID が衝突する
+// （render() の data-id 検索・getShapeRenderVersion キャッシュが混線し、
+// 整列などの更新がどちらの図形に反映されたか不定になる）
+function regenerateShapeIds(shape) {
+  shape.id = genId("shape");
+  if (shape.type === "group" && Array.isArray(shape.children)) {
+    for (const child of shape.children) regenerateShapeIds(child);
+  }
+  return shape;
+}
+
 function cloneSelectedShapes(dx, dy) {
   const state = getState();
   if (!state.selectedShapeIds.length) return [];
@@ -453,7 +465,7 @@ function cloneSelectedShapes(dx, dy) {
     const res = findShapeById(id);
     if (!res) continue;
     const clone = JSON.parse(JSON.stringify(res.shape));
-    clone.id = genId("shape");
+    regenerateShapeIds(clone);
     if (dx || dy) shiftShape(clone, dx, dy);
     // 寸法線クローンは dimensions[] へ、それ以外は layer.shapes[] へ
     if (res.isDimension) {
@@ -541,7 +553,7 @@ function arrayDuplicate(options = {}) {
     for (const tr of transforms) {
       for (const src of srcShapes) {
         const clone = JSON.parse(JSON.stringify(src.snapshot));
-        clone.id = genId("shape");
+        regenerateShapeIds(clone);
 
         if (tr.rot !== undefined) {
           // 極座標回転: 中心 (cx,cy) まわりに回転してから移動
@@ -664,7 +676,7 @@ function pasteShapes() {
   const newIds = [];
   for (const shape of _clipboard) {
     const clone = JSON.parse(JSON.stringify(shape));
-    clone.id = genId("shape");
+    regenerateShapeIds(clone);
     shiftShape(clone, offset, offset);
     layer.shapes.push(clone);
     newIds.push(clone.id);

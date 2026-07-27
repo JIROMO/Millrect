@@ -60,7 +60,6 @@
     "tools.dragHandle.title": "ドラッグで移動",
 
     "panel.tab.design": "デザイン",
-    "panel.tab.history": "履歴",
     "panel.tab.layers": "レイヤー",
     "panel.tab.pages": "ページ",
     "panel.splitHandle.title": "上下にドラッグして分割",
@@ -237,7 +236,6 @@
 
     "props.selectShape": "図形を選択してください",
     "props.multiSelect": "{count} 個選択中",
-    "props.noHistory": "履歴なし",
     "props.groupCount": "グループ ({count} 個)",
     "props.group": "グループ化",
     "props.groupShortcut": "グループ化 (⌘G)",
@@ -407,18 +405,6 @@
     "layers.sendBackward": "背面へ",
     "layers.shapeEmptyText": "(空)",
 
-    "history.none": "履歴なし",
-    "history.header": "操作履歴 ({current} / {total})",
-    "history.initial": "初期状態",
-    "history.loaded": "読み込み",
-    "history.action": "操作",
-    "history.edit": "編集",
-    "history.dimAdd": "寸法線追加",
-    "history.dimDelete": "寸法線削除",
-    "history.shapeAdd": "図形追加 ({count}個)",
-    "history.shapeDelete": "図形削除 ({count}個)",
-    "history.fontRegister": "フォント登録: {family}",
-    "history.fontRemove": "フォント削除: {family}",
 
     "context.paste": "貼り付け",
     "context.selectAll": "すべて選択",

@@ -159,14 +159,6 @@ function _pageSettingsSignature(state, page) {
   });
 }
 
-function _historyPanelSignature() {
-  return JSON.stringify({
-    locale: _uiLocaleKey(),
-    index: typeof getHistoryIndex === "function" ? getHistoryIndex() : -1,
-    labels: typeof getHistoryLabels === "function" ? getHistoryLabels() : [],
-  });
-}
-
 function _projectFontsSignature(state) {
   const projectFonts = state.fonts || [];
   const libraryFonts =
@@ -257,10 +249,6 @@ function updateAll() {
     updatePageSettings();
   }
   updateReferenceImagePanel();
-  const historySig = _historyPanelSignature();
-  if (_uiCacheChanged("history", historySig)) {
-    updateHistoryPanel();
-  }
   if (typeof renderProjectTabs === "function") renderProjectTabs();
   const el = document.getElementById("status-scale");
   if (el) el.textContent = `1/${page.scale.denominator}`;
@@ -2094,54 +2082,6 @@ const VIEW_DEFINITION_PRESETS = {
   detail: { normal: null, up: null },
 };
 
-// ── Undo 履歴パネル ────────────────────────────────────────────
-function updateHistoryPanel() {
-  const panel = document.getElementById("history-panel");
-  if (!panel) return;
-
-  const labels = getHistoryLabels();
-  const curIdx = getHistoryIndex();
-
-  if (!labels.length) {
-    panel.innerHTML = `<p class="prop-empty">${t("props.noHistory")}</p>`;
-    return;
-  }
-
-  // 新しい順（末尾→先頭）に表示
-  const items = labels
-    .map((label, idx) => {
-      const isCurrent = idx === curIdx;
-      const isFuture = idx > curIdx;
-      const displayLabel = translateHistoryLabel(label);
-      return `<div class="history-item${isCurrent ? " history-current" : ""}${isFuture ? " history-future" : ""}"
-                 data-hist-idx="${idx}" title="${displayLabel}">
-      <span class="history-badge${isCurrent ? "" : " history-badge-hidden"}"></span>
-      <span class="history-num">${idx}</span>
-      <span class="history-label">${displayLabel}</span>
-    </div>`;
-    })
-    .reverse()
-    .join("");
-
-  panel.innerHTML = `
-    <div class="history-header">
-      <span>${t("history.header", { current: curIdx + 1, total: labels.length })}</span>
-    </div>
-    <div class="history-list">${items}</div>
-  `;
-
-  // クリックでジャンプ
-  panel.querySelectorAll(".history-item").forEach((el) => {
-    el.addEventListener("click", () => {
-      const idx = parseInt(el.dataset.histIdx, 10);
-      if (jumpToHistory(idx)) {
-        render();
-        updateAll();
-      }
-    });
-  });
-}
-
 // ── 配列複製 UI ───────────────────────────────────────────────
 function _buildArrayDuplicateHTML() {
   const body = `
@@ -2632,14 +2572,18 @@ function bindKeyShortcuts() {
       _updateMeasureStatusVisibility(tool);
       return;
     }
+    // Electron ではメニューの CmdOrCtrl+Z/+Shift+Z アクセラレータが menu:undo/menu:redo
+    // IPC 経由で undo()/redo() を呼ぶため、ここでも呼ぶと同じキー押下で二重に進んでしまう
+    // （1回の Cmd+Z で履歴が2つ戻る不具合の原因）。Electron 版はメニュー側に任せる
+    const _hasElectronMenu = !!window.electronAPI?.onMenu;
     // Shift 併用時は e.key が "Z" になるため小文字化して比較（⌘⇧Z の Redo）
-    if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "z") {
+    if (!_hasElectronMenu && (e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "z") {
       e.preventDefault();
       e.shiftKey
         ? redo() && (cancelDim(), render(), updateAll())
         : undo() && (cancelDim(), render(), updateAll());
     }
-    if ((e.ctrlKey || e.metaKey) && e.key === "y") {
+    if (!_hasElectronMenu && (e.ctrlKey || e.metaKey) && e.key === "y") {
       e.preventDefault();
       redo() && (cancelDim(), render(), updateAll());
     }
