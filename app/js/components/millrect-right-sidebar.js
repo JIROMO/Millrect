@@ -7,9 +7,6 @@ class MillrectRightSidebar extends HTMLElement {
       <div class="panel-resize-handle" id="right-panel-resize"></div>
 
       <div class="panel-split-top" id="panel-split-top">
-        <div class="panel-tabs">
-          <button class="panel-tab active" data-tab="design" data-i18n="panel.tab.design">デザイン</button>
-        </div>
         <div class="tab-pane active" data-pane="design">
           <div class="tab-pane-scroll">
             <div id="properties-panel" class="panel-props">

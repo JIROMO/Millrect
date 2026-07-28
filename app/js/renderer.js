@@ -1746,7 +1746,6 @@ function liveUpdateShapes(ids, options = {}) {
   const scale = page.scale;
   const selIds = getState().selectedShapeIds;
   for (const id of ids) {
-    if (typeof markShapeDirty === "function") markShapeDirty(id);
     const old = root.querySelector(`[data-id="${_cssEsc(id)}"]`);
     const res = findShapeById(id);
     if (!res) {

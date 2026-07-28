@@ -1360,6 +1360,13 @@ function handleResize(rp, shiftKey) {
     }
   } else if (shape.type === "rect" || shape.type === "image") {
     const o = origShape;
+    // 回転・反転中は後段のアンカー固定補正が shape.x/y を毎フレーム加算するため、
+    // 各 hi 分岐が触れない軸を前フレームの値のまま残すと補正が累積してしまう。
+    // 基準値にリセットしてから hi 分岐で上書きする。
+    if (_xf) {
+      shape.x = o.x;
+      shape.y = o.y;
+    }
     let ndx = dx,
       ndy = dy;
     if (shiftKey) {
@@ -1603,7 +1610,7 @@ function handleResize(rp, shiftKey) {
       } else if (hi === 7 || hi === 0 || hi === 6) {
         shape.from.x = o.from.x + dx;
       } else if (hi === 1) {
-        shape.offset = (o.offset ?? -80) - dy;
+        shape.offset = (o.offset ?? -80) + dy;
       } else if (hi === 5) {
         shape.offset = (o.offset ?? -80) + dy;
       }
@@ -1616,7 +1623,7 @@ function handleResize(rp, shiftKey) {
       } else if (hi === 3) {
         shape.offset = (o.offset ?? -80) + dx;
       } else if (hi === 7) {
-        shape.offset = (o.offset ?? -80) - dx;
+        shape.offset = (o.offset ?? -80) + dx;
       }
     }
     // 表示値は from/to から自動導出（value 上書きは mm）

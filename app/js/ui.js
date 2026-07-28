@@ -2083,32 +2083,37 @@ const VIEW_DEFINITION_PRESETS = {
 };
 
 // ── 配列複製 UI ───────────────────────────────────────────────
+let _lastArrayDupOpts = null;
+
 function _buildArrayDuplicateHTML() {
+  const o = _lastArrayDupOpts || {};
+  const mode = o.mode || "linear";
+  const v = (val, fallback) => (val === undefined || val === null ? fallback : val);
   const body = `
     <div class="prop-row">
       <label>${t("props.array.mode")}</label>
       <select id="array-dup-mode">
-        <option value="linear">${t("props.array.mode.linear")}</option>
-        <option value="polar">${t("props.array.mode.polar")}</option>
-        <option value="grid">${t("props.array.mode.grid")}</option>
+        <option value="linear"${mode === "linear" ? " selected" : ""}>${t("props.array.mode.linear")}</option>
+        <option value="polar"${mode === "polar" ? " selected" : ""}>${t("props.array.mode.polar")}</option>
+        <option value="grid"${mode === "grid" ? " selected" : ""}>${t("props.array.mode.grid")}</option>
       </select>
     </div>
-    <div id="array-dup-params-linear">
-      <div class="prop-row"><label>${t("props.array.count")}</label><input type="number" id="array-dup-count" value="3" min="1" step="1"></div>
-      ${pRowUnitById(t("props.array.dx"), "array-dup-dx", "0", "mm", 'step="0.1"')}
-      ${pRowUnitById(t("props.array.dy"), "array-dup-dy", "100", "mm", 'step="0.1"')}
+    <div id="array-dup-params-linear" style="display:${mode === "linear" ? "" : "none"}">
+      <div class="prop-row"><label>${t("props.array.count")}</label><input type="number" id="array-dup-count" value="${v(o.count, 3)}" min="1" step="1"></div>
+      ${pRowUnitById(t("props.array.dx"), "array-dup-dx", String(v(o.dx, 0)), "mm", 'step="0.1"')}
+      ${pRowUnitById(t("props.array.dy"), "array-dup-dy", String(v(o.dy, 100)), "mm", 'step="0.1"')}
     </div>
-    <div id="array-dup-params-polar" style="display:none">
-      <div class="prop-row"><label>${t("props.array.count")}</label><input type="number" id="array-dup-polar-count" value="6" min="2" step="1"></div>
-      ${pRowUnitById(t("props.array.cx"), "array-dup-cx", "0", "mm", 'step="0.1"')}
-      ${pRowUnitById(t("props.array.cy"), "array-dup-cy", "0", "mm", 'step="0.1"')}
-      ${pRowUnitById(t("props.array.angle"), "array-dup-angle", "", "°", `placeholder="${t("props.array.anglePlaceholder")}" step="1"`)}
+    <div id="array-dup-params-polar" style="display:${mode === "polar" ? "" : "none"}">
+      <div class="prop-row"><label>${t("props.array.count")}</label><input type="number" id="array-dup-polar-count" value="${v(o.count, 6)}" min="2" step="1"></div>
+      ${pRowUnitById(t("props.array.cx"), "array-dup-cx", String(v(o.cx, 0)), "mm", 'step="0.1"')}
+      ${pRowUnitById(t("props.array.cy"), "array-dup-cy", String(v(o.cy, 0)), "mm", 'step="0.1"')}
+      ${pRowUnitById(t("props.array.angle"), "array-dup-angle", v(o.angle, ""), "°", `placeholder="${t("props.array.anglePlaceholder")}" step="1"`)}
     </div>
-    <div id="array-dup-params-grid" style="display:none">
-      <div class="prop-row"><label>${t("props.array.cols")}</label><input type="number" id="array-dup-cols" value="3" min="1" step="1"></div>
-      <div class="prop-row"><label>${t("props.array.rows")}</label><input type="number" id="array-dup-rows" value="3" min="1" step="1"></div>
-      ${pRowUnitById(t("props.array.dx"), "array-dup-grid-dx", "100", "mm", 'step="0.1"')}
-      ${pRowUnitById(t("props.array.dy"), "array-dup-grid-dy", "100", "mm", 'step="0.1"')}
+    <div id="array-dup-params-grid" style="display:${mode === "grid" ? "" : "none"}">
+      <div class="prop-row"><label>${t("props.array.cols")}</label><input type="number" id="array-dup-cols" value="${v(o.cols, 3)}" min="1" step="1"></div>
+      <div class="prop-row"><label>${t("props.array.rows")}</label><input type="number" id="array-dup-rows" value="${v(o.rows, 3)}" min="1" step="1"></div>
+      ${pRowUnitById(t("props.array.dx"), "array-dup-grid-dx", String(v(o.dx, 100)), "mm", 'step="0.1"')}
+      ${pRowUnitById(t("props.array.dy"), "array-dup-grid-dy", String(v(o.dy, 100)), "mm", 'step="0.1"')}
     </div>
     <div class="prop-multi-actions">
       <button id="btn-array-duplicate">${t("props.array.run")}</button>
@@ -2171,6 +2176,7 @@ function _bindArrayDuplicateEvents(container) {
           100;
       }
 
+      _lastArrayDupOpts = opts;
       const newIds = arrayDuplicate(opts);
       if (newIds.length) {
         render();
