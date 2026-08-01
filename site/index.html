@@ -3,14 +3,14 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Millrect — 2D作図・多ビュー3D・STL出力 | ブラウザ &amp; macOS</title>
+    <title>Millrect — 2D作図・多ビュー3D・STL出力</title>
     <meta
       name="description"
-      content="2D図面から3Dモデルを生成する軽量CAD。ブラウザで無料、macOSデスクトップ版はAI連携（MCP）対応。寸法・レイヤー・正投影図・STL出力。"
+      content="2D図面から3Dモデルを生成する軽量CAD。ブラウザで無料。寸法・レイヤー・正投影図・STL出力。"
     />
     <meta
       name="keywords"
-      content="Millrect,2D作図,CAD,3D,STL,正投影,多ビュー,ブラウザCAD,macOS,MCP"
+      content="Millrect,2D作図,CAD,3D,STL,正投影,多ビュー,ブラウザCAD"
     />
     <meta name="author" content="JIROMO" />
     <meta name="robots" content="index, follow" />
@@ -28,7 +28,7 @@
     />
     <meta
       property="og:description"
-      content="2D図面から3Dを導出。ブラウザで試せ、macOS版はAI連携（MCP）に対応。"
+      content="2D図面から3Dを導出。ブラウザですぐに試せます。"
     />
     <meta
       property="og:image"
@@ -40,7 +40,7 @@
     <meta name="twitter:title" content="Millrect — 2D作図・多ビュー3D" />
     <meta
       name="twitter:description"
-      content="2D図面から3Dモデルを生成。ブラウザ無料、macOSデスクトップ版はMCP対応。"
+      content="2D図面から3Dモデルを生成。ブラウザで無料。"
     />
     <meta
       name="twitter:image"
@@ -61,16 +61,15 @@
             "@type": "SoftwareApplication",
             "name": "Millrect",
             "applicationCategory": "DesignApplication",
-            "operatingSystem": "Web Browser, macOS",
+            "operatingSystem": "Web Browser",
             "softwareVersion": "0.1.0",
             "url": "https://millrect.com/app/",
-            "downloadUrl": "https://github.com/JIROMO/Millrect/releases/latest",
             "offers": {
               "@type": "Offer",
               "price": "0",
               "priceCurrency": "USD"
             },
-            "description": "SVGベースの2D作図と多ビューCSGによる3D生成。STL出力、MCP連携（macOS）。"
+            "description": "SVGベースの2D作図と多ビューCSGによる3D生成。STL出力。"
           }
         ]
       }
@@ -111,8 +110,7 @@
             <a class="is-active" href="/" hreflang="ja" lang="ja">日本語</a>
             <a href="en/" hreflang="en" lang="en">English</a>
           </div>
-          <a class="btn btn-secondary" href="app/">ブラウザで試す</a>
-          <a class="btn btn-primary" href="#download">ダウンロード</a>
+          <a class="btn btn-primary" href="app/">ブラウザで試す</a>
         </nav>
       </div>
     </header>
@@ -128,21 +126,11 @@
               出力も。
             </p>
             <div class="hero-actions">
-              <a class="btn btn-primary" href="#download"
-                >デスクトップ版をダウンロード</a
-              >
-              <a class="btn btn-secondary" href="app/">ブラウザで試す</a>
+              <a class="btn btn-primary" href="app/">ブラウザで試す</a>
               <a class="btn btn-secondary" href="docs/">ドキュメント</a>
             </div>
             <p class="hero-note">
-              デスクトップ版は AI 連携（MCP）・テキストの 3D
-              輪郭化に対応。初回リリースは
-              <a
-                href="https://github.com/JIROMO/Millrect/releases"
-                rel="noopener noreferrer"
-                >GitHub Releases</a
-              >
-              から（未署名・無料）。
+              インストール不要。ログインも不要です。
             </p>
           </div>
           <div class="hero-visual">
@@ -174,32 +162,6 @@
               <h3>3D プレビュー</h3>
               <p>投影図が揃えば立体化。STL 出力も可能。</p>
             </article>
-            <article class="feature-card">
-              <h3>AI 連携（デスクトップ）</h3>
-              <p>
-                Claude Desktop などから MCP
-                経由で図面操作。ブラウザ版では利用できません。
-              </p>
-            </article>
-          </div>
-        </div>
-      </section>
-
-      <section class="download" id="download">
-        <div class="container">
-          <div class="download-panel">
-            <div>
-              <span class="eyebrow">デスクトップ版</span>
-              <h2>本番向けはアプリをインストール</h2>
-              <p>
-                macOS（Apple Silicon / Intel）向け。Windows 版は未定です。
-                現時点は<strong>未署名</strong>のプレリリースです。初回起動時に
-                OS の警告が出る場合があります —
-                <a href="docs/desktop-download.html">インストール手順</a
-                >を参照してください。
-              </p>
-            </div>
-            <div class="download-actions" data-millrect-download></div>
           </div>
         </div>
       </section>
@@ -210,9 +172,7 @@
             <div>
               <h2>まずはブラウザで触ってみる</h2>
               <p>
-                ログイン不要。インストールも不要です。AI 連携やテキストの 3D
-                輪郭化が必要になったら
-                <a href="#download">デスクトップ版</a>へ。
+                ログイン不要。インストールも不要です。
               </p>
             </div>
             <a class="btn btn-primary" href="app/">Web アプリを開く</a>
@@ -229,12 +189,9 @@
             >GitHub</a
           >
           <a href="docs/">ドキュメント</a>
-          <a href="docs/desktop-download.html">ダウンロード</a>
           <a href="app/">Web アプリ</a>
         </div>
       </div>
     </footer>
-    <script src="packages/download-config.js"></script>
-    <script src="site/js/download-buttons.js"></script>
   </body>
 </html>

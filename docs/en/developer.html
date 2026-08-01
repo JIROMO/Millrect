@@ -37,7 +37,7 @@
       <h1>Developer Guide</h1>
       <p class="docs-lead">
         Technical reference for the Millrect repository: layout, architecture, data schemas, global APIs,
-        MCP / WebSocket integration, and Electron distribution.
+        MCP / WebSocket integration, and the Hono Worker architecture.
         <strong>This is not for everyday drawing users.</strong> It is written for contributors, MCP agent developers,
         and anyone inspecting the internal implementation.
       </p>
@@ -52,7 +52,7 @@
           <li><a href="#schemas">Data schemas</a></li>
           <li><a href="#api">Global API</a></li>
           <li><a href="#mcp">MCP / WebSocket</a></li>
-          <li><a href="#electron">Electron</a></li>
+          <li><a href="#electron">Legacy Electron</a></li>
           <li><a href="#patterns">Known patterns &amp; gotchas</a></li>
         </ul>
       </nav>
@@ -60,25 +60,22 @@
       <h2 id="dev-setup">Development setup</h2>
       <p>After cloning the repository, install dependencies with Node.js and launch the app.</p>
       <pre><code>npm install
+npm --prefix worker install
 npm run fonts:fetch   # Gen Interface JP (first run / updates)
-npm run dev           # Electron development
-npm run build         # Package build (dist/)</code></pre>
+npm run dev           # Hono Worker development
+npm run build         # Web deployment build (dist/)</code></pre>
       <p>
         Bundled fonts (<a href="https://gen.typesetting.jp/" target="_blank" rel="noopener">Gen Interface JP</a>) may not be in the Git tree.
-        Run <code>npm run fonts:fetch</code> before text rendering or outline conversion works.
+        Run <code>npm run fonts:fetch</code> before text rendering works.
         The app UI, docs, and landing page use the same typeface (<code>app/fonts/</code>, <code>docs/fonts/</code>, <code>site/fonts/</code>).
       </p>
       <p>
-        You can serve <code>app/index.html</code> with a static server to try the UI in a browser, but
-        the MCP WebSocket, text outline, and file dialogs require the Electron build.
-      </p>
-      <p>
-        Desktop release procedure (version bump, build, GitHub Release):
-        <code>docs/RELEASE.md</code> (Japanese: <code>docs/RELEASE.ja.md</code>).
+        <code>npm run dev</code> serves the static site, web app, and MCP endpoint from one Hono Worker.
+        Use <code>npm run deploy</code> for production deployment.
       </p>
       <p>
         E2E tests: <code>npm run test:e2e</code> (Playwright).
-        MCP server alone: <code>node mcp/server.js</code> while Millrect is running.
+        Worker typecheck: <code>npm --prefix worker run typecheck</code>.
       </p>
 
       <h2 id="project-layout">Project layout</h2>
@@ -97,10 +94,9 @@ npm run build         # Package build (dist/)</code></pre>
 │   └── *.js             # Isomorphic modules shared by renderer / MCP / tests (Part DSL, digitize, fonts, etc.)
 ├── docs/fonts/          # Docs webfonts (woff2)
 ├── site/                # Landing pages + assets (index.html→/, en/index.html→/en/, css/js/images/fonts)
-├── main.js              # Electron main process + WS server (ws://127.0.0.1:23450)
-├── preload.js           # contextBridge → window.electronAPI
-├── mcp/server.js        # MCP stdio adapter (maps to WS actions)
-├── electron/            # Native helpers (Core Text text outline, etc.)
+├── worker/              # Hono Worker, MCP HTTP, Durable Object
+├── shared/              # Shared MCP tool metadata
+├── main.js / preload.js # Legacy Electron implementation, not distributed
 ├── docs/                # User guide + this page
 ├── tests/e2e/           # Playwright E2E
 ├── scripts/             # Release build, screenshot generation
@@ -112,8 +108,8 @@ npm run build         # Package build (dist/)</code></pre>
       </p>
       <p>
         Boundary rule: runnable products belong under <code>apps/</code>; reusable libraries belong
-        under <code>packages/</code>. The existing 2D editor is still in <code>app/</code> for
-        compatibility with Electron, build packaging, docs, and tests. When it is moved, the target
+        under <code>packages/</code>. The existing 2D editor remains in <code>app/</code> for
+        web, docs, and test compatibility. When it is moved, the target
         should be <code>apps/millrect-editor</code>, not <code>packages/</code>. Only reusable 2D
         primitives such as drawing schema, profile extraction, command reducers, or rendering helpers
         should be split into packages.
@@ -195,7 +191,7 @@ Three.js display</code></pre>
           <tr><td><code>js/db.js</code></td><td>IndexedDB persistence (autosave)</td></tr>
           <tr><td><code>js/renderer.js</code></td><td><code>render()</code> — redraw SVG from state</td></tr>
           <tr><td><code>js/interaction.js</code></td><td>Mouse events, text edit dialog</td></tr>
-          <tr><td><code>js/text-outline.js</code></td><td>Native text preview and <code>outlineTextShape()</code></td></tr>
+          <tr><td><code>js/text-outline.js</code></td><td>Native text preview</td></tr>
           <tr><td><code>js/path-editor.js</code></td><td>Bezier draw/edit overlay</td></tr>
           <tr><td><code>js/ui.js</code></td><td>DOM wiring, tabs, resize, panel toggles</td></tr>
           <tr><td><code>js/commands.js</code></td><td>Undo/Redo, shape CRUD, Boolean ops</td></tr>
@@ -366,10 +362,9 @@ exportSTL()</code></pre>
 
       <h2 id="mcp">MCP / WebSocket</h2>
       <p>
-        While Millrect is running, <code>main.js</code> starts a WebSocket server at
-        <code>ws://127.0.0.1:23450</code> (or port+1 if busy).
-        The auth token is written to <code>~/.millrect/millrect-ws-token</code>.
-        <code>mcp/server.js</code> bridges stdio MCP ↔ WebSocket.
+        <code>worker/src/index.ts</code> serves <code>/mcp</code> (Streamable HTTP) through the official
+        <code>@modelcontextprotocol/hono</code> adapter. The browser connects to <code>/mcp/ws</code>;
+        a per-session Durable Object relays tool calls to the active tab.
       </p>
 
       <div class="docs-callout docs-callout-note">
@@ -386,16 +381,16 @@ exportSTL()</code></pre>
       <table>
         <thead><tr><th>Layer</th><th>Naming</th><th>Used by</th></tr></thead>
         <tbody>
-          <tr><td>MCP tools</td><td><code>snake_case</code></td><td>Claude Desktop, etc. (<code>mcp/server.js</code>)</td></tr>
-          <tr><td>WS <code>action</code></td><td><code>camelCase</code></td><td>Direct WebSocket (<code>main.js</code>)</td></tr>
+          <tr><td>MCP tools</td><td><code>snake_case</code></td><td>Remote MCP clients</td></tr>
+          <tr><td>WS <code>action</code></td><td><code>camelCase</code></td><td>Worker ↔ browser relay</td></tr>
           <tr><td><code>apply_commands</code> body</td><td><code>camelCase</code></td><td>Document ops like <code>addShape</code></td></tr>
         </tbody>
       </table>
 
       <h3 id="mcp-workflow">Basic workflow</h3>
       <ol class="docs-steps">
-        <li><strong>Launch Millrect</strong> — WS server and token file are created</li>
-        <li><strong>Connect MCP client</strong> — register <code>node mcp/server.js</code></li>
+        <li><strong>Open Millrect in a browser</strong> — start the Agent connection</li>
+        <li><strong>Connect an MCP client</strong> — register the displayed pairing URL</li>
         <li><strong><code>get_project_context</code></strong> — check new vs in-progress, profile count, viewDefinition</li>
         <li><strong>Prefer Intent API</strong> — <code>create_multiview_box</code>, <code>validate_3d_readiness</code>, etc.</li>
         <li><strong>Fine edits</strong> — <code>apply_commands</code> for individual shapes</li>
@@ -430,7 +425,6 @@ exportSTL()</code></pre>
           <tr><td><code>create_multiview_box</code></td><td><code>createMultiviewBox</code></td><td>mm multiview box</td></tr>
           <tr><td><code>create_part</code></td><td><code>createPart</code></td><td>Semantic part generation</td></tr>
           <tr><td><code>layout_rect_mm</code></td><td><code>layoutRectOnPageMm</code></td><td>Center mm rectangle</td></tr>
-          <tr><td><code>load_reference_image</code></td><td><code>loadReferenceImageFromFile</code></td><td>Place reference image</td></tr>
           <tr><td><code>set_reference_scale_anchor</code></td><td><code>setReferenceImageScaleAnchor</code></td><td>Scale from 2 points + mm</td></tr>
           <tr><td><code>digitize_sketch</code></td><td><code>applyDigitizeProposals</code></td><td>Ghost shape proposals</td></tr>
           <tr><td><code>confirm_digitize_proposals</code></td><td><code>confirmDigitizeProposals</code></td><td>Confirm ghosts</td></tr>
@@ -438,10 +432,8 @@ exportSTL()</code></pre>
           <tr><td><code>apply_part_dsl</code></td><td><code>applyPartDsl</code></td><td>Part DSL → drawing</td></tr>
           <tr><td><code>validate_manufacturability</code></td><td><code>validatePartManufacturability</code></td><td>Manufacturing rules check</td></tr>
           <tr><td><code>update_part_param</code></td><td><code>updatePartParam</code></td><td>Update part parameter</td></tr>
-          <tr><td><code>import_part_dsl_file</code></td><td><code>importPartDslFile</code></td><td>Load <code>.mlr-part.json</code></td></tr>
           <tr><td><code>list_docs_scenarios</code></td><td><code>listDocsScenarios</code></td><td>Docs scenario catalog</td></tr>
           <tr><td><code>run_docs_scenario</code></td><td><code>runDocsScenario</code></td><td>Apply scenario</td></tr>
-          <tr><td><code>capture_screenshot</code></td><td>(main process)</td><td>PNG capture</td></tr>
         </tbody>
       </table>
 
@@ -465,8 +457,8 @@ exportSTL()</code></pre>
         </tbody>
       </table>
 
-      <h2 id="electron">Electron</h2>
-      <p>The desktop app loads <code>app/index.html</code> in Electron.</p>
+      <h2 id="electron">Legacy Electron implementation</h2>
+      <p>This section is retained for maintenance of the retired desktop implementation. The current product is distributed only as the Hono-hosted web app.</p>
 
       <h3>Security</h3>
       <ul>
@@ -485,15 +477,14 @@ exportSTL()</code></pre>
           <tr><td><code>saveProjectJson</code> / <code>openProjectJson</code></td><td>JSON file dialogs</td></tr>
           <tr><td><code>saveSvg</code> / <code>savePdf</code></td><td>Save SVG / PDF</td></tr>
           <tr><td><code>openImageFile</code></td><td>Reference / canvas images</td></tr>
-          <tr><td><code>readFont</code> / <code>outlineTextShape</code> / <code>measureTextLayout</code></td><td>Text rendering and outline</td></tr>
-          <tr><td><code>readFontLibrary</code> / <code>writeFontLibrary</code></td><td>User font library persistence</td></tr>
+          <tr><td><code>readFont</code> / <code>outlineTextShape</code> / <code>measureTextLayout</code></td><td>Glyph paths for native text preview</td></tr>
           <tr><td><code>openHelpTopic(page, anchor)</code></td><td>In-app help modal</td></tr>
           <tr><td><code>setAppLocale(locale)</code></td><td>UI language switch</td></tr>
           <tr><td><code>onMenu(channel, callback)</code></td><td>Menu bar events (undo, export, help, etc.)</td></tr>
           <tr><td><code>isDesktopApp</code></td><td><code>true</code> (undefined in browser)</td></tr>
         </tbody>
       </table>
-      <p>Electron-only: text outline (macOS Core Text → fontkit fallback), MCP WebSocket, file I/O.</p>
+      <p>Electron-only: native text preview (macOS Core Text → fontkit fallback), MCP WebSocket, file I/O.</p>
 
       <h2 id="patterns">Known patterns &amp; gotchas</h2>
       <ul>

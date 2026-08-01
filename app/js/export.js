@@ -188,6 +188,101 @@ async function importProjectJsonFromFile() {
     input.click();
   });
 }
+// ── 全プロジェクト一括バックアップ（IndexedDB 内の全データをまとめて export/import）──
+function isMillrectBackupJson(data) {
+  return (
+    !!data &&
+    typeof data === "object" &&
+    data.millrectBackup === true &&
+    Array.isArray(data.projects)
+  );
+}
+
+async function exportAllProjectsBackup() {
+  const list = await dbListProjects();
+  const projects = [];
+  for (const proj of list) {
+    const full = await dbLoadProject(proj.id);
+    if (!full?.data) continue;
+    projects.push({
+      id: full.id,
+      name: full.name || "",
+      updatedAt: full.updatedAt,
+      thumbnail: full.thumbnail || "",
+      data: full.data,
+    });
+  }
+  const now = new Date();
+  const ts =
+    now.getFullYear().toString() +
+    String(now.getMonth() + 1).padStart(2, "0") +
+    String(now.getDate()).padStart(2, "0") +
+    String(now.getHours()).padStart(2, "0") +
+    String(now.getMinutes()).padStart(2, "0");
+  const backup = {
+    millrectBackup: true,
+    version: 1,
+    exportedAt: now.toISOString(),
+    projects,
+  };
+  await dl(
+    JSON.stringify(backup),
+    `millrect_backup_${ts}.json`,
+    "application/json",
+  );
+  return projects.length;
+}
+
+async function _readJsonFile() {
+  if (window.electronAPI) {
+    const result = await window.electronAPI.openProjectJson();
+    if (!result) throw new Error("No file");
+    return JSON.parse(result.json);
+  }
+  return new Promise((resolve, reject) => {
+    const input = document.createElement("input");
+    input.type = "file";
+    input.accept = ".json,application/json";
+    input.onchange = () => {
+      const file = input.files[0];
+      if (!file) return reject(new Error("No file"));
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        try {
+          resolve(JSON.parse(e.target.result));
+        } catch (err) {
+          reject(err);
+        }
+      };
+      reader.readAsText(file);
+    };
+    input.click();
+  });
+}
+
+async function importAllProjectsFromFile() {
+  const raw = await _readJsonFile();
+  if (!isMillrectBackupJson(raw)) {
+    const err = new Error("NotMillrectBackup");
+    err.code = "NotMillrectBackup";
+    throw err;
+  }
+  let imported = 0;
+  for (const proj of raw.projects) {
+    if (!proj?.id || typeof proj.data !== "string") continue;
+    let parsed;
+    try {
+      parsed = JSON.parse(proj.data);
+    } catch {
+      continue;
+    }
+    if (!isMillrectProjectJson(parsed)) continue;
+    await dbSaveProject(proj.id, proj.name || "", proj.data, proj.thumbnail || "");
+    imported++;
+  }
+  return imported;
+}
+
 async function importSvgFromFile() {
   return new Promise((resolve, reject) => {
     const input = document.createElement("input");
@@ -661,7 +756,12 @@ function _prepareDimensionForExport(dimEl) {
     const div = fo.firstElementChild;
     const fontSize = parseFloat(div?.style?.fontSize || "3") || 3;
     const fill = div?.style?.color || "#1a1a2e";
-    const fontFamily = div?.style?.fontFamily || DEFAULT_TEXT_FONT_FAMILY;
+    // PDF出力は svg2pdf 経由で jsPDF 標準フォントへマッピングされる。
+    // DEFAULT_TEXT_FONT_FAMILY（同梱の独自フォント）名は jsPDF 側に存在せず
+    // times（明朝体）へフォールバックしてしまうため、sans-serif 系トークンを
+    // 明示してゴシック体（helvetica）に解決させる。
+    const fontFamily =
+      div?.style?.fontFamily || "Helvetica,Arial,sans-serif";
     const text = se("text", {
       x: x + w / 2,
       y: y + h / 2,

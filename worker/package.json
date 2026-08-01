@@ -1,0 +1,24 @@
+{
+  "name": "millrect-worker",
+  "private": true,
+  "version": "0.0.1",
+  "type": "module",
+  "scripts": {
+    "dev": "wrangler dev --config ../wrangler.jsonc",
+    "build": "wrangler deploy --dry-run --config ../wrangler.jsonc --outdir dist/worker",
+    "deploy": "wrangler deploy --config ../wrangler.jsonc",
+    "typecheck": "tsc --noEmit",
+    "cf-typegen": "wrangler types src/worker-configuration.d.ts --config ../wrangler.jsonc --env-interface CloudflareBindings --include-runtime=false"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/hono": "^2.0.0",
+    "@modelcontextprotocol/server": "^2.0.0",
+    "hono": "^4.6.0",
+    "zod": "^4"
+  },
+  "devDependencies": {
+    "@cloudflare/workers-types": "^5",
+    "typescript": "^5.7.0",
+    "wrangler": "latest"
+  }
+}

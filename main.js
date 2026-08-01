@@ -979,6 +979,29 @@ async function openImageFileDialog() {
   };
 }
 
+ipcMain.handle("print:page", async (event) => {
+  const win = BrowserWindow.fromWebContents(event.sender);
+  if (!win) return;
+  // 以前ここでは「一度PDF化してから、そのPDFをビューア用ウィンドウで開いて
+  // 印刷する」方式を試したが、Chromium 内蔵PDFビューアの UI（ツールバー・
+  // ページサムネイル・ズーム%等）ごと印刷されてしまう不具合を引き起こした。
+  // 印刷内容に紛れ込んでいた「タイトル」は実際には印刷モードCSSで隠し忘れて
+  // いた #project-tabs（プロジェクトタブバー）だったため、そちらを app.css 側
+  // で修正済み。印刷自体はウィンドウを直接印刷するシンプルな方式に戻す。
+  //
+  // ヘッダー/フッターはOSまかせにせず #print-header/#print-footer としてアプリ側
+  // でDOMに描画し、印刷モードのチェックボックスで表示/非表示を切り替える
+  // （画面プレビューと実際の印刷内容を完全に一致させるため）。そのため
+  // marginType は常に 'none' にして、OS側が別のヘッダー/フッターを重ねて
+  // 追加しないようにする。
+  return new Promise((resolve) => {
+    win.webContents.print(
+      { silent: false, printBackground: true, margins: { marginType: "none" } },
+      () => resolve(),
+    );
+  });
+});
+
 ipcMain.handle("dialog:saveProjectJson", saveProjectJsonDialog);
 ipcMain.handle("dialog:openProjectJson", openProjectJsonDialog);
 ipcMain.handle("dialog:openImageFile", openImageFileDialog);
@@ -1013,39 +1036,6 @@ ipcMain.handle("dialog:savePdf", async (_, { defaultName, buffer }) => {
   if (!filePath) return null;
   fs.writeFileSync(filePath, Buffer.from(buffer));
   return filePath;
-});
-
-function _fontLibraryPath() {
-  return path.join(app.getPath("userData"), "fonts-library.json");
-}
-
-function _fontCatalogCachePath() {
-  return path.join(app.getPath("userData"), "font-catalog-cache.json");
-}
-
-function _readJsonFileSafe(filePath) {
-  try {
-    if (!fs.existsSync(filePath)) return null;
-    return JSON.parse(fs.readFileSync(filePath, "utf8"));
-  } catch {
-    return null;
-  }
-}
-
-ipcMain.handle("fontLibrary:read", async () =>
-  _readJsonFileSafe(_fontLibraryPath()),
-);
-
-ipcMain.handle("fontLibrary:write", async (_, data) => {
-  fs.writeFileSync(_fontLibraryPath(), JSON.stringify(data, null, 2));
-});
-
-ipcMain.handle("fontCatalog:read", async () =>
-  _readJsonFileSafe(_fontCatalogCachePath()),
-);
-
-ipcMain.handle("fontCatalog:write", async (_, data) => {
-  fs.writeFileSync(_fontCatalogCachePath(), JSON.stringify(data, null, 2));
 });
 
 ipcMain.handle("font:read", async (_, { family, style }) => {

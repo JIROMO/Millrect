@@ -49,10 +49,6 @@ function initUI() {
   bindToolbar();
   bindPageSettings();
   bindReferenceImageSettings();
-  bindProjectFonts();
-  if (typeof hydrateFontLibrary === "function") {
-    hydrateFontLibrary().then(() => updateProjectFontsPanel());
-  }
   bindKeyShortcuts();
   initSidebarTabs();
   const sidebar = document.getElementById("sidebar-right");
@@ -159,17 +155,6 @@ function _pageSettingsSignature(state, page) {
   });
 }
 
-function _projectFontsSignature(state) {
-  const projectFonts = state.fonts || [];
-  const libraryFonts =
-    typeof getFontLibraryFonts === "function" ? getFontLibraryFonts() : [];
-  return JSON.stringify({
-    locale: _uiLocaleKey(),
-    projectFonts,
-    libraryFonts,
-  });
-}
-
 async function applyOpenedProject({
   projectId,
   json,
@@ -230,10 +215,6 @@ function updateAll() {
   const pagesSig = _pageListSignature(state);
   if (_uiCacheChanged("pages", pagesSig) || !pagesEl?.childElementCount) {
     updatePagesList();
-  }
-  const projectFontsSig = _projectFontsSignature(state);
-  if (_uiCacheChanged("projectFonts", projectFontsSig)) {
-    updateProjectFontsPanel();
   }
   const layersEl = document.getElementById("layers-list");
   const layersSig = _layerListSignature(state, page);
@@ -1010,6 +991,18 @@ function updatePropertiesPanel() {
       }
     });
   }
+  const cbDimLabelBg = c.querySelector("#prop-dim-label-bg");
+  if (cbDimLabelBg) {
+    cbDimLabelBg.addEventListener("change", () => {
+      const r = findShapeById(state.selectedShapeIds[0]);
+      if (!r) return;
+      if (cbDimLabelBg.checked) r.shape.labelBg = true;
+      else delete r.shape.labelBg;
+      pushHistory();
+      render();
+      uiUpdate();
+    });
+  }
   // Path/bezier edit-mode toggles now live under the rotation control
   // (bindAlignPositionEvents → #btn-pathedit-toggle).
   const btnTE = c.querySelector("#btn-text-edit");
@@ -1018,15 +1011,6 @@ function updatePropertiesPanel() {
       const r = findShapeById(state.selectedShapeIds[0]);
       if (!r || r.shape.type !== "text") return;
       editTextShape(r.shape);
-    });
-  }
-  const btnTO = c.querySelector("#btn-text-outline");
-  if (btnTO) {
-    btnTO.addEventListener("click", () => {
-      if (btnTO.disabled || !isTextOutlineAvailable()) return;
-      const r = findShapeById(state.selectedShapeIds[0]);
-      if (!r || r.shape.type !== "text") return;
-      void outlineTextShape(r.shape.id);
     });
   }
   const btnDimReset = c.querySelector("#btn-dim-label-reset");
@@ -1168,6 +1152,27 @@ function updatePropertiesPanel() {
         // 半径フィールドを直径に追従させる（パネルは再構築しない方針）
         const rInp = c.querySelector('[data-key="r"]');
         if (rInp) rInp.value = fmtNum(newVal / 2);
+        render();
+        return;
+      }
+      if (key === "line-length") {
+        const newVal = parseFloat(inp.value);
+        if (isNaN(newVal) || newVal < 0) return;
+        const r = findShapeById(sid);
+        if (!r || r.shape.type !== "line") return;
+        const sh = r.shape;
+        const curLen = Math.hypot(sh.x2 - sh.x1, sh.y2 - sh.y1);
+        // 角度は維持し、x1/y1 を起点として x2/y2 だけを新しい長さに合わせる
+        const angle = curLen > 1e-9 ? Math.atan2(sh.y2 - sh.y1, sh.x2 - sh.x1) : 0;
+        const newLen = mmToReal(newVal);
+        const newX2 = sh.x1 + newLen * Math.cos(angle);
+        const newY2 = sh.y1 + newLen * Math.sin(angle);
+        updateShape(sid, { x2: newX2, y2: newY2 });
+        // x2/y2 フィールドを新しい端点に追従させる（パネルは再構築しない方針）
+        const x2Inp = c.querySelector('[data-key="x2"]');
+        if (x2Inp) x2Inp.value = fmtNum(realToMM(newX2));
+        const y2Inp = c.querySelector('[data-key="y2"]');
+        if (y2Inp) y2Inp.value = fmtNum(realToMM(newY2));
         render();
         return;
       }
@@ -1729,9 +1734,13 @@ function buildPropsHTML(s) {
       pRowMm(t("props.y2mm"), "y2", s.y2),
     );
     geometry.push(
-      pRO(
+      pRowUnit(
         t("props.length"),
-        fmtNum(realToMM(Math.hypot(s.x2 - s.x1, s.y2 - s.y1))) + " mm",
+        "line-length",
+        fmtNum(realToMM(Math.hypot(s.x2 - s.x1, s.y2 - s.y1))),
+        "mm",
+        "number",
+        "mm",
       ),
     );
     geometry.push(
@@ -1843,14 +1852,8 @@ function buildPropsHTML(s) {
       ),
       pSel(t("props.textAlign"), "textAlign", s.textAlign || "left", alignOpts),
     );
-    const outlineAvail =
-      typeof isTextOutlineAvailable === "function" && isTextOutlineAvailable();
     geometry.push(
-      `<div class="prop-multi-actions"><button id="btn-text-edit">${t("props.textEdit")}</button><button id="btn-text-outline"${
-        outlineAvail
-          ? ""
-          : ` disabled title="${t("props.textOutlineDisabled")}"`
-      }>${t("props.textOutline")}</button></div>`,
+      `<div class="prop-multi-actions"><button id="btn-text-edit">${t("props.textEdit")}</button></div>`,
     );
   } else if (s.type === "path") {
     let minX = Infinity,
@@ -1926,6 +1929,7 @@ function buildPropsHTML(s) {
       `<div class="prop-row"><label>${t("props.dimColor")}</label><input type="color" data-key="color" value="${s.color || "#1a1a2e"}"></div>`,
       pRowUnit(t("props.lineWidthMm"), "lineWidth", s.lineWidth ?? 0.25, "mm"),
       pRowUnit(t("props.textSizeMm"), "textSize", s.textSize ?? 3.0, "mm"),
+      `<label class="prop-checkbox-row"><input type="checkbox" id="prop-dim-label-bg"${s.labelBg === true ? " checked" : ""}/> <span>${t("props.dimLabelBg")}</span></label>`,
     ];
     dimFormat = [
       `<div class="prop-row"><label>${t("props.prefix")}</label><input type="text" data-key="prefix" value="${s.prefix || ""}" placeholder="${t("props.prefixPlaceholder")}"></div>`,
@@ -2187,138 +2191,6 @@ function _bindArrayDuplicateEvents(container) {
 
 function updatePageSettings() {
   updatePageSettingsLabels();
-}
-
-function updateProjectFontsPanel() {
-  const list = document.getElementById("project-fonts-list");
-  const libList = document.getElementById("font-library-list");
-  const err = document.getElementById("project-font-error");
-  if (!list) return;
-  const fonts = getProjectFonts();
-  list.innerHTML = "";
-  if (!fonts.length) {
-    const li = document.createElement("li");
-    li.className = "project-font-empty";
-    li.textContent = t("font.noneRegistered");
-    list.appendChild(li);
-  } else {
-    for (const f of fonts) {
-      const li = document.createElement("li");
-      li.className = "project-font-item";
-      li.innerHTML = `<span class="project-font-name">${String(f.family).replace(/&/g, "&amp;").replace(/</g, "&lt;")}</span><button type="button" class="project-font-remove" data-font-id="${f.id}" title="${t("font.remove")}">×</button>`;
-      list.appendChild(li);
-    }
-  }
-  if (libList) {
-    const library =
-      typeof getFontLibraryFonts === "function" ? getFontLibraryFonts() : [];
-    libList.innerHTML = "";
-    if (!library.length) {
-      const li = document.createElement("li");
-      li.className = "project-font-empty";
-      li.textContent = t("font.libraryEmpty");
-      libList.appendChild(li);
-    } else {
-      for (const f of library) {
-        const inProject = fonts.some(
-          (p) => p.family.toLowerCase() === String(f.family).toLowerCase(),
-        );
-        const li = document.createElement("li");
-        li.className = "project-font-item font-library-item";
-        li.innerHTML =
-          `<span class="project-font-name">${String(f.family).replace(/&/g, "&amp;").replace(/</g, "&lt;")}</span>` +
-          (inProject
-            ? `<span class="font-library-badge">${t("font.inUse")}</span>`
-            : `<button type="button" class="font-library-add" data-library-id="${f.id}" title="${t("font.addToProject")}">＋</button>`) +
-          `<button type="button" class="project-font-remove font-library-remove" data-library-id="${f.id}" title="${t("font.removeFromLibrary")}">×</button>`;
-        libList.appendChild(li);
-      }
-    }
-  }
-  if (err && document.activeElement?.id !== "project-font-url") {
-    err.textContent = "";
-    err.hidden = true;
-  }
-}
-
-function bindProjectFonts() {
-  const input = document.getElementById("project-font-url");
-  const btn = document.getElementById("project-font-add-btn");
-  const browseBtn = document.getElementById("project-font-browse-btn");
-  const list = document.getElementById("project-fonts-list");
-  const libList = document.getElementById("font-library-list");
-  const err = document.getElementById("project-font-error");
-  if (!input || !btn || btn.dataset.bound) return;
-  btn.dataset.bound = "1";
-
-  const setError = (message) => {
-    if (!err) return;
-    err.textContent = message || "";
-    err.hidden = !message;
-  };
-
-  const submit = async () => {
-    const url = input.value.trim();
-    if (!url) {
-      setError(t("font.urlRequired"));
-      return;
-    }
-    btn.disabled = true;
-    setError("");
-    try {
-      await registerGoogleFontCssUrl(url);
-      input.value = "";
-      setError("");
-      updateProjectFontsPanel();
-      updatePropertiesPanel();
-    } catch (e) {
-      setError(e.message || String(e));
-    } finally {
-      btn.disabled = false;
-    }
-  };
-
-  btn.addEventListener("click", () => {
-    submit();
-  });
-  input.addEventListener("keydown", (e) => {
-    if (e.key === "Enter") {
-      e.preventDefault();
-      submit();
-    }
-  });
-  browseBtn?.addEventListener("click", () => {
-    if (typeof openFontBrowserModal === "function") {
-      openFontBrowserModal({ addToProject: true });
-    }
-  });
-  list?.addEventListener("click", (e) => {
-    const rm = e.target.closest(".project-font-remove");
-    if (!rm) return;
-    removeProjectFont(rm.dataset.fontId);
-    updateProjectFontsPanel();
-    updatePropertiesPanel();
-    render();
-  });
-  libList?.addEventListener("click", async (e) => {
-    const addBtnEl = e.target.closest(".font-library-add");
-    if (addBtnEl) {
-      setError("");
-      try {
-        await addLibraryFontToProject(addBtnEl.dataset.libraryId);
-        updateProjectFontsPanel();
-        updatePropertiesPanel();
-        render();
-      } catch (errAdd) {
-        setError(errAdd.message || String(errAdd));
-      }
-      return;
-    }
-    const rmLib = e.target.closest(".font-library-remove");
-    if (!rmLib) return;
-    await removeLibraryFont(rmLib.dataset.libraryId);
-    updateProjectFontsPanel();
-  });
 }
 
 function bindPageSettings() {
@@ -2661,15 +2533,12 @@ function bindKeyShortcuts() {
       e.preventDefault();
       const step = e.shiftKey ? 100 : 10;
       const [dx, dy] = arrowMap[e.key].map((v) => v * step);
-      const page = getCurrentPage();
+      // 寸法線は page.dimensions[] にあり layer.shapes には入らないため、
+      // 手動でレイヤーを走査するこれまでの実装では見つからず動かせなかった。
+      // findShapeById は寸法線も解決できるのでそちらを使う。
       for (const id of getState().selectedShapeIds) {
-        for (const layer of page.layers) {
-          const s = layer.shapes.find((sh) => sh.id === id);
-          if (s) {
-            shiftShape(s, dx, dy);
-            break;
-          }
-        }
+        const res = findShapeById(id);
+        if (res?.shape) shiftShape(res.shape, dx, dy);
       }
       pushHistory();
       render();
@@ -2874,6 +2743,8 @@ function showProjectList() {
           <button id="pl-btn-new" class="startup-primary pl-action-primary">${t("startup.newProject")}</button>
           <div class="pl-actions-secondary">
             <button id="pl-btn-import" class="pl-btn-secondary">${t("startup.importJson")}</button>
+            <button id="pl-btn-export-all" class="pl-btn-secondary">${t("startup.exportAll")}</button>
+            <button id="pl-btn-import-all" class="pl-btn-secondary">${t("startup.importAll")}</button>
           </div>
         </div>
         <div class="pl-section">
@@ -3053,6 +2924,50 @@ function showProjectList() {
             return;
           }
           console.warn(e);
+        }
+      });
+
+    overlay
+      .querySelector("#pl-btn-export-all")
+      .addEventListener("click", async (e) => {
+        const btn = e.currentTarget;
+        const original = btn.textContent;
+        btn.disabled = true;
+        try {
+          const count = await exportAllProjectsBackup();
+          alert(t("startup.exportAllDone", { count }));
+        } catch (err) {
+          console.warn(err);
+          alert(t("startup.exportAllError", { message: err.message }));
+        } finally {
+          btn.disabled = false;
+          btn.textContent = original;
+        }
+      });
+
+    overlay
+      .querySelector("#pl-btn-import-all")
+      .addEventListener("click", async (e) => {
+        const btn = e.currentTarget;
+        try {
+          const count = await importAllProjectsFromFile();
+          await renderGrid();
+          alert(t("startup.importAllDone", { count }));
+        } catch (err) {
+          if (err.message === "No file") return;
+          if (err.code === "NotMillrectBackup") {
+            alert(t("common.alert.notMillrectBackup"));
+            return;
+          }
+          if (err instanceof SyntaxError) {
+            alert(
+              t("common.alert.projectJsonParseError", {
+                message: err.message,
+              }),
+            );
+            return;
+          }
+          console.warn(err);
         }
       });
   });

@@ -1,8 +1,6 @@
 # Millrect
 
 [![License: MIT](https://img.shields.io/github/license/JIROMO/Millrect)](LICENSE)
-[![Release](https://img.shields.io/github/v/release/JIROMO/Millrect)](https://github.com/JIROMO/Millrect/releases/latest)
-[![Downloads](https://img.shields.io/github/downloads/JIROMO/Millrect/total)](https://github.com/JIROMO/Millrect/releases)
 [![Website](https://img.shields.io/badge/website-millrect.com-5965f9)](https://millrect.com/)
 [![Docs](https://img.shields.io/badge/docs-ユーザーガイド-71717a)](docs/index.html)
 
@@ -10,7 +8,7 @@
 
 **2D の正投影図を描くと、3D と STL を導出する軽量 CAD（3D プリント向け）。**
 
-Millrect はブラウザまたは macOS デスクトップで使えます。**2D 図面**が本体で、上面・正面・側面などから **3D を再生成**します。
+Millrect はブラウザで使える軽量CADです。**2D 図面**が本体で、上面・正面・側面などから **3D を再生成**します。
 
 ## 試してみる
 
@@ -32,19 +30,15 @@ Millrect はブラウザまたは macOS デスクトップで使えます。**2D
 
 ## 起動
 
-| | |
-|---|---|
-| **ブラウザ** | [millrect.com/app](https://millrect.com/app/) — インストール不要 |
-| **デスクトップ** | [GitHub Releases](https://github.com/JIROMO/Millrect/releases) から macOS DMG（[インストール手順](docs/desktop-download.html)） |
+**ブラウザ** | [millrect.com/app](https://millrect.com/app/) — インストール不要
 
 ```bash
 npm install
+npm --prefix worker install
 npm run fonts:fetch   # Gen Interface JP（テキスト・UI に必要）
-npm run dev           # 開発（Electron）
-npm run build         # パッケージビルド（dist/）
+npm run dev           # Hono + Cloudflare Workers 開発サーバー
+npm run build         # Web配布物を dist/ にビルド
 ```
-
-リリース手順（メンテナ向け）: [`docs/RELEASE.ja.md`](docs/RELEASE.ja.md)
 
 ## 言語
 

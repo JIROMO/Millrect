@@ -513,6 +513,14 @@ html.is-desktop #boot-loading {
   overflow: hidden;
 }
 
+/* 通常編集時は #main-svg をそのまま満たすだけの素通しラッパー。
+   印刷モード時のみ用紙サイズぴったりの実体（ヘッダー/フッターの配置基準）になる */
+#print-page-wrap {
+  width: 100%;
+  height: 100%;
+  display: block;
+}
+
 #main-svg {
   width: 100%;
   height: 100%;
@@ -3400,24 +3408,8 @@ button.ctx-item {
   display: block;
 }
 
-/* Project fonts (Google Fonts URL) */
-.project-fonts-panel {
-  padding: 4px var(--panel-pad) var(--panel-pad);
-}
-.project-font-hint {
-  margin: 0 0 8px;
-  font-size: 10px;
-  line-height: 1.45;
-  color: var(--text-3);
-}
-.project-font-add-row {
-  flex-direction: column;
-  align-items: stretch;
-  gap: 6px;
-}
-.project-font-add-row > label:first-child {
-  width: auto;
-}
+/* 汎用の input+button 行スタイル（class名はフォント取り込みUI由来だが、
+   参照画像パネルの各行でも共通ボタン/入力スタイルとして再利用されている） */
 .project-font-add-controls {
   display: flex;
   gap: 6px;
@@ -3448,43 +3440,6 @@ button.ctx-item {
 .project-font-add-btn:disabled {
   opacity: 0.5;
   cursor: default;
-}
-.project-font-error {
-  margin: 6px 0 0;
-  font-size: 10px;
-  color: #dc2626;
-}
-.project-fonts-list {
-  list-style: none;
-  margin: 10px 0 0;
-  padding: 0;
-}
-.project-font-item,
-.project-font-empty {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 8px;
-  min-height: 28px;
-  padding: 4px 0;
-  font-size: 11px;
-  color: var(--text-2);
-  border-top: 1px solid var(--panel-divider);
-}
-.project-font-empty {
-  color: var(--text-3);
-}
-.project-font-remove {
-  border: none;
-  background: transparent;
-  color: var(--text-3);
-  cursor: pointer;
-  font-size: 14px;
-  line-height: 1;
-  padding: 2px 4px;
-}
-.project-font-browse-row {
-  margin-bottom: 8px;
 }
 .project-font-browse-btn {
   width: 100%;
@@ -3558,214 +3513,6 @@ button.ctx-item {
   flex-shrink: 0;
   white-space: nowrap;
 }
-.project-font-section {
-  margin-top: 10px;
-}
-.project-font-section-title {
-  font-size: 10px;
-  font-weight: 600;
-  color: var(--text-3);
-  margin-bottom: 4px;
-}
-.font-library-badge {
-  font-size: 9px;
-  color: var(--text-3);
-  flex-shrink: 0;
-}
-.font-library-add {
-  border: none;
-  background: transparent;
-  color: var(--text-2);
-  cursor: pointer;
-  font-size: 13px;
-  line-height: 1;
-  padding: 2px 4px;
-}
-.font-library-add:hover {
-  color: var(--text);
-}
-
-/* Font browser modal */
-#font-browser-overlay {
-  position: fixed;
-  inset: 0;
-  background: rgba(0, 0, 0, 0.55);
-  backdrop-filter: blur(2px);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  z-index: 10050;
-  padding: 24px;
-}
-#font-browser-dialog {
-  background: var(--surface-1, #1e1e1e);
-  border: 1px solid var(--border, #3a3a3a);
-  border-radius: 12px;
-  padding: 20px 24px 18px;
-  width: min(560px, calc(100vw - 48px));
-  max-height: min(720px, calc(100vh - 48px));
-  display: flex;
-  flex-direction: column;
-  color: var(--text, #e8e8e8);
-  box-shadow: 0 24px 64px rgba(0, 0, 0, 0.45);
-}
-#font-browser-dialog h2 {
-  margin: 0 0 6px;
-  font-size: 15px;
-  font-weight: 600;
-}
-.font-browser-desc {
-  margin: 0 0 12px;
-  font-size: 11px;
-  color: var(--text-3, #888);
-  line-height: 1.45;
-}
-.font-browser-toolbar {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-  align-items: center;
-  margin-bottom: 8px;
-}
-.font-browser-search {
-  flex: 1 1 180px;
-  min-width: 0;
-  height: 32px;
-  padding: 0 10px;
-  border: 1px solid var(--border, #3a3a3a);
-  border-radius: 6px;
-  background: var(--surface-2, #2e2e2e);
-  color: var(--text, #e8e8e8);
-  font: inherit;
-  font-size: 12px;
-}
-.font-browser-filter {
-  display: flex;
-  align-items: center;
-  gap: 4px;
-  font-size: 11px;
-  color: var(--text-2, #aaa);
-  white-space: nowrap;
-}
-.font-browser-category {
-  height: 32px;
-  padding: 0 8px;
-  border: 1px solid var(--border, #3a3a3a);
-  border-radius: 6px;
-  background: var(--surface-2, #2e2e2e);
-  color: var(--text, #e8e8e8);
-  font-size: 11px;
-}
-.font-browser-status {
-  font-size: 10px;
-  color: var(--text-3, #888);
-  margin-bottom: 4px;
-}
-.font-browser-list {
-  list-style: none;
-  margin: 0;
-  padding: 0;
-  flex: 1 1 auto;
-  min-height: 160px;
-  max-height: 280px;
-  overflow: auto;
-  border: 1px solid var(--border, #3a3a3a);
-  border-radius: 8px;
-  background: var(--surface-2, #2e2e2e);
-}
-.font-browser-item {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 8px;
-  padding: 8px 10px;
-  font-size: 12px;
-  cursor: pointer;
-  border-bottom: 1px solid var(--panel-divider, #333);
-}
-.font-browser-item:last-child {
-  border-bottom: none;
-}
-.font-browser-item:hover {
-  background: rgba(255, 255, 255, 0.04);
-}
-.font-browser-item.selected {
-  background: rgba(37, 99, 235, 0.18);
-}
-.font-browser-item-name {
-  min-width: 0;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-.font-browser-item-meta {
-  flex-shrink: 0;
-  font-size: 10px;
-  color: var(--text-3, #888);
-}
-.font-browser-empty,
-.font-browser-more {
-  padding: 12px 10px;
-  font-size: 11px;
-  color: var(--text-3, #888);
-}
-.font-browser-preview {
-  margin-top: 10px;
-  padding: 8px 10px;
-  border: 1px solid var(--border, #3a3a3a);
-  border-radius: 8px;
-  background: var(--surface-2, #2e2e2e);
-}
-.font-browser-preview-label {
-  display: block;
-  font-size: 10px;
-  color: var(--text-3, #888);
-  margin-bottom: 4px;
-}
-.font-browser-preview-text {
-  margin: 0;
-  font-size: 20px;
-  line-height: 1.4;
-}
-.font-browser-option {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  margin-top: 10px;
-  font-size: 11px;
-  color: var(--text-2, #aaa);
-}
-.font-browser-error {
-  margin: 8px 0 0;
-  font-size: 11px;
-  color: #dc2626;
-}
-.font-browser-actions {
-  display: flex;
-  justify-content: flex-end;
-  gap: 8px;
-  margin-top: 14px;
-}
-.font-browser-actions button {
-  height: 32px;
-  padding: 0 14px;
-  border: 1px solid var(--border, #3a3a3a);
-  border-radius: 6px;
-  background: var(--surface-2, #2e2e2e);
-  color: var(--text, #e8e8e8);
-  font-size: 12px;
-  cursor: pointer;
-}
-.font-browser-add {
-  background: #2563eb;
-  border-color: #2563eb;
-  color: #fff;
-}
-.font-browser-add:disabled {
-  opacity: 0.5;
-  cursor: default;
-}
-
 /* ════════════════════════════════════════════════════
    PRINT MODE
    ════════════════════════════════════════════════════ */
@@ -3821,7 +3568,28 @@ button.ctx-item {
   width: 14px;
   height: 14px;
 }
+#print-mode-header-footer {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  height: 26px;
+  padding: 0 8px;
+  border: 1px solid var(--border-2);
+  border-radius: 5px;
+  background: var(--surface-2);
+  color: var(--text-2);
+  font-family: var(--font-sans);
+  font-size: 11px;
+  white-space: nowrap;
+  cursor: pointer;
+  user-select: none;
+}
+#print-mode-header-footer input {
+  margin: 0;
+  cursor: pointer;
+}
 #app.mode-print #toolbar,
+#app.mode-print #project-tabs,
 #app.mode-print #sidebar-left,
 #app.mode-print #sidebar-right,
 #app.mode-print #zoom-controls,
@@ -3843,7 +3611,10 @@ button.ctx-item {
   overflow: auto;
   padding: 64px 24px 40px;
 }
-#app.mode-print #main-svg {
+/* ヘッダー/フッターの絶対配置は用紙そのものを表す #print-page-wrap 基準にする
+   （#canvas-container 基準だとスクロール余白・パディングの分だけ用紙とズレる） */
+#app.mode-print #print-page-wrap {
+  position: relative;
   flex: 0 0 auto;
   width: var(--print-paper-width, 297mm);
   height: var(--print-paper-height, 210mm);
@@ -3851,6 +3622,10 @@ button.ctx-item {
   box-shadow:
     0 0 0 1px rgba(0, 0, 0, 0.12),
     0 12px 34px rgba(0, 0, 0, 0.22);
+}
+#app.mode-print #main-svg {
+  width: 100%;
+  height: 100%;
   cursor: default;
 }
 #app.mode-print #main-svg * {
@@ -3858,6 +3633,115 @@ button.ctx-item {
 }
 #app.mode-print #print-mode-bar {
   display: flex;
+}
+/* ヘッダー/フッターのオーバーレイ本体は画面プレビュー用・@media print 用を
+   1箇所にまとめて後方で定義する（screen preview と実印刷で見た目を揃えるため） */
+
+/* ── エージェント接続パネル ──────────────────────────────────── */
+#agent-panel {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  z-index: 190;
+  width: 300px;
+  padding: 12px 14px 14px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--surface);
+  color: var(--text-2);
+  box-shadow: 0 10px 28px rgba(0, 0, 0, 0.22);
+}
+#agent-panel[hidden] {
+  display: none;
+}
+.agent-panel-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 8px;
+  color: var(--text);
+  font-size: 12px;
+  font-weight: 600;
+}
+.agent-panel-header button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  border: none;
+  border-radius: 5px;
+  background: transparent;
+  color: var(--text-2);
+  cursor: pointer;
+}
+.agent-panel-header button:hover {
+  background: var(--surface-2);
+}
+.agent-panel-status {
+  margin: 0 0 10px;
+  font-size: 11px;
+}
+.agent-panel-status[data-state="connected"] {
+  color: #22c55e;
+}
+.agent-panel-status[data-state="connecting"] {
+  color: #eab308;
+}
+.agent-panel-status[data-state="error"] {
+  color: #dc2626;
+}
+.agent-panel-field-label {
+  display: block;
+  margin-bottom: 4px;
+  font-size: 10px;
+  color: var(--text-3);
+}
+.agent-panel-url-row {
+  display: flex;
+  gap: 6px;
+  margin-bottom: 10px;
+}
+.agent-panel-url-row input {
+  flex: 1;
+  min-width: 0;
+  height: 26px;
+  padding: 0 8px;
+  border: 1px solid var(--border-2);
+  border-radius: 5px;
+  background: var(--surface-2);
+  color: var(--text);
+  font-size: 10px;
+}
+.agent-panel-url-row button {
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  height: 26px;
+  border: 1px solid var(--border-2);
+  border-radius: 5px;
+  background: var(--surface-2);
+  color: var(--text);
+  cursor: pointer;
+}
+.agent-panel-actions {
+  display: flex;
+  gap: 6px;
+}
+.agent-panel-actions button {
+  flex: 1;
+  height: 26px;
+  border: 1px solid var(--border-2);
+  border-radius: 5px;
+  background: var(--surface-2);
+  color: var(--text);
+  font-size: 11px;
+  cursor: pointer;
+}
+.agent-panel-actions button:hover {
+  background: var(--surface-3);
 }
 
 @media print {
@@ -3877,6 +3761,7 @@ button.ctx-item {
     height: var(--print-paper-height, 210mm);
   }
   #toolbar,
+  #project-tabs,
   #sidebar-left,
   #sidebar-right,
   #zoom-controls,
@@ -3888,7 +3773,15 @@ button.ctx-item {
     display: none !important;
   }
   #workspace,
-  #canvas-area,
+  #canvas-area {
+    position: static !important;
+    display: block !important;
+    width: var(--print-paper-width, 297mm) !important;
+    height: var(--print-paper-height, 210mm) !important;
+    padding: 0 !important;
+    overflow: visible !important;
+    background: #fff !important;
+  }
   #canvas-container {
     position: static !important;
     display: block !important;
@@ -3898,6 +3791,15 @@ button.ctx-item {
     overflow: visible !important;
     background: #fff !important;
   }
+  /* ヘッダー/フッターの絶対配置の基準は用紙そのものを表す #print-page-wrap
+     （#canvas-container 基準だとレイアウトの余白分だけ用紙とズレる） */
+  #print-page-wrap {
+    position: relative !important;
+    display: block !important;
+    width: var(--print-paper-width, 297mm) !important;
+    height: var(--print-paper-height, 210mm) !important;
+    background: #fff !important;
+  }
   #main-svg {
     display: block !important;
     width: var(--print-paper-width, 297mm) !important;
@@ -3905,6 +3807,41 @@ button.ctx-item {
     background: #fff !important;
     box-shadow: none !important;
   }
+}
+
+/* 表題欄（図面の右下に置く定番のタイトルブロック）。画面プレビュー
+   #app.mode-print と実際の @media print の両方で同じ見た目になるよう
+   共通定義する。印刷モードバーのチェックボックスで #app に show-print-hf
+   クラスが付いた時だけ表示する。 */
+#print-titleblock {
+  display: none;
+  position: absolute;
+  right: 6mm;
+  bottom: 6mm;
+  border-collapse: collapse;
+  background: #fff;
+  font-family: var(--font-sans);
+  font-size: 2.6mm;
+  color: #1a1a2e;
+  pointer-events: none;
+}
+#print-titleblock th,
+#print-titleblock td {
+  border: 0.25mm solid #1a1a2e;
+  padding: 1mm 2.5mm;
+  text-align: left;
+  font-weight: 400;
+  white-space: nowrap;
+}
+#print-titleblock th {
+  background: #f2f2f2;
+  width: 20mm;
+}
+#print-titleblock td {
+  min-width: 45mm;
+}
+#app.mode-print.show-print-hf #print-titleblock {
+  display: table;
 }
 
 /* ════════════════════════════════════════════════════

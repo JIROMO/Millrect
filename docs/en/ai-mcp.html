@@ -36,7 +36,7 @@
       <nav class="docs-breadcrumb"><a href="./">Documentation</a> / AI / MCP</nav>
       <h1>AI Integration (Optional)</h1>
       <p class="docs-lead">
-        Connect Millrect to AI assistants such as Claude Desktop to operate the app remotely.
+        Connect the browser version of Millrect to AI assistants that support remote MCP.
         This is not required for normal drawing — use it when you want AI help creating drawings.
       </p>
 
@@ -59,55 +59,30 @@
 
       <h2 id="requirements">Requirements</h2>
       <ul>
-        <li>Millrect must be running (AI integration is only active while the app is open)</li>
-        <li>An AI client that supports MCP (Model Context Protocol), such as Claude Desktop</li>
-        <li><a href="#mcp-setup">MCP server configuration</a> (bundled with the desktop app; requires <strong>Node.js</strong> on PATH)</li>
+        <li><a href="https://millrect.com/app/">Millrect in your browser</a></li>
+        <li>An AI client that supports Streamable HTTP MCP</li>
+        <li>The pairing URL shown in Millrect’s Agent connection panel</li>
       </ul>
 
       <h2 id="mcp-setup">MCP server setup</h2>
       <p>
-        The desktop build bundles an MCP server. While Millrect is running, point your AI client at:
-      </p>
-      <table>
-        <thead><tr><th>Environment</th><th>Example path to <code>server.js</code></th></tr></thead>
-        <tbody>
-          <tr>
-            <td>macOS (.app)</td>
-            <td><code>/Applications/Millrect.app/Contents/Resources/mcp/server.js</code></td>
-          </tr>
-          <tr>
-            <td>Windows</td>
-            <td><code>C:\Program Files\Millrect\resources\mcp\server.js</code> (depends on install dir)</td>
-          </tr>
-          <tr>
-            <td>Development (repo)</td>
-            <td><code>mcp/server.js</code></td>
-          </tr>
-        </tbody>
-      </table>
-      <p>Claude Desktop (<code>claude_desktop_config.json</code>) example:</p>
-      <pre><code>{
-  "mcpServers": {
-    "millrect": {
-      "command": "node",
-      "args": ["/Applications/Millrect.app/Contents/Resources/mcp/server.js"]
-    }
-  }
-}</code></pre>
-      <p>
-        On Windows, use the path from the table above and escape backslashes for JSON.
-        Launch <strong>Millrect first</strong>, then restart Claude Desktop.
+        Open the Agent connection panel from the Millrect toolbar and press <strong>Start</strong>.
+        Register the displayed <code>https://millrect.com/mcp?session=…</code> URL as a remote
+        MCP server in your AI client.
       </p>
       <p>
-        Other MCP clients (e.g. Cursor) use the same <code>node</code> + <code>server.js</code> entry.
+        The pairing URL is a connection key for the current project. Do not publish it.
+        Use <strong>New session</strong> to rotate it when needed. No local Node.js server is required.
+      </p>
+      <p>
         See the <a href="developer.html#mcp">Developer guide (MCP)</a> and <code>AGENT.md</code> in the repository for agent instructions.
       </p>
 
       <h2 id="workflow">Basic workflow with AI</h2>
       <ol class="docs-steps">
         <li>
-          <strong>Launch Millrect</strong><br>
-          Open the app as usual and create or open a project.
+          <strong>Open Millrect in a browser</strong><br>
+          Create or open a project, then start the Agent connection.
         </li>
         <li>
           <strong>Connect the AI client to Millrect</strong><br>
@@ -136,7 +111,7 @@
           <tr><td>Intent API</td><td><code>create_multiview_box</code>, <code>layout_rect_mm</code></td><td>Generate drawings from width/depth/height in mm</td></tr>
           <tr><td>Part DSL</td><td><code>compile_part_dsl</code>, <code>apply_part_dsl</code>, <code>update_part_param</code></td><td>Create boxes, panels, L-brackets, enclosures, holes, slots, and fillets declaratively</td></tr>
           <tr><td>Manufacturing check</td><td><code>validate_manufacturability</code></td><td>Check hole size, wall thickness, fillet, and other rule warnings</td></tr>
-          <tr><td>Review</td><td><code>capture_screenshot</code>, <code>append_artifact_log</code></td><td>Record visual review and feed the next revision</td></tr>
+          <tr><td>Review</td><td><code>get_svg</code></td><td>Inspect the current page SVG and feed the next revision</td></tr>
         </tbody>
       </table>
 
@@ -162,11 +137,11 @@
       <ol class="docs-steps">
         <li>
           <strong>Place reference image</strong><br>
-          MCP <code>load_reference_image</code>, or UI: Pages → Reference image → <strong>Load image</strong>.
+          UI: Pages → Reference image → <strong>Load image</strong>.
         </li>
         <li>
           <strong>Move &amp; resize (optional)</strong><br>
-          UI: <strong>Move &amp; resize</strong> → adjust on canvas → click the same button again to exit. MCP can also set <code>x</code> / <code>y</code> / <code>widthMm</code> on <code>load_reference_image</code>.
+          UI: <strong>Move &amp; resize</strong> → adjust on canvas → click the same button again to exit.
         </li>
         <li>
           <strong>Calibrate scale</strong><br>

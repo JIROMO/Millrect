@@ -9,14 +9,13 @@ All functions are exposed in the global scope and can be called via `window.xxx(
 
 ## MCP reference
 
-When operating via the MCP server (`mcp/server.js`), this manual is published as a Resource.
+The Hono Worker publishes this manual as a Resource through the remote `/mcp` endpoint.
 
 | Resource URI | Content |
 |--------------|---------|
 | `millrect://docs/agent-manual` | Full manual (this document) |
 | `millrect://docs/workflow` | Operation checklist (short) |
 | `millrect://docs/mcp-reference` | **Supplement:** full MCP tool list + `apply_commands` actions |
-| `millrect://docs/taste-memory` | [docs/TASTE-MEMORY.md](docs/TASTE-MEMORY.md) — Taste Memory (Project / Global / Artifact layers) |
 
 Standard prompts: `operate_drawing` (2D), `create_3d_model` (multiview 3D).
 
@@ -63,7 +62,7 @@ absolute coordinates, or `"center"` to force centering.
 **Workflow (agent or human):**
 
 ```
-load_reference_image          → underlay on current page
+Browser UI: load image        → underlay on current page
 set_reference_scale_anchor    → 2 points + length_mm (or UI: Pages → Reference image → Calibrate scale)
 digitize_sketch               → proposals[] as ghost shapes (semi-transparent, dashed)
 confirm_digitize_proposals    → ghosts become normal shapes (3D profiles enabled)
@@ -86,14 +85,11 @@ validate_3d_readiness         → check before 3D
 
 | MCP tool | WS action | Purpose |
 |----------|-----------|---------|
-| `load_reference_image` | `loadReferenceImageFromFile` | Image file → `page.referenceImage` |
 | `set_reference_scale_anchor` | `setReferenceImageScaleAnchor` | Scale underlay from 2 points + mm |
 | `digitize_sketch` | `applyDigitizeProposals` | Place proposals as ghosts (`confirm: true` to finalize in one step) |
 | `confirm_digitize_proposals` | `confirmDigitizeProposals` | Remove ghost flag from shapes |
 
-### Documentation via MCP (Electron required)
-
-For docs screenshots, **MCP + running Electron** is more accurate than guessing coordinates:
+### Documentation scenarios
 
 Durable documentation-production memory lives in
 [docs/design/documentation-system.md](docs/design/documentation-system.md).
@@ -101,15 +97,12 @@ Before changing generated docs screenshots, read its source-finding notes and
 update scenario code rather than editing PNGs directly.
 
 1. `list_docs_scenarios` → `run_docs_scenario` — reproducible scene (mm-based)
-2. `capture_screenshot` — PNG to `docs/images/...` with `target`, `view_type`, `scenario`
-3. `npm run docs:screenshots` — batch fallback (Playwright script)
+2. `npm run docs:screenshots` — capture with the Playwright documentation script
 
 | MCP tool | Purpose |
 |----------|---------|
 | `list_docs_scenarios` | Scenario catalog |
 | `run_docs_scenario` | Apply named docs scene |
-| `capture_screenshot` | Save PNG (viewport, toolbar, panel_3d, …) |
-| `load_reference_image` | Sketch/photo underlay |
 | `set_reference_scale_anchor` | Calibrate reference scale from 2 points + mm |
 | `digitize_sketch` | Place Vision LLM primitive proposals as ghost shapes (mm) |
 | `confirm_digitize_proposals` | Confirm ghost shapes → normal drawing objects |
@@ -139,7 +132,6 @@ update scenario code rather than editing PNGs directly.
 | `apply_part_dsl` | DSL → geometry in document |
 | `validate_manufacturability` | Manufacturing rules check (no state change) |
 | `update_part_param` | Change params — Solver diff when `partIntent` exists |
-| `import_part_dsl_file` | Load `.mlr-part.json` and apply |
 
 Pipeline: **DSL** → **Compiler** → **Emitter** (`applyPartDsl`) → **Param Solver** (`applyParamBindSolver`) → **Geometry Solver** (`applyConstraints`).
 
@@ -409,27 +401,12 @@ flattenSelectedShapes()           // flatten path/group
 
 ---
 
-## Text outline API (Electron)
+## Project fonts (`state.fonts[]`, legacy compat only)
 
-```js
-isTextOutlineAvailable()          // → boolean
-outlineTextShape(shapeOrId)       // replace text with path group; pushHistory() called
-// Browser-only: shows alert and exits
-// macOS: Core Text; otherwise fontkit
-```
-
-To use text in 3D contours:
-1. `addShape({ type:"text", ... })`
-2. `outlineTextShape(id)` → path group
-3. Set viewDefinition on each page, then `update3DScene()`
-
-No dedicated MCP tool for `outlineTextShape`. After adding text via `apply_commands`, call it over WS (UI operation is usually easier).
-
----
-
-## Project fonts (`state.fonts[]`)
-
-Google Fonts registered via Fontsource API. Part of Undo/export (`DOC_KEYS`).
+The UI to search/register new fonts (Fontsource catalog browser, Google Fonts URL input) has been
+removed. `state.fonts[]` still exists purely for backward compatibility with projects saved before
+the removal — there is no way to add new entries anymore. New projects can only pick from the
+built-in font list (`packages/builtin-fonts.js`).
 
 ```js
 {
@@ -438,21 +415,14 @@ Google Fonts registered via Fontsource API. Part of Undo/export (`DOC_KEYS`).
   cssUrl: "https://fonts.googleapis.com/css2?family=Roboto:wght@400;700&display=swap",
   fileUrl: "https://cdn.jsdelivr.net/fontsource/fonts/roboto@.../latin-400-normal.ttf",
   fileUrlBold: "https://cdn.jsdelivr.net/fontsource/fonts/roboto@.../latin-700-normal.ttf",
-  source: "google",
-  libraryId: "libfont-yyy"
+  source: "google"
 }
 ```
 
-| Action | Function / UI |
-|--------|---------------|
-| Search & register from Fontsource | UI "Find fonts…" → `openFontBrowserModal()` |
-| Register from URL | `registerGoogleFontCssUrl(url)` |
-| Library → project | `addProjectFontFromLibrary(entry)` |
-| Remove from project | `removeProjectFont(fontId)` |
-| Font choices | `getFontFamilyOptions()` → bundled + `fonts[]` |
-
-**Note:** modal lists Fontsource (Google catalog), not system-installed fonts.  
-User library persists in `userData/fonts-library.json` (Electron), separate from project JSON.
+If an existing project has a `text` shape whose `fontFamily` matches an entry in `state.fonts[]`,
+the native preview (`js/text-outline.js`) still fetches that entry's TTF via
+`findProjectFontByFamily`/`fetchProjectFontBytes` (both kept in `js/project-fonts.js`) so it
+renders correctly. `getFontFamilyOptions()` still merges bundled fonts + `state.fonts[]`.
 
 ---
 

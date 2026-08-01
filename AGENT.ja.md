@@ -9,14 +9,13 @@ AI エージェント（Claude / MCP / スクリプト）が Millrect を操作�
 
 ## MCP からの参照
 
-MCP サーバー（`mcp/server.js`）経由で操作する場合、本書は Resource として公開されている。
+Hono Worker はリモート `/mcp` エンドポイントから本書を Resource として公開する。
 
 | Resource URI | 内容 |
 |--------------|------|
 | `millrect://docs/agent-manual` | 本書全文（英語版 `AGENT.md`） |
 | `millrect://docs/workflow` | 操作チェックリスト（短縮版） |
 | `millrect://docs/mcp-reference` | **補足:** MCP ツール全一覧 + `apply_commands` アクション |
-| `millrect://docs/taste-memory` | [docs/TASTE-MEMORY.md](docs/TASTE-MEMORY.md) — 美意識・判断（Project / Global / Artifact 層） |
 
 定型 Prompt: `operate_drawing`（2D 操作）、`create_3d_model`（多ビュー 3D）。
 
@@ -45,7 +44,7 @@ Part DSL 系: `compile_part_dsl` / `apply_part_dsl` / `update_part_param` / `val
 **目的:** 手書きスケッチ/写真 → **編集可能な下書き**。Millrect 内に Vision はない — 外部 LLM が **proposals**（mm）を生成する。
 
 ```
-load_reference_image          → 下絵を現在ページに配置
+ブラウザUIで画像を読み込む      → 下絵を現在ページに配置
 set_reference_scale_anchor    → 2 点 + length_mm（UI: ページ → 参照画像 → スケール校正 も可）
 digitize_sketch               → proposals[] をゴースト図形として配置
 confirm_digitize_proposals    → ゴースト確定（3D Profile 対象に）
@@ -67,7 +66,7 @@ validate_3d_readiness         → 3D 前チェック
 
 | MCP ツール | 用途 |
 |----------|------|
-| `load_reference_image` / `set_reference_scale_anchor` | 下絵 + スケール校正 |
+| `set_reference_scale_anchor` | ブラウザUIで読み込んだ下絵のスケール校正 |
 | `digitize_sketch` | proposals → ゴースト（`confirm: true` で一括確定可） |
 | `confirm_digitize_proposals` | ゴースト → 通常図形 |
 
@@ -350,28 +349,11 @@ flattenSelectedShapes()           // flatten path/group
 
 ---
 
-## テキストアウトライン API（Electron 版）
+## プロジェクトフォント（`state.fonts[]`、レガシー互換のみ）
 
-```js
-isTextOutlineAvailable()          // → boolean。electronAPI.outlineTextShape があるか
-outlineTextShape(shapeOrId)       // テキスト → path の group に置換。pushHistory() 済み
-// ブラウザ単体では alert を出して終了
-// macOS: Core Text、それ以外: fontkit で輪郭生成
-// 表示プレビューとアウトライン化は同じ glyph path を使用（Figma 式）
-```
-
-テキスト図形を 3D 輪郭に使う場合:
-1. `addShape({ type:"text", ... })` で文字を配置
-2. `outlineTextShape(id)` で path の group に変換
-3. 各ページの viewDefinition + 輪郭として `update3DScene()`
-
-MCP からは `outlineTextShape` 専用ツールは未提供。`apply_commands` で text を追加したあと、WS 経由で `outlineTextShape` を呼ぶ必要がある（通常は UI 操作を推奨）。
-
----
-
-## プロジェクトフォント（`state.fonts[]`）
-
-Google Fonts を Fontsource API 経由で登録。Undo / エクスポート対象（`DOC_KEYS` に含む）。
+フォントを検索・登録するUI（Fontsourceカタログ検索、Google Fonts URL入力）は撤去済み。
+`state.fonts[]` 自体は撤去前に保存されたプロジェクトとの後方互換のためだけに残っており、新規に追加する手段はない。
+新規プロジェクトで選べるのは組み込みフォント（`packages/builtin-fonts.js`）のみ。
 
 ```js
 {
@@ -380,21 +362,11 @@ Google Fonts を Fontsource API 経由で登録。Undo / エクスポート対�
   cssUrl: "https://fonts.googleapis.com/css2?family=Roboto:wght@400;700&display=swap",
   fileUrl: "https://cdn.jsdelivr.net/fontsource/fonts/roboto@.../latin-400-normal.ttf",
   fileUrlBold: "https://cdn.jsdelivr.net/fontsource/fonts/roboto@.../latin-700-normal.ttf", // 省略可
-  source: "google",
-  libraryId: "libfont-yyy"   // 任意。ユーザーライブラリ参照
+  source: "google"
 }
 ```
 
-| 操作 | 関数 / UI |
-|------|-----------|
-| Fontsource から検索登録 | UI「フォントを探す…」→ `openFontBrowserModal()` |
-| URL 直接登録 | `registerGoogleFontCssUrl(url)` |
-| ライブラリ → プロジェクト | `addProjectFontFromLibrary(entry)` / UI ライブラリの **＋** |
-| プロジェクトから削除 | `removeProjectFont(fontId)` |
-| フォント選択肢 | `getFontFamilyOptions()` → 同梱 + `fonts[]` |
-
-**注意:** モーダル一覧は Fontsource（Google Fonts カタログ）であり、**PC インストールフォントではない**。
-**ユーザーライブラリ**は `userData/fonts-library.json`（Electron）に永続化され、プロジェクト JSON とは別。
+既存プロジェクトの `text` 図形が `state.fonts[]` の登録フォントを `fontFamily` に持つ場合、ネイティブプレビュー（`js/text-outline.js`）が `findProjectFontByFamily`/`fetchProjectFontBytes`（`js/project-fonts.js` に残存）経由でそのTTFを取得して正しく表示する。`getFontFamilyOptions()` は引き続き組み込み + `state.fonts[]` をマージする。
 
 ---
 

@@ -97,6 +97,65 @@ function addShape(shape) {
   pushHistory(`図形追加 (${shape.type})`);
   return true;
 }
+
+// テンプレート枠（用紙外周の枠 + 表題欄テキスト）を現在ページに追加する。
+// shape.frame=true を付け、iterProfileSourcesFromPage / DXF出力から除外することで
+// 印刷・SVG/PDF出力には表示されつつ 3D生成・CNC出力の対象にはならないようにする。
+function addTemplateFrame() {
+  const layer = getCurrentLayer();
+  if (!layer || layer.locked) return false;
+  const page = getCurrentPage();
+  const state = getState();
+  const { w, h } = getPageCanvasMM(page);
+  const stroke = "#1a1a2e";
+  const marginReal = paperToRealDist(5, page.scale);
+
+  const border = {
+    id: genId("rect"),
+    type: "rect",
+    x: marginReal,
+    y: marginReal,
+    width: w - marginReal * 2,
+    height: h - marginReal * 2,
+    stroke,
+    fill: "none",
+    strokeWidth: "thin",
+    frame: true,
+  };
+
+  const label = [
+    state.projectName,
+    page.name,
+    `S=${page.scale.numerator}:${page.scale.denominator}`,
+  ]
+    .filter(Boolean)
+    .join("   ");
+  const fontSizeMm = 3.2;
+  const padReal = paperToRealDist(3, page.scale);
+  const titleText = {
+    id: genId("text"),
+    type: "text",
+    x: marginReal + padReal,
+    y: h - marginReal - padReal - paperToRealDist(fontSizeMm, page.scale),
+    text: label,
+    fontSize: fontSizeMm,
+    fontFamily: "Helvetica,Arial,sans-serif",
+    fontWeight: "normal",
+    textAlign: "left",
+    lineHeight: 1,
+    stroke,
+    fill: "none",
+    frame: true,
+  };
+
+  layer.shapes.push(border, titleText);
+  if (typeof markShapeDirty === "function") {
+    markShapeDirty(border.id);
+    markShapeDirty(titleText.id);
+  }
+  pushHistory("テンプレート枠追加");
+  return true;
+}
 // 図形単位のロック切替（updateShape のロックガードを迂回する専用ルート）
 function setShapeLocked(id, locked) {
   const res = findShapeById(id);

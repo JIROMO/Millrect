@@ -1,8 +1,6 @@
 # Millrect
 
 [![License: MIT](https://img.shields.io/github/license/JIROMO/Millrect)](LICENSE)
-[![Release](https://img.shields.io/github/v/release/JIROMO/Millrect)](https://github.com/JIROMO/Millrect/releases/latest)
-[![Downloads](https://img.shields.io/github/downloads/JIROMO/Millrect/total)](https://github.com/JIROMO/Millrect/releases)
 [![Website](https://img.shields.io/badge/website-millrect.com-5965f9)](https://millrect.com/)
 [![Docs](https://img.shields.io/badge/docs-user%20guide-71717a)](docs/en/index.html)
 
@@ -10,7 +8,7 @@
 
 **Draw orthographic views in 2D — Millrect derives 3D and STL for 3D printing.**
 
-Millrect is a lightweight CAD app (browser or macOS desktop). You edit **2D drawings** on paper; **3D is regenerated** from top, front, and side views. No install needed in the browser.
+Millrect is a lightweight, browser-based CAD app. You edit **2D drawings** on paper; **3D is regenerated** from top, front, and side views. No install needed.
 
 ## Try 3D
 
@@ -32,19 +30,15 @@ Step-by-step guide: [`docs/en/getting-started.html`](docs/en/getting-started.htm
 
 ## Run locally
 
-| | |
-|---|---|
-| **Browser** | [millrect.com/app](https://millrect.com/app/) — no install |
-| **Desktop** | macOS DMG from [GitHub Releases](https://github.com/JIROMO/Millrect/releases) ([install guide](docs/en/desktop-download.html)) |
+**Browser** | [millrect.com/app](https://millrect.com/app/) — no install
 
 ```bash
 npm install
+npm --prefix worker install
 npm run fonts:fetch   # Gen Interface JP (required for text / UI)
-npm run dev           # development (Electron)
-npm run build         # package build (dist/)
+npm run dev           # Hono + Cloudflare Workers dev server
+npm run build         # build the web deployment into dist/
 ```
-
-Release procedure (maintainers): [`docs/RELEASE.md`](docs/RELEASE.md)
 
 ## Language
 

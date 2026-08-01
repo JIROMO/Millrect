@@ -39,16 +39,12 @@ contextBridge.exposeInMainWorld("electronAPI", {
     ipcRenderer.invoke("dialog:savePdf", { defaultName, buffer }),
   readFont: (family, style) =>
     ipcRenderer.invoke("font:read", { family, style }),
-  readFontLibrary: () => ipcRenderer.invoke("fontLibrary:read"),
-  writeFontLibrary: (data) => ipcRenderer.invoke("fontLibrary:write", data),
-  readFontCatalogCache: () => ipcRenderer.invoke("fontCatalog:read"),
-  writeFontCatalogCache: (data) =>
-    ipcRenderer.invoke("fontCatalog:write", data),
   outlineTextShape: (payload) =>
     ipcRenderer.invoke("font:outlineText", payload),
   measureTextLayout: (payload) =>
     ipcRenderer.invoke("font:measureTextLayout", payload),
   isDesktopApp: true,
+  printPage: () => ipcRenderer.invoke("print:page"),
   openHelpTopic: (page, anchor) =>
     ipcRenderer.invoke("help:openTopic", { page, anchor }),
   setAppLocale: (locale) => ipcRenderer.invoke("app:setLocale", locale),

@@ -277,7 +277,6 @@ function commitBezierPath(closed) {
   });
   _bezierDraw = null;
   const state = getState();
-  state.activeTool = "select";
   state.selectedShapeIds = [id];
   updateToolbar();
   render();

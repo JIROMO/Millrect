@@ -4,11 +4,35 @@ class MillrectCanvas extends HTMLElement {
   connectedCallback() {
     this.innerHTML = `
       <div id="canvas-container">
-        <svg id="main-svg"></svg>
+        <div id="print-page-wrap">
+          <svg id="main-svg"></svg>
+          <table id="print-titleblock">
+            <tr>
+              <th data-i18n="printMode.titleblock.drawing">図名</th>
+              <td id="print-tb-drawing"></td>
+            </tr>
+            <tr>
+              <th data-i18n="printMode.titleblock.project">プロジェクト</th>
+              <td id="print-tb-project"></td>
+            </tr>
+            <tr>
+              <th data-i18n="printMode.titleblock.scale">尺度</th>
+              <td id="print-tb-scale"></td>
+            </tr>
+            <tr>
+              <th data-i18n="printMode.titleblock.date">日付</th>
+              <td id="print-tb-date"></td>
+            </tr>
+          </table>
+        </div>
       </div>
 
       <div id="print-mode-bar" aria-live="polite">
         <span id="print-mode-summary"></span>
+        <label id="print-mode-header-footer" data-i18n-title="printMode.titleblock.toggle.title">
+          <input type="checkbox" id="print-mode-header-footer-checkbox">
+          <span data-i18n="printMode.titleblock.toggle">表題欄</span>
+        </label>
         <button id="print-mode-print" type="button" data-i18n-title="printMode.print.title">
           <i data-lucide="printer"></i>
           <span data-i18n="printMode.print">印刷</span>
@@ -17,6 +41,27 @@ class MillrectCanvas extends HTMLElement {
           <i data-lucide="x"></i>
           <span data-i18n="printMode.exit">終了</span>
         </button>
+      </div>
+
+      <div id="agent-panel" hidden aria-live="polite">
+        <div class="agent-panel-header">
+          <span data-i18n="agentPanel.title">エージェント接続</span>
+          <button id="agent-panel-close" type="button" data-i18n-title="agentPanel.close">
+            <i data-lucide="x"></i>
+          </button>
+        </div>
+        <p class="agent-panel-status" id="agent-panel-status" data-state="disconnected"></p>
+        <label class="agent-panel-field-label" data-i18n="agentPanel.pairingUrl">接続用URL</label>
+        <div class="agent-panel-url-row">
+          <input type="text" id="agent-panel-url" readonly>
+          <button id="agent-panel-copy" type="button" data-i18n-title="agentPanel.copy">
+            <i data-lucide="copy"></i>
+          </button>
+        </div>
+        <div class="agent-panel-actions">
+          <button id="agent-panel-toggle" type="button" data-i18n="agentPanel.start">開始</button>
+          <button id="agent-panel-new-session" type="button" data-i18n="agentPanel.newSession">新しいセッション</button>
+        </div>
       </div>
 
       <div id="dim-hint"></div>

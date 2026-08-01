@@ -156,6 +156,18 @@ function addHitLine(g, x1, y1, x2, y2) {
   );
 }
 
+// 寸法値ラベルの白背景サイズ算出用。文字数×固定文字幅の概算だと実際のグリフ幅と
+// ずれて背景がぴったり覆いきれず、寸法線がラベルにかぶって見えることがあるため、
+// canvas 2D の measureText で実際の描画幅を測る（DOM挿入不要で高速・reflow無し）。
+let _dimLabelMeasureCtx = null;
+function _measureDimLabelWidth(text, fontSizePx, fontFamily) {
+  if (!_dimLabelMeasureCtx) {
+    _dimLabelMeasureCtx = document.createElement("canvas").getContext("2d");
+  }
+  _dimLabelMeasureCtx.font = `${fontSizePx}px ${fontFamily}`;
+  return _dimLabelMeasureCtx.measureText(String(text)).width;
+}
+
 function renderDimensionSVG(dim, scale) {
   const g = se("g", {
     "data-id": dim.id,
@@ -192,6 +204,7 @@ function renderDimensionSVG(dim, scale) {
     anchorX,
     anchorY,
     textAnchor = "middle",
+    centerY = false,
   ) {
     const lox = rtp(dim.textOffsetX || 0, scale);
     const loy = rtp(dim.textOffsetY || 0, scale);
@@ -221,24 +234,32 @@ function renderDimensionSVG(dim, scale) {
     }
 
     // White background rect behind text (also serves as hit area for dragging)
-    const pad = ts * 0.2;
-    const charW = ts * 0.62;
-    const bgW = String(val).length * charW + pad * 2;
+    // 寸法値のデフォルトフォントはスキーマ既定の "Helvetica,Arial,sans-serif"（PDF出力の
+    // フォント解決の都合。renderer.js 内の他箇所と同じデフォルト）。
+    const fontFamily = dim.fontFamily || "Helvetica,Arial,sans-serif";
+    const pad = ts * 0.25;
+    const bgW = _measureDimLabelWidth(val, ts, fontFamily) + pad * 2;
     const bgH = ts * 0.82 + pad; // ascender height + top padding
-    const bgY = ty - ts * 0.82 - pad;
+    // 縦の寸法線は defaultY が既にセグメントの中点（my）なので、背景ボックスも
+    // その中点に対して上下中央になるよう配置する。横の寸法線はこれまで通り
+    // 寸法線の上にテキストが乗る配置（ベースライン基準）を維持する。
+    const bgY = centerY ? ty - (bgH + pad) / 2 : ty - ts * 0.82 - pad;
     const bgX =
       textAnchor === "end"
         ? tx - bgW
         : textAnchor === "start"
           ? tx
           : tx - bgW / 2;
+    // デフォルトは背景なし。labelBg === true のときだけ表示する
+    // （ドラッグ用の当たり判定はどちらの場合も透明で維持する）
+    const showLabelBg = dim.labelBg === true;
     const hitR = se("rect", {
       x: bgX,
       y: bgY,
       width: bgW,
       height: bgH + pad,
-      fill: "white",
-      "fill-opacity": "0.85",
+      fill: showLabelBg ? "white" : "none",
+      "fill-opacity": showLabelBg ? "0.85" : "0",
       stroke: "none",
       rx: ts * 0.15,
       "data-dim-label": dim.id,
@@ -264,7 +285,7 @@ function renderDimensionSVG(dim, scale) {
     );
     labelDiv.className = "millrect-dim-label";
     labelDiv.style.fontSize = `${ts}px`;
-    labelDiv.style.fontFamily = dim.fontFamily || DEFAULT_TEXT_FONT_FAMILY;
+    labelDiv.style.fontFamily = fontFamily;
     labelDiv.style.color = stroke;
     labelDiv.style.lineHeight = `${bgH + pad}px`;
     labelDiv.style.height = "100%";
@@ -387,7 +408,16 @@ function renderDimensionSVG(dim, scale) {
     const rawVal = dimensionValueMM(dim);
     const my = (y1 + y2) / 2;
     const defaultTx = dimX - ts * 0.5;
-    addDimLabel(formatDimValue(rawVal), defaultTx, my, 0, dimX, my, "end");
+    addDimLabel(
+      formatDimValue(rawVal),
+      defaultTx,
+      my,
+      0,
+      dimX,
+      my,
+      "end",
+      true,
+    );
   }
   return g;
 }

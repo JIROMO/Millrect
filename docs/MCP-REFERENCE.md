@@ -11,8 +11,8 @@ For schemas, coordinates, and drawing rules, read `agent-manual` first.
 
 | Layer | Naming | Used by |
 |-------|--------|---------|
-| MCP tools | `snake_case` | Claude Desktop, Cursor (`mcp/server.js`) |
-| WebSocket `action` | `camelCase` | Direct WS (`main.js`) |
+| MCP tools | `snake_case` | Remote MCP clients through `/mcp` |
+| WebSocket `action` | `camelCase` | Hono Worker ↔ browser relay |
 | `apply_commands` body | `camelCase` | `addShape`, `updateShape`, … |
 
 ## MCP tools (snake_case → WS action)
@@ -25,11 +25,9 @@ For schemas, coordinates, and drawing rules, read `agent-manual` first.
 | `compile_part_dsl` | `compilePartDsl` | Part DSL dry-run |
 | `apply_part_dsl` | `applyPartDsl` | Apply Part DSL v1 to document |
 | `update_part_param` | `updatePartParam` | Update W/D/H mm (Solver when `partIntent` exists) |
-| `import_part_dsl_file` | `importPartDslFile` | Load `.mlr-part.json` from disk |
 | `create_part` | `createPart` | Semantic part (`box` + features) |
 | `create_multiview_box` | `createMultiviewBox` | Multiview box in mm |
 | `layout_rect_mm` | `layoutRectOnPageMm` | Centered rect on current page (mm) |
-| `load_reference_image` | `loadReferenceImageFromFile` | Reference image underlay |
 | `set_reference_scale_anchor` | `setReferenceImageScaleAnchor` | 2-point scale calibration (mm) |
 | `digitize_sketch` | `applyDigitizeProposals` | Vision proposals → ghost shapes |
 | `confirm_digitize_proposals` | `confirmDigitizeProposals` | Confirm ghosts → normal shapes |
@@ -54,9 +52,9 @@ For schemas, coordinates, and drawing rules, read `agent-manual` first.
 | `get_3d_scene_status` | `get3DSceneStatus` | 3D status (no regen) |
 | `list_docs_scenarios` | `listDocsScenarios` | Docs screenshot scenarios |
 | `run_docs_scenario` | `runDocsScenario` | Apply docs scenario |
-| `capture_screenshot` | (main process) | PNG capture (Electron) |
 
-**WebSocket:** `ws://127.0.0.1:23450` (retries +1 if busy). Token file: `~/.millrect/millrect-ws-token`.
+The browser connects to `/mcp/ws?session=<id>`. The public MCP endpoint is
+`/mcp?session=<id>`; the session value is a capability key and must not be published.
 
 ## `apply_commands` actions
 
@@ -94,4 +92,4 @@ bbox-based per page, so placement does not affect CSG output.
 
 ## More for contributors
 
-Repository layout, architecture, Electron APIs: [developer.html](developer.html) (JA) · [en/developer.html](en/developer.html) (EN)
+Repository layout and Hono Worker architecture: [developer.html](developer.html) (JA) · [en/developer.html](en/developer.html) (EN)

@@ -36,7 +36,7 @@
       <nav class="docs-breadcrumb"><a href="./">ドキュメント</a> / 開発者ガイド</nav>
       <h1>開発者ガイド</h1>
       <p class="docs-lead">
-        Millrect のリポジトリ構成、アーキテクチャ、データスキーマ、グローバル API、MCP / WebSocket 連携、Electron 配布についての技術リファレンスです。
+        Millrect のリポジトリ構成、Hono Workerアーキテクチャ、データスキーマ、グローバル API、MCP / WebSocket 連携についての技術リファレンスです。
         <strong>日常の作図ユーザー向けではありません。</strong> コントリビューター、MCP エージェント開発者、内部実装を調べる開発者向けに書かれています。
       </p>
 
@@ -50,7 +50,7 @@
           <li><a href="#schemas">データスキーマ</a></li>
           <li><a href="#api">グローバル API</a></li>
           <li><a href="#mcp">MCP / WebSocket</a></li>
-          <li><a href="#electron">Electron</a></li>
+          <li><a href="#electron">旧Electron実装</a></li>
           <li><a href="#patterns">既知のパターンと注意点</a></li>
         </ul>
       </nav>
@@ -58,25 +58,22 @@
       <h2 id="dev-setup">開発環境</h2>
       <p>リポジトリを clone したあと、Node.js で依存関係をインストールして起動します。</p>
       <pre><code>npm install
+npm --prefix worker install
 npm run fonts:fetch   # Gen Interface JP（初回・更新時）
-npm run dev           # Electron 開発起動
-npm run build         # 配布物ビルド（dist/）</code></pre>
+npm run dev           # Hono Worker 開発起動
+npm run build         # Web配布物ビルド（dist/）</code></pre>
       <p>
         同梱フォント（<a href="https://gen.typesetting.jp/" target="_blank" rel="noopener">Gen Interface JP</a>）は Git に含まれない場合があります。
-        テキスト表示・アウトライン化の前に <code>npm run fonts:fetch</code> を実行してください。
+        テキスト表示の前に <code>npm run fonts:fetch</code> を実行してください。
         アプリ UI・ドキュメント・ランディングページも同じ書体を使います（<code>app/fonts/</code> · <code>docs/fonts/</code> · <code>site/fonts/</code>）。
       </p>
       <p>
-        ブラウザのみで UI を試す場合は <code>app/index.html</code> を静的サーバーで配信しても動きますが、
-        MCP WebSocket・テキストアウトライン・ファイルダイアログは Electron 版の機能です。
-      </p>
-      <p>
-        デスクトップ版のリリース手順（バージョン bump、ビルド、GitHub Release）は
-        <code>docs/RELEASE.ja.md</code>（英語: <code>docs/RELEASE.md</code>）を参照してください。
+        <code>npm run dev</code> は静的サイト・Webアプリ・MCPを単一のHono Workerで配信します。
+        本番デプロイは <code>npm run deploy</code> です。
       </p>
       <p>
         E2E テスト: <code>npm run test:e2e</code>（Playwright）。
-        MCP サーバー単体: Millrect 起動中に <code>node mcp/server.js</code>。
+        Worker型検査: <code>npm --prefix worker run typecheck</code>。
       </p>
 
       <h2 id="project-layout">プロジェクト構成</h2>
@@ -95,10 +92,9 @@ npm run build         # 配布物ビルド（dist/）</code></pre>
 │   └── *.js             # レンダラー / MCP / テスト共通の isomorphic モジュール（Part DSL, digitize, fonts 等）
 ├── docs/fonts/          # ドキュメント用 webfont（woff2）
 ├── site/                # ランディングページ + 資産（index.html→/、en/index.html→/en/、css/js/images/fonts）
-├── main.js              # Electron メインプロセス + WS サーバー (ws://127.0.0.1:23450)
-├── preload.js           # contextBridge → window.electronAPI
-├── mcp/server.js        # MCP stdio アダプター（WS action に変換）
-├── electron/            # ネイティブヘルパー（Core Text テキストアウトライン等）
+├── worker/              # Hono Worker、MCP HTTP、Durable Object
+├── shared/              # MCPツールの共通メタデータ
+├── main.js / preload.js # 配布対象外の旧Electron実装
 ├── docs/                # ユーザーガイド + 本ページ
 ├── tests/e2e/           # Playwright E2E
 ├── scripts/             # リリースビルド、スクリーンショット生成
@@ -110,8 +106,8 @@ npm run build         # 配布物ビルド（dist/）</code></pre>
       </p>
       <p>
         境界ルール: 実行アプリは <code>apps/</code>、再利用可能なライブラリは
-        <code>packages/</code> に置きます。既存の 2D editor は Electron、build packaging、
-        docs、tests との互換性のため、現時点では <code>app/</code> に残しています。
+        <code>packages/</code> に置きます。既存の 2D editor はWeb配信、docs、testsとの
+        互換性のため、現時点では <code>app/</code> に残しています。
         移動する場合の移行先は <code>packages/</code> ではなく
         <code>apps/millrect-editor</code> です。<code>packages/</code> に切り出すのは、
         drawing schema、profile 抽出、command reducer、rendering helper など再利用可能な
@@ -193,7 +189,7 @@ Three.js 表示</code></pre>
           <tr><td><code>js/db.js</code></td><td>IndexedDB 永続化（autosave）</td></tr>
           <tr><td><code>js/renderer.js</code></td><td><code>render()</code> — SVG を state から再描画</td></tr>
           <tr><td><code>js/interaction.js</code></td><td>マウスイベント、テキスト編集ダイアログ</td></tr>
-          <tr><td><code>js/text-outline.js</code></td><td>テキストのネイティブプレビューと <code>outlineTextShape()</code></td></tr>
+          <tr><td><code>js/text-outline.js</code></td><td>テキストのネイティブプレビュー</td></tr>
           <tr><td><code>js/path-editor.js</code></td><td>ベジェ描画・編集オーバーレイ</td></tr>
           <tr><td><code>js/ui.js</code></td><td>DOM 配線、タブ、リサイズ、パネル開閉</td></tr>
           <tr><td><code>js/commands.js</code></td><td>Undo/Redo、shape CRUD、Boolean 演算</td></tr>
@@ -364,9 +360,9 @@ exportSTL()</code></pre>
 
       <h2 id="mcp">MCP / WebSocket</h2>
       <p>
-        Millrect 起動中、<code>main.js</code> が <code>ws://127.0.0.1:23450</code>（ポート使用中なら +1）で WebSocket サーバーを立てます。
-        認証トークンは <code>~/.millrect/millrect-ws-token</code> に書き出されます。
-        <code>mcp/server.js</code> が stdio MCP ↔ WS を橋渡しします。
+        <code>worker/src/index.ts</code> が公式 <code>@modelcontextprotocol/hono</code> アダプターで
+        <code>/mcp</code>（Streamable HTTP）を配信します。ブラウザは <code>/mcp/ws</code> から
+        セッション単位の Durable Object に接続し、MCPツール呼び出しを現在のタブへ中継します。
       </p>
 
       <div class="docs-callout docs-callout-note">
@@ -382,16 +378,16 @@ exportSTL()</code></pre>
       <table>
         <thead><tr><th>レイヤー</th><th>命名</th><th>利用者</th></tr></thead>
         <tbody>
-          <tr><td>MCP ツール</td><td><code>snake_case</code></td><td>Claude Desktop 等（<code>mcp/server.js</code>）</td></tr>
-          <tr><td>WS <code>action</code></td><td><code>camelCase</code></td><td>WebSocket 直叩き（<code>main.js</code>）</td></tr>
+          <tr><td>MCP ツール</td><td><code>snake_case</code></td><td>リモートMCPクライアント</td></tr>
+          <tr><td>WS <code>action</code></td><td><code>camelCase</code></td><td>Worker ↔ ブラウザ中継</td></tr>
           <tr><td><code>apply_commands</code> 内</td><td><code>camelCase</code></td><td><code>addShape</code> 等のドキュメント操作</td></tr>
         </tbody>
       </table>
 
       <h3 id="mcp-workflow">基本ワークフロー</h3>
       <ol class="docs-steps">
-        <li><strong>Millrect を起動</strong> — WS サーバーとトークンファイルが生成される</li>
-        <li><strong>MCP クライアントを接続</strong> — <code>node mcp/server.js</code> を登録</li>
+        <li><strong>Millrectをブラウザで開く</strong> — エージェント接続パネルで開始</li>
+        <li><strong>MCPクライアントを接続</strong> — 表示されたペアリングURLを登録</li>
         <li><strong><code>get_project_context</code></strong> — 新規/作業中、Profile 数、viewDefinition を確認</li>
         <li><strong>Intent API を優先</strong> — <code>create_multiview_box</code> / <code>validate_3d_readiness</code> 等</li>
         <li><strong>微調整</strong> — <code>apply_commands</code> で個別図形編集</li>
@@ -426,7 +422,6 @@ exportSTL()</code></pre>
           <tr><td><code>create_multiview_box</code></td><td><code>createMultiviewBox</code></td><td>mm 指定多ビュー直方体</td></tr>
           <tr><td><code>create_part</code></td><td><code>createPart</code></td><td>セマンティック Part 生成</td></tr>
           <tr><td><code>layout_rect_mm</code></td><td><code>layoutRectOnPageMm</code></td><td>mm 矩形を中央配置</td></tr>
-          <tr><td><code>load_reference_image</code></td><td><code>loadReferenceImageFromFile</code></td><td>参照画像配置</td></tr>
           <tr><td><code>set_reference_scale_anchor</code></td><td><code>setReferenceImageScaleAnchor</code></td><td>2 点 + mm でスケール校正</td></tr>
           <tr><td><code>digitize_sketch</code></td><td><code>applyDigitizeProposals</code></td><td>ゴースト図形提案</td></tr>
           <tr><td><code>confirm_digitize_proposals</code></td><td><code>confirmDigitizeProposals</code></td><td>ゴースト確定</td></tr>
@@ -434,10 +429,8 @@ exportSTL()</code></pre>
           <tr><td><code>apply_part_dsl</code></td><td><code>applyPartDsl</code></td><td>Part DSL → 図面</td></tr>
           <tr><td><code>validate_manufacturability</code></td><td><code>validatePartManufacturability</code></td><td>製造ルール検証</td></tr>
           <tr><td><code>update_part_param</code></td><td><code>updatePartParam</code></td><td>Part パラメータ更新</td></tr>
-          <tr><td><code>import_part_dsl_file</code></td><td><code>importPartDslFile</code></td><td><code>.mlr-part.json</code> 読み込み</td></tr>
           <tr><td><code>list_docs_scenarios</code></td><td><code>listDocsScenarios</code></td><td>ドキュメントシナリオ一覧</td></tr>
           <tr><td><code>run_docs_scenario</code></td><td><code>runDocsScenario</code></td><td>シナリオ適用</td></tr>
-          <tr><td><code>capture_screenshot</code></td><td>（main process）</td><td>PNG キャプチャ</td></tr>
         </tbody>
       </table>
 
@@ -461,8 +454,8 @@ exportSTL()</code></pre>
         </tbody>
       </table>
 
-      <h2 id="electron">Electron</h2>
-      <p>デスクトップ版は Electron で <code>app/index.html</code> を読み込みます。</p>
+      <h2 id="electron">旧Electron実装</h2>
+      <p>以下は配布を終了したデスクトップ版の保守用メモです。現在の製品はHono WorkerからWeb版のみを配信します。</p>
 
       <h3>セキュリティ</h3>
       <ul>
@@ -481,15 +474,14 @@ exportSTL()</code></pre>
           <tr><td><code>saveProjectJson</code> / <code>openProjectJson</code></td><td>JSON ファイルダイアログ</td></tr>
           <tr><td><code>saveSvg</code> / <code>savePdf</code></td><td>SVG / PDF 保存</td></tr>
           <tr><td><code>openImageFile</code></td><td>参照画像・キャンバス画像</td></tr>
-          <tr><td><code>readFont</code> / <code>outlineTextShape</code> / <code>measureTextLayout</code></td><td>テキストレンダリング・アウトライン化</td></tr>
-          <tr><td><code>readFontLibrary</code> / <code>writeFontLibrary</code></td><td>ユーザーフォントライブラリ永続化</td></tr>
+          <tr><td><code>readFont</code> / <code>outlineTextShape</code> / <code>measureTextLayout</code></td><td>テキストのネイティブプレビュー用グリフパス取得</td></tr>
           <tr><td><code>openHelpTopic(page, anchor)</code></td><td>アプリ内ヘルプモーダル</td></tr>
           <tr><td><code>setAppLocale(locale)</code></td><td>UI 言語切替</td></tr>
           <tr><td><code>onMenu(channel, callback)</code></td><td>メニューバーイベント（undo, export, help 等）</td></tr>
           <tr><td><code>isDesktopApp</code></td><td><code>true</code>（ブラウザ版では undefined）</td></tr>
         </tbody>
       </table>
-      <p>Electron 専用: テキストアウトライン化（macOS Core Text → fontkit フォールバック）、MCP WebSocket、ファイル I/O。</p>
+      <p>Electron 専用: テキストのネイティブプレビュー（macOS Core Text → fontkit フォールバック）、MCP WebSocket、ファイル I/O。</p>
 
       <h2 id="patterns">既知のパターンと注意点</h2>
       <ul>

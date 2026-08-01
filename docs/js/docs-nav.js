@@ -14,11 +14,6 @@
         },
         { id: "philosophy", href: "philosophy.html", label: "設計思想" },
         { id: "atlas", href: "atlas.html", label: "設計標本帳" },
-        {
-          id: "desktop-download",
-          href: "desktop-download.html",
-          label: "ダウンロード",
-        },
         { id: "interface", href: "interface.html", label: "画面構成" },
         { id: "drawing", href: "drawing.html", label: "2D 描画" },
         { id: "editing", href: "editing.html", label: "編集操作" },
@@ -44,11 +39,6 @@
         },
         { id: "philosophy", href: "philosophy.html", label: "Philosophy" },
         { id: "atlas", href: "atlas.html", label: "Design Atlas" },
-        {
-          id: "desktop-download",
-          href: "desktop-download.html",
-          label: "Download",
-        },
         { id: "interface", href: "interface.html", label: "Interface" },
         { id: "drawing", href: "drawing.html", label: "2D Drawing" },
         { id: "editing", href: "editing.html", label: "Editing" },

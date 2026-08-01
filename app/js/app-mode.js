@@ -86,6 +86,36 @@
         : `${page.name || ""} · ${page.paper || "A4"} ${orientation} · ${pageScaleLabel(page)}`;
   }
 
+  // 表題欄（図名・プロジェクト名・尺度・日付）の内容を反映する。
+  // チェックボックスON/OFFの見た目を画面プレビュー（#app.mode-print）と
+  // 実際の印刷（webContents.print がこのDOMをそのまま印刷する）の両方で一致させる。
+  function updatePrintTitleBlock() {
+    const app = document.getElementById("app");
+    const checkbox = document.getElementById(
+      "print-mode-header-footer-checkbox",
+    );
+    if (!app || !checkbox) return;
+    app.classList.toggle("show-print-hf", checkbox.checked);
+    if (!checkbox.checked) return;
+    if (typeof getState !== "function" || typeof getCurrentPage !== "function")
+      return;
+    const state = getState();
+    const page = getCurrentPage();
+    const dateStr = new Date().toLocaleDateString(
+      typeof getLocale === "function" && getLocale() === "en"
+        ? "en-US"
+        : "ja-JP",
+    );
+    const drawingEl = document.getElementById("print-tb-drawing");
+    const projectEl = document.getElementById("print-tb-project");
+    const scaleEl = document.getElementById("print-tb-scale");
+    const dateEl = document.getElementById("print-tb-date");
+    if (drawingEl) drawingEl.textContent = page.name || "";
+    if (projectEl) projectEl.textContent = state.projectName || "";
+    if (scaleEl) scaleEl.textContent = pageScaleLabel(page);
+    if (dateEl) dateEl.textContent = dateStr;
+  }
+
   function enterPrintMode(options = {}) {
     const app = document.getElementById("app");
     if (!app) return;
@@ -93,6 +123,7 @@
     app.classList.add("mode-print");
     updatePrintButton(true);
     updatePrintSummary();
+    updatePrintTitleBlock();
     if (typeof render === "function") render();
 
     if (options.print) {
@@ -103,7 +134,11 @@
       requestAnimationFrame(() => {
         pendingPrintCall = setTimeout(() => {
           pendingPrintCall = null;
-          window.print();
+          if (window.electronAPI?.printPage) {
+            window.electronAPI.printPage().then(exitPrintMode);
+          } else {
+            window.print();
+          }
         }, 0);
       });
     }
@@ -228,6 +263,16 @@
     document
       .getElementById("print-mode-exit")
       ?.addEventListener("click", exitPrintMode);
+    document
+      .getElementById("print-mode-header-footer-checkbox")
+      ?.addEventListener("change", updatePrintTitleBlock);
+
+    document.getElementById("btn-add-frame")?.addEventListener("click", () => {
+      if (typeof addTemplateFrame === "function" && addTemplateFrame()) {
+        if (typeof render === "function") render();
+        if (typeof uiUpdate === "function") uiUpdate();
+      }
+    });
 
     document.getElementById("btn-export-stl")?.addEventListener("click", () => {
       if (typeof exportSTL === "function") exportSTL();
@@ -256,10 +301,16 @@
     window.addEventListener("beforeprint", () => enterPrintMode());
     window.addEventListener("afterprint", exitPrintMode);
     window.addEventListener("millrect:uiupdate", () => {
-      if (isPrintMode()) updatePrintSummary();
+      if (isPrintMode()) {
+        updatePrintSummary();
+        updatePrintTitleBlock();
+      }
     });
     window.addEventListener("millrect-localechange", () => {
-      if (isPrintMode()) updatePrintSummary();
+      if (isPrintMode()) {
+        updatePrintSummary();
+        updatePrintTitleBlock();
+      }
     });
 
     if (window.electronAPI?.onMenu) {

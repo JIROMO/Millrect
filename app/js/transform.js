@@ -259,6 +259,7 @@ function* iterProfileSourcesFromPage(page) {
   function* walk(shapes, ancestors) {
     for (const shape of shapes) {
       if (shape.ghost) continue;
+      if (shape.frame) continue;
       if (shape.type === "group" && Array.isArray(shape.children)) {
         yield* walk(shape.children, [...ancestors, shape]);
         continue;

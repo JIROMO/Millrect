@@ -198,37 +198,6 @@ class MillrectRightSidebar extends HTMLElement {
                 </div>
               </div>
             </div>
-            <div class="panel-collapse" data-section="panel.project.fonts">
-              <button type="button" class="panel-collapse-trigger" data-default-open="false" aria-expanded="false">
-                <svg class="panel-collapse-chevron" width="10" height="10" viewBox="0 0 10 10" aria-hidden="true"><path d="M2 3l3 3 3-3" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
-                <span class="panel-collapse-title" data-i18n="panel.project.fonts">プロジェクトフォント（任意）</span>
-              </button>
-              <div class="panel-collapse-body">
-                <div id="project-fonts-panel" class="panel-fields project-fonts-panel">
-                  <p class="project-font-hint" data-i18n="font.hint">Fontsource から検索して登録するか、Google Fonts の CSS URL を直接入力できます。</p>
-                  <div class="project-font-browse-row">
-                    <button type="button" id="project-font-browse-btn" class="project-font-browse-btn" data-i18n="font.browse">フォントを探す…</button>
-                  </div>
-                  <div class="settings-row project-font-add-row">
-                    <label for="project-font-url" data-i18n="font.googleUrl">Google Fonts URL</label>
-                    <div class="project-font-add-controls">
-                      <input type="url" id="project-font-url" class="pl-text-input" data-i18n-placeholder="font.googleUrlPlaceholder" placeholder="https://fonts.googleapis.com/css2?family=...">
-                      <button type="button" id="project-font-add-btn" class="project-font-add-btn" data-i18n="font.ok">OK</button>
-                    </div>
-                  </div>
-                  <p id="project-font-error" class="project-font-error" hidden></p>
-                  <div class="project-font-section">
-                    <div class="project-font-section-title" data-i18n="font.thisProject">このプロジェクト</div>
-                    <ul id="project-fonts-list" class="project-fonts-list"></ul>
-                  </div>
-                  <div class="project-font-section">
-                    <div class="project-font-section-title" data-i18n="font.library">ライブラリ</div>
-                    <ul id="font-library-list" class="project-fonts-list font-library-list"></ul>
-                  </div>
-                </div>
-              </div>
-            </div>
-
           </div>
         </div>
       </div>

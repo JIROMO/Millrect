@@ -1603,26 +1603,36 @@ function handleResize(rp, shiftKey) {
   } else if (shape.type === "dimension") {
     const o = origShape;
     const isH = shape.dimensionType === "horizontal";
+    // ハンドル位置は from/to の min/max (bbox) から決まるが、from/to のどちらが
+    // 右(下)側かは描画方向（どちらからドラッグして引いたか）で変わる。
+    // hi を常に to/from に固定すると、逆向きに引いた寸法線でハンドルの意味が
+    // 反転してしまう（一部の寸法線だけリサイズが逆に動くバグの原因）。
+    // ドラッグ開始時点でどちらが大きい側かを判定し、実際にそのハンドル位置に
+    // いる端点を動かす。
     if (isH) {
-      // horizontal: hi=3(右端)→to.x, hi=7(左端)→from.x, hi=1/5(上下)→offset, corners→両端
+      // horizontal: hi=3(右端)/hi=7(左端)→from.x か to.x（大きい方を判定）、
+      // hi=1/5(上下)→offset, corners→両端と同じ扱い
+      const fromIsMax = o.from.x >= o.to.x;
       if (hi === 3 || hi === 2 || hi === 4) {
-        shape.to.x = o.to.x + dx;
+        if (fromIsMax) shape.from.x = o.from.x + dx;
+        else shape.to.x = o.to.x + dx;
       } else if (hi === 7 || hi === 0 || hi === 6) {
-        shape.from.x = o.from.x + dx;
-      } else if (hi === 1) {
-        shape.offset = (o.offset ?? -80) + dy;
-      } else if (hi === 5) {
+        if (fromIsMax) shape.to.x = o.to.x + dx;
+        else shape.from.x = o.from.x + dx;
+      } else if (hi === 1 || hi === 5) {
         shape.offset = (o.offset ?? -80) + dy;
       }
     } else {
-      // vertical: hi=5(下端)→to.y, hi=1(上端)→from.y, hi=3/7(左右)→offset, corners→両端
+      // vertical: hi=5(下端)/hi=1(上端)→from.y か to.y（大きい方を判定）、
+      // hi=3/7(左右)→offset, corners→両端と同じ扱い
+      const fromIsMax = o.from.y >= o.to.y;
       if (hi === 5 || hi === 4 || hi === 6) {
-        shape.to.y = o.to.y + dy;
+        if (fromIsMax) shape.from.y = o.from.y + dy;
+        else shape.to.y = o.to.y + dy;
       } else if (hi === 1 || hi === 0 || hi === 2) {
-        shape.from.y = o.from.y + dy;
-      } else if (hi === 3) {
-        shape.offset = (o.offset ?? -80) + dx;
-      } else if (hi === 7) {
+        if (fromIsMax) shape.to.y = o.to.y + dy;
+        else shape.from.y = o.from.y + dy;
+      } else if (hi === 3 || hi === 7) {
         shape.offset = (o.offset ?? -80) + dx;
       }
     }
@@ -2352,7 +2362,6 @@ function handleText(rp) {
       fill: "none",
     });
     const state = getState();
-    state.activeTool = "select";
     state.selectedShapeIds = [id];
     updateToolbar();
     render();
@@ -2525,7 +2534,6 @@ function handleDimDown(pp, rp) {
       strokeWidth: "thin",
     });
     cancelDim();
-    getState().activeTool = "select";
     render();
     uiUpdate();
   }
@@ -2677,7 +2685,6 @@ function commitShape(tool, sr, er, shiftKey) {
   }
   if (newId) {
     const state = getState();
-    state.activeTool = "select";
     state.selectedShapeIds = [newId];
     updateToolbar();
   }
@@ -2843,7 +2850,6 @@ function showSizePopover(tool, rp, clientX, clientY) {
 
     if (newId) {
       const state = getState();
-      state.activeTool = "select";
       state.selectedShapeIds = [newId];
       updateToolbar();
       pushHistory();
@@ -3187,22 +3193,13 @@ function _buildShapeContextItems(ids) {
   if (ids.length === 1 && shape && !locked) {
     items.push({ type: "sep" });
     if (shape.type === "text") {
-      items.push(
-        {
-          label: t("context.editText"),
-          action: () => {
-            dismissContextMenu();
-            editTextShape(shape);
-          },
+      items.push({
+        label: t("context.editText"),
+        action: () => {
+          dismissContextMenu();
+          editTextShape(shape);
         },
-        {
-          label: t("context.outlineText"),
-          disabled: !isTextOutlineAvailable(),
-          action: () => {
-            void outlineTextShape(shape.id);
-          },
-        },
-      );
+      });
     } else if (shape.type === "bezier") {
       items.push({
         label: t("context.editPath"),
