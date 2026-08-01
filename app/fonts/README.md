@@ -6,8 +6,10 @@ Millrect uses **[Gen Interface JP](https://gen.typesetting.jp/)** (SIL OFL 1.1) 
 
 | Path | Format | Use |
 |------|--------|-----|
-| `app/fonts/GenInterfaceJP-Regular.ttf` | TTF | App UI, HarfBuzz / Core Text text engine |
-| `app/fonts/GenInterfaceJP-Bold.ttf` | TTF | Bold weight |
+| `app/fonts/GenInterfaceJP-Regular.ttf` | TTF | HarfBuzz / Core Text text engine |
+| `app/fonts/GenInterfaceJP-Bold.ttf` | TTF | HarfBuzz / Core Text text engine (bold) |
+| `app/fonts/GenInterfaceJP-UI-Regular.woff2` | WOFF2 | App UI subset |
+| `app/fonts/GenInterfaceJP-UI-Bold.woff2` | WOFF2 | App UI subset (bold) |
 | `docs/fonts/*.woff2` | WOFF2 | Documentation site |
 | `site/fonts/*.woff2` | WOFF2 | millrect.com landing page |
 
@@ -22,6 +24,8 @@ npm run fonts:fetch
 ```
 
 This downloads TTF into `app/fonts/` and WOFF2 into `docs/fonts/` and `site/fonts/`.
+The app UI uses committed WOFF2 subsets; the full TTF files remain available to the
+text engine so arbitrary drawing text is not limited by the UI subset.
 
 Project fonts added via Google Fonts / Fontsource at runtime are subject to their respective licenses.
 

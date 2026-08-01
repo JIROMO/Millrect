@@ -21,9 +21,15 @@ if (_textEngineFileProtocol && !window.electronAPI?.measureTextLayout) {
   );
 }
 
-window.__millrectHbInitPromise = _textEngineFileProtocol
-  ? Promise.resolve()
-  : import(getTextEngineModuleUrl())
+window.__millrectHbInitPromise = null;
+
+function startBrowserTextEngine() {
+  if (window.__millrectHbInitPromise) {
+    return window.__millrectHbInitPromise;
+  }
+  window.__millrectHbInitPromise = _textEngineFileProtocol
+    ? Promise.resolve()
+    : import(getTextEngineModuleUrl())
       .then(() => {
         if (!window.MillrectTextEngine?.init) {
           throw new Error("MillrectTextEngine module missing");
@@ -43,6 +49,8 @@ window.__millrectHbInitPromise = _textEngineFileProtocol
         console.warn("[text-engine] browser WASM init failed:", err);
         window.__millrectHbReady = false;
       });
+  return window.__millrectHbInitPromise;
+}
 
 function isBrowserTextEngineReady() {
   return Boolean(window.__millrectHbReady && window.MillrectTextEngine);
@@ -50,7 +58,7 @@ function isBrowserTextEngineReady() {
 
 async function ensureBrowserTextEngine() {
   if (isBrowserTextEngineReady()) return window.MillrectTextEngine;
-  if (window.__millrectHbInitPromise) await window.__millrectHbInitPromise;
+  await startBrowserTextEngine();
   if (!isBrowserTextEngineReady()) {
     throw new Error("ブラウザ text engine が初期化できませんでした");
   }

@@ -277,7 +277,13 @@ async function importAllProjectsFromFile() {
       continue;
     }
     if (!isMillrectProjectJson(parsed)) continue;
-    await dbSaveProject(proj.id, proj.name || "", proj.data, proj.thumbnail || "");
+    await dbSaveProject(
+      proj.id,
+      proj.name || "",
+      proj.data,
+      proj.thumbnail || "",
+      typeof proj.updatedAt === "number" ? proj.updatedAt : Date.now(),
+    );
     imported++;
   }
   return imported;

@@ -72,7 +72,7 @@ async function dbDeleteReferenceImagesForProject(projectId) {
   });
 }
 
-async function dbSaveProject(id, name, data, thumbnail = "") {
+async function dbSaveProject(id, name, data, thumbnail = "", updatedAt = Date.now()) {
   const db = await _openDB();
   return new Promise((resolve, reject) => {
     const tx = db.transaction(_STORE, "readwrite");
@@ -81,7 +81,7 @@ async function dbSaveProject(id, name, data, thumbnail = "") {
       name,
       data,
       thumbnail,
-      updatedAt: Date.now(),
+      updatedAt,
     });
     tx.oncomplete = () => resolve();
     tx.onerror = () => reject(tx.error);
