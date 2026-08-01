@@ -74,6 +74,16 @@
         The pairing URL is a connection key for the current project. Do not publish it.
         Use <strong>New session</strong> to rotate it when needed. No local Node.js server is required.
       </p>
+      <h3 id="session-lifetime">Session lifetime and disconnection</h3>
+      <ul>
+        <li>The session ID in the connection URL currently has no time-based expiration.</li>
+        <li>Closing the Millrect tab or pressing <strong>Stop</strong> prevents the AI from operating the project.</li>
+        <li>Open the same project and press <strong>Start</strong> again to reconnect with the same saved connection URL.</li>
+        <li>If the URL may have been exposed, press <strong>New session</strong> and register the new URL in your AI client. The previous URL will no longer connect to the current project.</li>
+      </ul>
+      <p>
+        Each MCP operation has a 15-second response timeout. This is separate from the lifetime of the session ID.
+      </p>
       <p>
         See the <a href="developer.html#mcp">Developer guide (MCP)</a> and <code>AGENT.md</code> in the repository for agent instructions.
       </p>
