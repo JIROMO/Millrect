@@ -3152,6 +3152,64 @@ button.ctx-item {
 .pl-btn-secondary:hover {
   background: var(--surface-3, #3a3a3a);
 }
+.pl-btn-secondary:disabled {
+  cursor: not-allowed;
+  opacity: 0.45;
+}
+.pl-btn-danger {
+  border-color: color-mix(in srgb, var(--danger) 55%, var(--border));
+  color: var(--danger);
+}
+.pl-btn-danger:hover:not(:disabled) {
+  border-color: var(--danger);
+  background: color-mix(in srgb, var(--danger) 12%, var(--surface-2));
+}
+.pl-confirm-overlay {
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  border-radius: inherit;
+  background: rgba(0, 0, 0, 0.72);
+}
+.pl-confirm-dialog {
+  width: min(400px, 100%);
+  padding: 22px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--surface-1, #1e1e1e);
+  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.45);
+}
+.pl-confirm-dialog h3 {
+  margin: 0 0 10px;
+  font-size: 17px;
+}
+.pl-confirm-dialog p {
+  margin: 0;
+  color: var(--text-2);
+  font-size: 13px;
+  line-height: 1.65;
+}
+.pl-confirm-actions {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+  margin-top: 20px;
+}
+.pl-confirm-actions .pl-btn-secondary,
+.pl-confirm-actions .startup-primary {
+  width: 100%;
+  margin: 0;
+}
+.pl-confirm-actions .pl-confirm-delete {
+  background: var(--danger);
+}
+.pl-confirm-actions .pl-confirm-delete:hover {
+  filter: brightness(0.92);
+}
 #pl-grid {
   display: flex;
   flex-direction: column;

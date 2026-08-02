@@ -2,7 +2,11 @@
 
 const { describe, it } = require("node:test");
 const assert = require("node:assert/strict");
-const { isMillrectProjectJson } = require("../../packages/project-json");
+const {
+  isMillrectProjectJson,
+  normalizeProjectUpdatedAt,
+  resolveImportedProjectUpdatedAt,
+} = require("../../packages/project-json");
 
 describe("project-json", () => {
   const valid = {
@@ -45,6 +49,44 @@ describe("project-json", () => {
         pages: [{ id: "page-1", layers: [{ id: "layer-1" }] }],
       }),
       false,
+    );
+  });
+
+  it("normalizes imported updatedAt values without replacing them with import time", () => {
+    assert.equal(normalizeProjectUpdatedAt(1_725_000_000_123), 1_725_000_000_123);
+    assert.equal(normalizeProjectUpdatedAt(1_725_000_000), 1_725_000_000_000);
+    assert.equal(
+      normalizeProjectUpdatedAt("2024-08-30T12:34:56.000Z"),
+      Date.parse("2024-08-30T12:34:56.000Z"),
+    );
+    assert.equal(
+      normalizeProjectUpdatedAt("invalid", "1725000000"),
+      1_725_000_000_000,
+    );
+  });
+
+  it("returns null when no imported updatedAt candidate is valid", () => {
+    assert.equal(normalizeProjectUpdatedAt(undefined, "", "invalid"), null);
+  });
+
+  it("recognizes updatedat aliases from backup and project data", () => {
+    assert.equal(
+      resolveImportedProjectUpdatedAt(
+        { updatedat: "2024-01-02T03:04:05Z" },
+        {},
+        {},
+        99,
+      ),
+      Date.parse("2024-01-02T03:04:05Z"),
+    );
+    assert.equal(
+      resolveImportedProjectUpdatedAt(
+        {},
+        { updated_at: "1725000000" },
+        {},
+        99,
+      ),
+      1_725_000_000_000,
     );
   });
 });

@@ -78,6 +78,15 @@ async function flushAutosave() {
   await doAutosave();
 }
 
+// 全プロジェクト削除時は、保留中の保存が削除後にデータを復活させないよう破棄する。
+function discardPendingAutosave() {
+  clearTimeout(_autosaveTimer);
+  _autosaveTimer = null;
+  _lastSavedAt = null;
+  setCurrentProjectId(null);
+  setAutosaveStatus("off");
+}
+
 function setAutosaveStatus(state) {
   if (!_statusEl) _statusEl = document.getElementById("status-autosave");
   if (!_statusEl) return;

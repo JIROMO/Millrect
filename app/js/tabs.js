@@ -27,6 +27,29 @@ function getActiveProjectTabId() {
   return _activeProjectTabId;
 }
 
+// 全プロジェクト削除前に、開いているタブと保留中の自動保存を破棄する。
+// これを行わないと、削除後の編集やタブ切替でプロジェクトが再保存されてしまう。
+async function resetProjectTabsForDeleteAll() {
+  if (_tabSwitching) return false;
+  _tabSwitching = true;
+  try {
+    if (typeof discardPendingAutosave === "function") {
+      discardPendingAutosave();
+    } else if (typeof setCurrentProjectId === "function") {
+      setCurrentProjectId(null);
+    }
+    _projectTabs = [];
+    _activeProjectTabId = null;
+    if (typeof initState === "function") initState();
+    renderProjectTabs();
+    if (typeof render === "function") render();
+    if (typeof updateAll === "function") updateAll();
+    return true;
+  } finally {
+    _tabSwitching = false;
+  }
+}
+
 function _findTab(tabId) {
   return _projectTabs.find((x) => x.tabId === tabId) || null;
 }

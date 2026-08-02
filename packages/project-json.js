@@ -17,6 +17,63 @@ function isMillrectProjectJson(data) {
   });
 }
 
+/**
+ * バックアップ由来の更新日時を IndexedDB で使うミリ秒 timestamp に揃える。
+ * 旧バックアップや外部変換データを考慮し、ミリ秒・秒・数値文字列・ISO文字列を受け付ける。
+ */
+function normalizeProjectUpdatedAt(...candidates) {
+  for (const candidate of candidates) {
+    if (candidate instanceof Date) {
+      const time = candidate.getTime();
+      if (Number.isFinite(time)) return time;
+      continue;
+    }
+
+    if (typeof candidate === "number" && Number.isFinite(candidate)) {
+      if (candidate <= 0) continue;
+      // Unix秒は現在でも12桁未満。ミリ秒timestampへ変換する。
+      return candidate < 100_000_000_000 ? candidate * 1000 : candidate;
+    }
+
+    if (typeof candidate !== "string") continue;
+    const value = candidate.trim();
+    if (!value) continue;
+
+    if (/^\d+(?:\.\d+)?$/.test(value)) {
+      const numeric = Number(value);
+      if (Number.isFinite(numeric) && numeric > 0) {
+        return numeric < 100_000_000_000 ? numeric * 1000 : numeric;
+      }
+    }
+
+    const parsed = Date.parse(value);
+    if (Number.isFinite(parsed)) return parsed;
+  }
+  return null;
+}
+
+function resolveImportedProjectUpdatedAt(
+  project,
+  parsedProject,
+  backup,
+  fallback = Date.now(),
+) {
+  return normalizeProjectUpdatedAt(
+    project?.updatedAt,
+    project?.updatedat,
+    project?.updated_at,
+    parsedProject?.updatedAt,
+    parsedProject?.updatedat,
+    parsedProject?.updated_at,
+    backup?.exportedAt,
+    fallback,
+  );
+}
+
 if (typeof module !== "undefined" && module.exports) {
-  module.exports = { isMillrectProjectJson };
+  module.exports = {
+    isMillrectProjectJson,
+    normalizeProjectUpdatedAt,
+    resolveImportedProjectUpdatedAt,
+  };
 }

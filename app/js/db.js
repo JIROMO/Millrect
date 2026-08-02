@@ -149,3 +149,16 @@ async function dbDeleteProject(id) {
   });
   await dbDeleteReferenceImagesForProject(id);
 }
+
+async function dbDeleteAllProjects() {
+  const db = await _openDB();
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction([_STORE, _REFIMG_STORE], "readwrite");
+    const projects = tx.objectStore(_STORE);
+    const countReq = projects.count();
+    projects.clear();
+    tx.objectStore(_REFIMG_STORE).clear();
+    tx.oncomplete = () => resolve(countReq.result || 0);
+    tx.onerror = () => reject(tx.error);
+  });
+}

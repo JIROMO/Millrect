@@ -268,6 +268,7 @@ async function importAllProjectsFromFile() {
     throw err;
   }
   let imported = 0;
+  const importedAt = Date.now();
   for (const proj of raw.projects) {
     if (!proj?.id || typeof proj.data !== "string") continue;
     let parsed;
@@ -277,12 +278,18 @@ async function importAllProjectsFromFile() {
       continue;
     }
     if (!isMillrectProjectJson(parsed)) continue;
+    const updatedAt = resolveImportedProjectUpdatedAt(
+      proj,
+      parsed,
+      raw,
+      importedAt,
+    );
     await dbSaveProject(
       proj.id,
       proj.name || "",
       proj.data,
       proj.thumbnail || "",
-      typeof proj.updatedAt === "number" ? proj.updatedAt : Date.now(),
+      updatedAt,
     );
     imported++;
   }

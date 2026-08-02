@@ -152,6 +152,18 @@
     "startup.exportAllDone": "{count} 件のプロジェクトをエクスポートしました。",
     "startup.exportAllError": "エクスポートに失敗しました: {message}",
     "startup.importAllDone": "{count} 件のプロジェクトをインポートしました。",
+    "startup.clearAll": "すべてのプロジェクトを削除",
+    "startup.clearAll.step1.title": "すべて削除しますか？",
+    "startup.clearAll.step1.message":
+      "保存済みの {count} 件と、現在開いているプロジェクトを削除します。",
+    "startup.clearAll.step1.continue": "削除内容を確認",
+    "startup.clearAll.step2.title": "本当に削除してもよいですか？",
+    "startup.clearAll.step2.message":
+      "この操作は元に戻せません。プロジェクトと参照画像がすべて削除されます。",
+    "startup.clearAll.step2.back": "戻る",
+    "startup.clearAll.step2.confirm": "すべて削除する",
+    "startup.clearAll.done": "{count} 件のプロジェクトを削除しました。",
+    "startup.clearAll.error": "削除に失敗しました: {message}",
     "startup.recentProjects": "プロジェクト一覧",
     "startup.searchProjects": "プロジェクトを検索",
     "startup.multiviewHint":

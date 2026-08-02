@@ -155,6 +155,18 @@
     "startup.exportAllDone": "Exported {count} project(s).",
     "startup.exportAllError": "Export failed: {message}",
     "startup.importAllDone": "Imported {count} project(s).",
+    "startup.clearAll": "Delete all projects",
+    "startup.clearAll.step1.title": "Delete all projects?",
+    "startup.clearAll.step1.message":
+      "This will delete {count} saved project(s) and all currently open projects.",
+    "startup.clearAll.step1.continue": "Review deletion",
+    "startup.clearAll.step2.title": "Are you absolutely sure?",
+    "startup.clearAll.step2.message":
+      "This cannot be undone. All projects and reference images will be deleted.",
+    "startup.clearAll.step2.back": "Back",
+    "startup.clearAll.step2.confirm": "Delete everything",
+    "startup.clearAll.done": "Deleted {count} project(s).",
+    "startup.clearAll.error": "Delete failed: {message}",
     "startup.recentProjects": "Project list",
     "startup.searchProjects": "Search projects",
     "startup.multiviewHint":

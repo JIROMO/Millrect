@@ -2745,6 +2745,7 @@ function showProjectList() {
             <button id="pl-btn-import" class="pl-btn-secondary">${t("startup.importJson")}</button>
             <button id="pl-btn-export-all" class="pl-btn-secondary">${t("startup.exportAll")}</button>
             <button id="pl-btn-import-all" class="pl-btn-secondary">${t("startup.importAll")}</button>
+            <button id="pl-btn-clear-all" class="pl-btn-secondary pl-btn-danger">${t("startup.clearAll")}</button>
           </div>
         </div>
         <div class="pl-section">
@@ -2785,6 +2786,77 @@ function showProjectList() {
     const plActions = overlay.querySelector(".pl-actions");
     const plSection = overlay.querySelector(".pl-section");
 
+    function confirmDeleteAllProjects(projectCount) {
+      return new Promise((confirmResolve) => {
+        const confirmOverlay = document.createElement("div");
+        confirmOverlay.className = "pl-confirm-overlay";
+        confirmOverlay.innerHTML = `
+          <div class="pl-confirm-dialog" role="dialog" aria-modal="true" aria-labelledby="pl-confirm-title">
+            <h3 id="pl-confirm-title"></h3>
+            <p id="pl-confirm-message"></p>
+            <div class="pl-confirm-actions">
+              <button type="button" class="pl-btn-secondary" id="pl-confirm-cancel">${t("startup.cancel")}</button>
+              <button type="button" class="startup-primary" id="pl-confirm-next"></button>
+            </div>
+          </div>
+        `;
+        overlay.appendChild(confirmOverlay);
+
+        const title = confirmOverlay.querySelector("#pl-confirm-title");
+        const message = confirmOverlay.querySelector("#pl-confirm-message");
+        const cancel = confirmOverlay.querySelector("#pl-confirm-cancel");
+        const next = confirmOverlay.querySelector("#pl-confirm-next");
+        let step = 1;
+
+        const close = (confirmed) => {
+          confirmOverlay.remove();
+          confirmResolve(confirmed);
+        };
+        const renderStep = () => {
+          if (step === 1) {
+            title.textContent = t("startup.clearAll.step1.title");
+            message.textContent = t("startup.clearAll.step1.message", {
+              count: projectCount,
+            });
+            cancel.textContent = t("startup.cancel");
+            next.textContent = t("startup.clearAll.step1.continue");
+            next.classList.remove("pl-confirm-delete");
+          } else {
+            title.textContent = t("startup.clearAll.step2.title");
+            message.textContent = t("startup.clearAll.step2.message");
+            cancel.textContent = t("startup.clearAll.step2.back");
+            next.textContent = t("startup.clearAll.step2.confirm");
+            next.classList.add("pl-confirm-delete");
+          }
+        };
+
+        cancel.addEventListener("click", () => {
+          if (step === 2) {
+            step = 1;
+            renderStep();
+          } else {
+            close(false);
+          }
+        });
+        next.addEventListener("click", () => {
+          if (step === 1) {
+            step = 2;
+            renderStep();
+          } else {
+            close(true);
+          }
+        });
+        confirmOverlay.addEventListener("click", (event) => {
+          if (event.target === confirmOverlay) close(false);
+        });
+        confirmOverlay.addEventListener("keydown", (event) => {
+          if (event.key === "Escape") close(false);
+        });
+        renderStep();
+        cancel.focus();
+      });
+    }
+
     function showNewProjectForm() {
       plSection.hidden = true;
       plActions.hidden = true;
@@ -2824,7 +2896,10 @@ function showProjectList() {
 
     async function renderGrid() {
       const query = (search?.value || "").trim().toLowerCase();
-      const projects = (await dbListProjects()).filter((proj) => {
+      const allProjects = await dbListProjects();
+      const clearAllButton = overlay.querySelector("#pl-btn-clear-all");
+      if (clearAllButton) clearAllButton.disabled = allProjects.length === 0;
+      const projects = allProjects.filter((proj) => {
         if (!query) return true;
         return (proj.name || t("default.unnamed"))
           .toLowerCase()
@@ -2968,6 +3043,33 @@ function showProjectList() {
             return;
           }
           console.warn(err);
+        }
+      });
+
+    overlay
+      .querySelector("#pl-btn-clear-all")
+      .addEventListener("click", async (e) => {
+        const btn = e.currentTarget;
+        const projects = await dbListProjects();
+        if (projects.length === 0) return;
+        if (!(await confirmDeleteAllProjects(projects.length))) return;
+
+        btn.disabled = true;
+        try {
+          if (typeof resetProjectTabsForDeleteAll === "function") {
+            const reset = await resetProjectTabsForDeleteAll();
+            if (!reset) return;
+          }
+          const count = await dbDeleteAllProjects();
+          if (search) search.value = "";
+          await renderGrid();
+          alert(t("startup.clearAll.done", { count }));
+        } catch (err) {
+          console.warn(err);
+          alert(t("startup.clearAll.error", { message: err.message }));
+        } finally {
+          const remaining = await dbListProjects().catch(() => []);
+          btn.disabled = remaining.length === 0;
         }
       });
   });
