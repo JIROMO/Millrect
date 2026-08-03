@@ -2805,6 +2805,12 @@ function confirmDeleteAllProjects(parentOverlay, projectCount) {
 function showProjectActionsMenu() {
   if (document.getElementById("project-actions-overlay")) return;
 
+  const menuItem = ({ id = "", trigger = "", icon, label, shortcut = "", danger = false }) => `
+    <button type="button"${id ? ` id="${id}"` : ""}${trigger ? ` data-trigger="${trigger}"` : ""} class="project-menu-item${danger ? " project-menu-item-danger" : ""}">
+      <span class="project-menu-item-main"><i data-lucide="${icon}"></i><span>${label}</span></span>
+      ${shortcut ? `<kbd>${shortcut}</kbd>` : ""}
+    </button>
+  `;
   const overlay = document.createElement("div");
   overlay.id = "project-actions-overlay";
   overlay.className = "project-actions-overlay";
@@ -2815,15 +2821,45 @@ function showProjectActionsMenu() {
         <p class="pl-subtitle">${t("projectMenu.subtitle")}</p>
         <button type="button" class="pl-btn-close" aria-label="${t("startup.cancel")}">✕</button>
       </div>
-      <div class="pl-actions-secondary">
-        <button type="button" id="pl-btn-import" class="pl-btn-secondary">${t("startup.importJson")}</button>
-        <button type="button" id="pl-btn-export-all" class="pl-btn-secondary">${t("startup.exportAll")}</button>
-        <button type="button" id="pl-btn-import-all" class="pl-btn-secondary">${t("startup.importAll")}</button>
-        <button type="button" id="pl-btn-clear-all" class="pl-btn-secondary pl-btn-danger">${t("startup.clearAll")}</button>
+      <div class="project-menu-sections">
+        <section class="project-menu-section">
+          <h3>${t("projectMenu.section.file")}</h3>
+          ${menuItem({ trigger: "btn-new", icon: "file-plus", label: t("toolbar.new"), shortcut: t("projectMenu.shortcut.new") })}
+          ${menuItem({ trigger: "btn-open", icon: "folder-open", label: t("toolbar.open") })}
+          ${menuItem({ trigger: "btn-save", icon: "save", label: t("toolbar.save"), shortcut: t("projectMenu.shortcut.save") })}
+        </section>
+        <section class="project-menu-section">
+          <h3>${t("projectMenu.section.importExport")}</h3>
+          ${menuItem({ trigger: "btn-import-svg", icon: "image-up", label: t("toolbar.importSvg") })}
+          ${menuItem({ trigger: "btn-import-image", icon: "image-plus", label: t("toolbar.importImage") })}
+          ${menuItem({ trigger: "btn-export-svg", icon: "file-code", label: t("toolbar.exportSvg") })}
+          ${menuItem({ trigger: "btn-export-dxf", icon: "ruler", label: t("toolbar.exportDxf") })}
+          ${menuItem({ trigger: "btn-export-pdf", icon: "file-text", label: t("toolbar.exportPdf") })}
+          ${menuItem({ trigger: "btn-export-json", icon: "file-json", label: t("toolbar.exportJson") })}
+          ${menuItem({ trigger: "btn-print-mode", icon: "printer", label: t("toolbar.print"), shortcut: t("projectMenu.shortcut.print") })}
+          ${menuItem({ trigger: "btn-add-frame", icon: "layout-template", label: t("projectMenu.addFrame") })}
+        </section>
+        <section class="project-menu-section">
+          <h3>${t("projectMenu.section.viewEdit")}</h3>
+          ${menuItem({ trigger: "btn-toggle-left", icon: "panel-left", label: t("toolbar.panelLeft") })}
+          ${menuItem({ trigger: "btn-toggle-right", icon: "panel-right", label: t("toolbar.panelRight") })}
+          ${menuItem({ trigger: "btn-undo", icon: "undo-2", label: t("toolbar.undo"), shortcut: t("projectMenu.shortcut.undo") })}
+          ${menuItem({ trigger: "btn-redo", icon: "redo-2", label: t("toolbar.redo"), shortcut: t("projectMenu.shortcut.redo") })}
+          ${menuItem({ trigger: "btn-agent-panel", icon: "bot", label: t("toolbar.agent.title") })}
+          ${menuItem({ trigger: "btn-help-docs", icon: "circle-help", label: t("toolbar.helpDocs") })}
+        </section>
+        <section class="project-menu-section">
+          <h3>${t("projectMenu.section.data")}</h3>
+          ${menuItem({ id: "pl-btn-import", icon: "file-input", label: t("startup.importJson") })}
+          ${menuItem({ id: "pl-btn-export-all", icon: "archive", label: t("startup.exportAll") })}
+          ${menuItem({ id: "pl-btn-import-all", icon: "archive-restore", label: t("startup.importAll") })}
+          ${menuItem({ id: "pl-btn-clear-all", icon: "trash-2", label: t("startup.clearAll"), danger: true })}
+        </section>
       </div>
     </div>
   `;
   document.body.appendChild(overlay);
+  if (window.lucide) window.lucide.createIcons();
 
   const close = () => overlay.remove();
   overlay.querySelector(".pl-btn-close").addEventListener("click", close);
@@ -2834,6 +2870,19 @@ function showProjectActionsMenu() {
     if (event.key === "Escape" && !overlay.querySelector(".pl-confirm-overlay")) {
       close();
     }
+  });
+
+  overlay.querySelectorAll("[data-trigger]").forEach((menuButton) => {
+    const target = document.getElementById(menuButton.dataset.trigger);
+    if (!target) {
+      menuButton.disabled = true;
+      return;
+    }
+    menuButton.disabled = target.disabled;
+    menuButton.addEventListener("click", () => {
+      close();
+      target.click();
+    });
   });
 
   overlay.querySelector("#pl-btn-import").addEventListener("click", async () => {

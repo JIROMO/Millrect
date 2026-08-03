@@ -73,6 +73,7 @@ const SCREENSHOT_FILES = [
   "multiview-front-drawing.png",
   "3d-panel.png",
   "toolbar.png",
+  "project-menu.png",
   "sketch-digitize.png",
   "reference-image-panel.png",
   "module-joint-1-millrect.png",
@@ -104,6 +105,7 @@ const SCENARIO_FILES = {
     "multiview-front-drawing.png",
     "3d-panel.png",
     "toolbar.png",
+    "project-menu.png",
   ],
   workspace_orientation: [
     "main-window.png",
@@ -275,7 +277,8 @@ async function openProjectListDialog(page) {
   await page.waitForFunction(() =>
     Boolean(window.getState?.() && window.getCurrentPage?.()),
   );
-  await page.locator("#btn-open").click();
+  await page.locator("#btn-project-menu").click();
+  await page.locator('[data-trigger="btn-open"]').click();
   await page.locator("#startup-dialog").waitFor({ state: "visible" });
 }
 
@@ -625,6 +628,11 @@ async function captureMultiviewScreens(page, config, options = {}) {
   await page
     .locator("#toolbar")
     .screenshot({ path: path.join(OUT, "toolbar.png") });
+
+  await page.locator("#btn-project-menu").click();
+  await page.locator("#project-actions-dialog").waitFor({ state: "visible" });
+  await page.screenshot({ path: path.join(OUT, "project-menu.png") });
+  await page.locator("#project-actions-dialog .pl-btn-close").click();
 
   const status = await page.evaluate(() => get3DSceneStatus());
   if (status.meshCount < 1) {

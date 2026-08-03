@@ -25,6 +25,7 @@ const DOCS_SCENARIO_CATALOG = {
       "multiview-front-drawing.png",
       "3d-panel.png",
       "toolbar.png",
+      "project-menu.png",
     ],
   },
   workspace_orientation: {

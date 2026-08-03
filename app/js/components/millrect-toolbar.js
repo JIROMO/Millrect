@@ -15,9 +15,9 @@ class MillrectToolbar extends HTMLElement {
         <button id="btn-mode-3d" class="toolbar-mode-btn" data-mode="3d" aria-pressed="false" data-i18n="toolbar.mode.3d">3D</button>
       </div>
 
-      <div class="toolbar-sep"></div>
+      <div class="toolbar-sep toolbar-menu-action"></div>
 
-      <div class="toolbar-group">
+      <div class="toolbar-group toolbar-menu-action">
         <button class="toolbar-icon-btn" id="btn-toggle-left" data-i18n-title="toolbar.panelLeft" aria-pressed="true">
           <i data-lucide="panel-left"></i>
         </button>
@@ -26,9 +26,9 @@ class MillrectToolbar extends HTMLElement {
         </button>
       </div>
 
-      <div class="toolbar-sep"></div>
+      <div class="toolbar-sep toolbar-menu-action"></div>
 
-      <div class="toolbar-group">
+      <div class="toolbar-group toolbar-menu-action">
         <button id="btn-new" class="toolbar-icon-btn" data-i18n-title="toolbar.new.title"><i data-lucide="file"></i></button>
         <button id="btn-open" class="toolbar-icon-btn" data-i18n-title="toolbar.open.title"><i data-lucide="folder-open"></i></button>
         <button id="btn-import-svg" class="toolbar-icon-btn" data-i18n-title="toolbar.importSvg.title"><i data-lucide="image-up"></i></button>
@@ -36,9 +36,9 @@ class MillrectToolbar extends HTMLElement {
         <button id="btn-save" class="toolbar-icon-btn" data-i18n-title="toolbar.save.title"><i data-lucide="save"></i></button>
       </div>
 
-      <div class="toolbar-sep"></div>
+      <div class="toolbar-sep toolbar-menu-action"></div>
 
-      <div class="toolbar-group">
+      <div class="toolbar-group toolbar-menu-action">
         <button id="btn-export-svg" class="toolbar-icon-btn" data-i18n-title="toolbar.exportSvg.title"><i data-lucide="file-code"></i></button>
         <button id="btn-export-dxf" class="toolbar-icon-btn" data-i18n-title="toolbar.exportDxf.title"><i data-lucide="ruler"></i></button>
         <button id="btn-export-pdf" class="toolbar-icon-btn" data-i18n-title="toolbar.exportPdf.title"><i data-lucide="file-text"></i></button>
@@ -47,9 +47,9 @@ class MillrectToolbar extends HTMLElement {
         <button id="btn-export-json" class="toolbar-icon-btn" data-i18n-title="toolbar.exportJson.title"><i data-lucide="file-json"></i></button>
       </div>
 
-      <div class="toolbar-sep"></div>
+      <div class="toolbar-sep toolbar-menu-action"></div>
 
-      <div class="toolbar-group">
+      <div class="toolbar-group toolbar-menu-action">
         <button id="btn-undo" class="toolbar-icon-btn" data-i18n-title="toolbar.undo.title"><i data-lucide="undo-2"></i></button>
         <button id="btn-redo" class="toolbar-icon-btn" data-i18n-title="toolbar.redo.title"><i data-lucide="redo-2"></i></button>
         <button id="btn-agent-panel" class="toolbar-icon-btn" data-i18n-title="toolbar.agent.title" aria-pressed="false"><i data-lucide="bot"></i></button>
