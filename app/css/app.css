@@ -111,14 +111,19 @@ millrect-3d-panel {
 }
 
 .toolbar-logo {
-  font-size: 11px;
-  font-weight: 800;
-  letter-spacing: 0.18em;
-  color: var(--text);
+  display: flex;
+  align-items: center;
   padding-right: 12px;
   border-right: 1px solid var(--border);
   margin-right: 2px;
   flex-shrink: 0;
+}
+.toolbar-logo img {
+  display: block;
+  width: auto;
+  height: 10px;
+  filter: invert(1);
+  opacity: 0.9;
 }
 
 .toolbar-sep {
@@ -2966,7 +2971,8 @@ button.ctx-item {
 }
 
 /* ── Startup dialog ─────────────────────────────────────────── */
-#startup-overlay {
+#startup-overlay,
+#project-actions-overlay {
   position: fixed;
   inset: 0;
   background: rgba(0, 0, 0, 0.7);
@@ -2977,7 +2983,8 @@ button.ctx-item {
   padding: 20px 0;
   z-index: 9999;
 }
-#startup-dialog {
+#startup-dialog,
+#project-actions-dialog {
   background: var(--surface-1, #1e1e1e);
   border: 1px solid var(--border, #3a3a3a);
   border-radius: 12px;
@@ -2997,6 +3004,17 @@ button.ctx-item {
   flex-direction: column;
   gap: 0;
   padding: 24px 28px 20px;
+}
+#project-actions-dialog {
+  position: relative;
+  width: min(420px, calc(100vw - 32px));
+  padding: 24px 28px 28px;
+}
+#project-actions-dialog .pl-header {
+  margin-bottom: 18px;
+}
+#project-actions-dialog .pl-actions-secondary {
+  gap: 10px;
 }
 .pl-header {
   display: flex;

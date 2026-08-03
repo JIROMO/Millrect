@@ -1,6 +1,7 @@
 (function (g) {
   g.__millrectRegisterLocale("ja", {
     "toolbar.logo": "MILLRECT",
+    "toolbar.projectMenu.title": "プロジェクトメニュー",
     "toolbar.panelLeft": "左パネル",
     "toolbar.panelRight": "右パネル",
     "toolbar.new": "新規",
@@ -163,6 +164,8 @@
     "startup.clearAll.step2.back": "戻る",
     "startup.clearAll.step2.confirm": "すべて削除する",
     "startup.clearAll.done": "{count} 件のプロジェクトを削除しました。",
+    "projectMenu.title": "プロジェクトメニュー",
+    "projectMenu.subtitle": "プロジェクトデータの読み込み、バックアップ、削除",
     "startup.clearAll.error": "削除に失敗しました: {message}",
     "startup.recentProjects": "プロジェクト一覧",
     "startup.searchProjects": "プロジェクトを検索",

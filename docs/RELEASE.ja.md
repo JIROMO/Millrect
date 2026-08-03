@@ -72,10 +72,10 @@ GitHub の **Releases → Draft a new release** から:
 
 ```bash
 npm run seo:sitemap
-npm run build:site    # 配信物を ../millrect.com/ に生成
+npm run build:site    # 任意のローカル確認: 配信物を dist/site/ に生成
 ```
 
-隣接する `millrect.com` repo を commit / push すると Cloudflare へ自動デプロイされます。配信物の定義は `scripts/site-manifest.js` が唯一の真実の源。対象: `index.html`, `en/`, `robots.txt`, `sitemap.xml`, `favicon.ico`, `site/`, `app/`, `packages/`, `samples/`, `docs/`。
+このリポジトリを push すると、Cloudflare の GitHub 連携ビルドからWeb版がデプロイされます。`build:site` を手動実行して別リポジトリへコピーする作業は不要です。配信物の定義は `scripts/site-manifest.js` が唯一の真実の源で、Wrangler は生成された `dist/site/` を静的アセットとして使用します。
 
 ## 将来（本格配布時）
 

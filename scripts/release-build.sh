@@ -33,6 +33,6 @@ cat <<EOF
   2. packages/download-config.js の version / releaseTag / assets を更新
   3. git tag v${VERSION} && git push origin v${VERSION}
   4. GitHub Releases に dist/ をアップロード
-  5. npm run build:site  → ../millrect.com に生成し、millrect.com repo を push（Cloudflare 自動デプロイ）
+  5. このリポジトリを push（Cloudflare の GitHub 連携ビルドでWeb版をデプロイ）
 
 EOF

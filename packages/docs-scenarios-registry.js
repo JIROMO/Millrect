@@ -20,7 +20,6 @@ const DOCS_SCENARIO_CATALOG = {
       "main-window.png",
       "drawing-features.png",
       "pages-add-view.png",
-      "taste-brief-panel.png",
       "multiview-top-drawing.png",
       "pages-multiview.png",
       "multiview-front-drawing.png",
@@ -29,18 +28,16 @@ const DOCS_SCENARIO_CATALOG = {
     ],
   },
   workspace_orientation: {
-    description: "ツール、ページ、レイヤー、履歴、3D プレビューの UI 標本",
+    description: "ツール、プロパティ、ページ、レイヤー、3D プレビューの UI 標本",
     tags: ["atlas", "ui", "panels"],
     screenshots: [
       "main-window.png",
       "tools-panel.png",
       "design-panel.png",
       "layers-panel.png",
-      "history-panel.png",
       "editing-multiselect.png",
       "help-shortcuts.png",
       "pages-multiview.png",
-      "taste-brief-panel.png",
     ],
   },
   annotation_plate: {

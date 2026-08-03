@@ -50,13 +50,13 @@ Tag `v0.1.x`, upload `dist/` artifacts, note unsigned macOS-only distribution in
 ## 6. Deploy site
 
 ```bash
-npm run build:site    # assemble deploy set into ../millrect.com/
+npm run build:site    # optional local check: assemble assets into dist/site/
 ```
 
-Commit and push the adjacent `millrect.com` repository to trigger the Cloudflare
-deployment. The deploy set is defined once in `scripts/site-manifest.js`. Set:
-`index.html`, `en/`, `robots.txt`, `sitemap.xml`, `favicon.ico`, `site/`, `app/`,
-`packages/`, `samples/`, `docs/`.
+Push this repository to deploy the web app through Cloudflare's GitHub integration.
+There is no longer a manual copy or a separate `millrect.com` repository to push.
+The deploy set is defined in `scripts/site-manifest.js`; Wrangler serves the generated
+`dist/site/` directory as static assets.
 
 ## Later (production distribution)
 

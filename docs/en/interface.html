@@ -50,12 +50,13 @@
 
       <h2 id="toolbar">Toolbar (top)</h2>
       <figure class="docs-figure docs-figure-bar">
-        <img src="../images/en/toolbar.png" alt="Top toolbar: 2D/3D switch, file operations, export, Undo/Redo, project name">
-        <figcaption>Left side: 2D / 3D switch, file operations, export, Undo/Redo. Right end: project name.</figcaption>
+        <img src="../images/en/toolbar.png" alt="Top toolbar: project menu, 2D/3D switch, file operations, export, Undo/Redo, project name">
+        <figcaption>Open project-data actions from the hamburger at the far left, followed by the 2D / 3D switch, file operations, export, and Undo/Redo. The project name is at the right end.</figcaption>
       </figure>
       <table>
         <thead><tr><th>Button</th><th>Function</th><th>Shortcut</th></tr></thead>
         <tbody>
+          <tr><td>☰ Project menu</td><td>Import JSON, export or import all projects, or delete all projects</td><td>—</td></tr>
           <tr><td>New / Open / Save</td><td>Create, open, or save a project</td><td>Ctrl+N / Ctrl+S</td></tr>
           <tr><td>Import SVG</td><td>Import an external SVG into the current page</td><td>—</td></tr>
           <tr><td>Place image</td><td>Place PNG / JPEG / WebP / SVG on the canvas as selectable image objects</td><td>—</td></tr>
@@ -117,7 +118,7 @@
       <p>The current zoom level (e.g. 339%) appears at the right end of the status bar.</p>
 
       <h2 id="right-panel">Right panel</h2>
-      <p>Four tabs manage project structure and settings.</p>
+      <p>The properties area at the top and the Layers / Pages tabs below manage shapes, project structure, and page settings.</p>
 
       <div class="docs-figure-grid">
         <figure class="docs-figure docs-figure-panel">
@@ -129,22 +130,17 @@
           <figcaption>Pages tab — switch displayed pages and add pages by face direction</figcaption>
         </figure>
         <figure class="docs-figure docs-figure-panel">
-          <img src="../images/en/design-panel.png" alt="Design tab property editing">
-          <figcaption>Design tab — numeric editing and alignment for selected shapes</figcaption>
-        </figure>
-        <figure class="docs-figure docs-figure-panel">
-          <img src="../images/en/history-panel.png" alt="History tab">
-          <figcaption>History tab — Undo history list and jump</figcaption>
+          <img src="../images/en/design-panel.png" alt="Properties area at the top of the right panel">
+          <figcaption>Properties — numeric editing and alignment for selected shapes</figcaption>
         </figure>
       </div>
 
       <table>
-        <thead><tr><th>Tab</th><th>Contents</th></tr></thead>
+        <thead><tr><th>Area</th><th>Contents</th></tr></thead>
         <tbody>
+          <tr><td>Properties</td><td>Edit coordinates, <strong>fill and stroke</strong>, line width, and other properties for the selected shape. For images, opacity and stored image size are shown. Multiple selections support bulk appearance changes.</td></tr>
           <tr><td>Layers</td><td>Add layers, show/hide, lock. Shapes are organized per layer.</td></tr>
           <tr><td>Pages</td><td>Switch and add pages. Use <strong>Add page</strong> to choose face direction (top, front, side, etc.); existing faces cannot be added again. Paper, scale, <strong>Reference image</strong>, and <strong>project fonts</strong> also live in this tab.</td></tr>
-          <tr><td>Design</td><td>Edit coordinates, <strong>fill and stroke</strong>, line width, and other properties for the selected shape. For images, opacity and stored image size are shown. Bulk appearance changes when multiple shapes are selected.</td></tr>
-          <tr><td>History</td><td>View Undo / Redo history.</td></tr>
         </tbody>
       </table>
       <p>Drag the right edge of the panel to change its width.</p>

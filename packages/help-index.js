@@ -166,14 +166,12 @@ var HELP_INDEX = [
     keywords: [
       "レイヤー",
       "ページ",
-      "Design",
-      "History",
+      "プロパティ",
       "フォント",
       "Google Fonts",
-      "制作メモ",
     ],
     summary:
-      "レイヤー・ページ・プロパティ・履歴タブ。Pages 内に参照画像、フォント、制作メモ",
+      "上部のプロパティ領域と、下部のレイヤー・ページタブ。Pages 内に参照画像とフォント",
   },
   {
     title: "プロジェクトフォント（右パネル）",
@@ -183,22 +181,6 @@ var HELP_INDEX = [
     keywords: ["フォント", "Google Fonts", "Fontsource", "ライブラリ", "Pages"],
     summary:
       "Pages タブ内 — フォントを探す / ライブラリ / プロジェクトへの追加",
-  },
-  {
-    title: "制作メモ（Pages タブ）",
-    section: "画面構成",
-    page: "interface.html",
-    anchor: "taste-brief-panel",
-    keywords: [
-      "制作メモ",
-      "Taste brief",
-      "Taste Memory",
-      "projectBrief",
-      "方針",
-      "AI",
-    ],
-    summary:
-      "Pages タブ内 — projectBrief の意図・フェーズ・設計原則・判断履歴を確認",
   },
   {
     title: "3D プレビューパネル",
@@ -312,7 +294,7 @@ var HELP_INDEX = [
       "path",
       "Electron",
     ],
-    summary: "Design タブまたは右クリックからテキストを path に変換",
+    summary: "プロパティ領域または右クリックからテキストを path に変換",
   },
   {
     title: "寸法線 (D)",
@@ -437,11 +419,11 @@ var HELP_INDEX = [
     summary: "図形の選択・複数選択・移動",
   },
   {
-    title: "Design タブ（プロパティ）",
+    title: "プロパティ領域",
     section: "編集操作",
     page: "editing.html",
     anchor: "design",
-    keywords: ["Design", "プロパティ", "数値", "座標"],
+    keywords: ["プロパティ", "数値", "座標"],
     summary: "右パネルで図形の数値を直接編集",
   },
   {
@@ -859,35 +841,19 @@ var HELP_INDEX_EN = {
     keywords: [
       "layer",
       "page",
-      "Design",
-      "History",
+      "properties",
       "font",
       "Google Fonts",
-      "Taste brief",
       "sidebar",
     ],
     summary:
-      "Layers, pages, properties, history, reference images, project fonts, and Taste brief",
+      "Top properties area plus the Layers and Pages tabs, reference images, and project fonts",
   },
   "interface.html#project-fonts-panel": {
     title: "Project fonts (right panel)",
     section: "Interface",
     keywords: ["font", "Google Fonts", "Fontsource", "library", "Pages"],
     summary: "Browse fonts, library, and add fonts to the project",
-  },
-  "interface.html#taste-brief-panel": {
-    title: "Taste brief (Pages tab)",
-    section: "Interface",
-    keywords: [
-      "Taste brief",
-      "Taste Memory",
-      "projectBrief",
-      "intent",
-      "principles",
-      "AI",
-    ],
-    summary:
-      "Pages tab — inspect projectBrief intent, phase, design principles, and decisions",
   },
   "interface.html#reference-image-panel": {
     title: "Reference image panel",
@@ -962,7 +928,7 @@ var HELP_INDEX_EN = {
     title: "Convert text to outlines",
     section: "Editing",
     keywords: ["outline", "text", "group", "path", "Electron", "convert"],
-    summary: "Convert text from the Design tab or context menu",
+    summary: "Convert text from the properties area or context menu",
   },
   "drawing.html#dimensions": {
     title: "Dimensions (D)",
@@ -1071,9 +1037,9 @@ var HELP_INDEX_EN = {
     summary: "Select, multi-select, and move shapes",
   },
   "editing.html#design": {
-    title: "Design tab (properties)",
+    title: "Properties area",
     section: "Editing",
-    keywords: ["Design", "property", "numeric", "coordinates", "inspector"],
+    keywords: ["property", "numeric", "coordinates", "inspector"],
     summary: "Edit shape values in the right panel",
   },
   "editing.html#appearance": {

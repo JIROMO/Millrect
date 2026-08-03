@@ -3,7 +3,12 @@
 class MillrectToolbar extends HTMLElement {
   connectedCallback() {
     this.innerHTML = `
-      <span class="toolbar-logo">MILLRECT</span>
+      <button id="btn-project-menu" class="toolbar-icon-btn" data-i18n-title="toolbar.projectMenu.title" aria-haspopup="dialog">
+        <i data-lucide="menu"></i>
+      </button>
+      <span class="toolbar-logo">
+        <img src="../site/images/logo.svg" alt="Millrect">
+      </span>
 
       <div class="toolbar-group toolbar-mode-switch" role="group" data-i18n-title="toolbar.mode.title">
         <button id="btn-mode-2d" class="toolbar-mode-btn active" data-mode="2d" aria-pressed="true" data-i18n="toolbar.mode.2d">2D</button>

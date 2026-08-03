@@ -1,12 +1,12 @@
 "use strict";
 
-// Single source of truth for what gets published to the static host
-// (Cloudflare Pages via the adjacent millrect.com repository). Consumed by:
+// Single source of truth for the static assets published by the Hono Worker.
+// Consumed by:
 //   - scripts/build-site.js            (assembles everything into outDir/)
 //   - tests/unit/deploy-assets.test.js (guards against deploy drift)
 //
-// `npm run build:site` produces outDir/. Commit and push that adjacent repo to
-// trigger the Cloudflare deployment.
+// `npm run build:site` assembles outDir/ inside this repository. Wrangler uses
+// that directory as its static-assets binding; no adjacent repository is used.
 //
 // Each entry is copied into outDir preserving the deployed structure so the
 // relative <script src> / <link href> paths inside the HTML keep resolving

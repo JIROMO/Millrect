@@ -94,7 +94,7 @@ img {
 
 .logo-img {
   display: block;
-  height: 22px;
+  height: 16px;
   width: auto;
 }
 
@@ -145,7 +145,10 @@ img {
   font-size: 0.95rem;
   font-weight: 600;
   border: 1px solid transparent;
-  transition: background 0.15s, border-color 0.15s, color 0.15s;
+  transition:
+    background 0.15s,
+    border-color 0.15s,
+    color 0.15s;
 }
 
 .btn-primary {
@@ -281,7 +284,11 @@ img {
   padding: 32px;
   border: 1px solid var(--border);
   border-radius: calc(var(--radius) + 4px);
-  background: linear-gradient(135deg, rgba(89, 101, 249, 0.14), rgba(89, 101, 249, 0.04));
+  background: linear-gradient(
+    135deg,
+    rgba(89, 101, 249, 0.14),
+    rgba(89, 101, 249, 0.04)
+  );
 }
 
 .cta-panel h2 {

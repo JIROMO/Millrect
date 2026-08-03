@@ -47,12 +47,13 @@
 
       <h2 id="toolbar">ツールバー（上部）</h2>
       <figure class="docs-figure docs-figure-bar">
-        <img src="images/toolbar.png" alt="上部ツールバー。2D/3D切替、ファイル操作、出力、Undo/Redo、プロジェクト名">
-        <figcaption>ツールバー左側: 2D / 3D 切替、ファイル操作、出力、Undo/Redo。右端: プロジェクト名。</figcaption>
+        <img src="images/toolbar.png" alt="上部ツールバー。プロジェクトメニュー、2D/3D切替、ファイル操作、出力、Undo/Redo、プロジェクト名">
+        <figcaption>左端のハンバーガーからプロジェクトデータ操作を開けます。続いて 2D / 3D 切替、ファイル操作、出力、Undo/Redo。右端はプロジェクト名です。</figcaption>
       </figure>
       <table>
         <thead><tr><th>ボタン</th><th>機能</th><th>ショートカット</th></tr></thead>
         <tbody>
+          <tr><td>☰ プロジェクトメニュー</td><td>JSONインポート、一括エクスポート／インポート、すべてのプロジェクトの削除</td><td>—</td></tr>
           <tr><td>新規 / 開く / 保存</td><td>プロジェクトの作成・読み込み・保存</td><td>Ctrl+N / Ctrl+S</td></tr>
           <tr><td>SVG インポート</td><td>外部 SVG を現在のページに取り込む</td><td>—</td></tr>
           <tr><td>画像配置</td><td>PNG / JPEG / WebP / SVG を選択可能な画像オブジェクトとしてキャンバスに配置</td><td>—</td></tr>
@@ -114,7 +115,7 @@
       <p>ステータスバー右端に現在のズーム倍率（例: 339%）が表示されます。</p>
 
       <h2 id="right-panel">右パネル</h2>
-      <p>4 つのタブで、プロジェクトの構造と設定を管理します。</p>
+      <p>上部のプロパティ領域と、下部の Layers／Pages タブで、図形・プロジェクト構造・ページ設定を管理します。</p>
 
       <div class="docs-figure-grid">
         <figure class="docs-figure docs-figure-panel">
@@ -126,22 +127,17 @@
           <figcaption>Pages タブ — 表示ページの切替と、面の向きを選んだページ追加</figcaption>
         </figure>
         <figure class="docs-figure docs-figure-panel">
-          <img src="images/design-panel.png" alt="Design タブでプロパティ編集">
-          <figcaption>Design タブ — 選択図形の数値編集と整列</figcaption>
-        </figure>
-        <figure class="docs-figure docs-figure-panel">
-          <img src="images/history-panel.png" alt="History タブ">
-          <figcaption>History タブ — Undo 履歴の一覧とジャンプ</figcaption>
+          <img src="images/design-panel.png" alt="右パネル上部のプロパティ領域">
+          <figcaption>プロパティ領域 — 選択図形の数値編集と整列</figcaption>
         </figure>
       </div>
 
       <table>
-        <thead><tr><th>タブ</th><th>内容</th></tr></thead>
+        <thead><tr><th>領域</th><th>内容</th></tr></thead>
         <tbody>
+          <tr><td>プロパティ</td><td>選択中の図形の座標・<strong>塗り・線色</strong>・線幅などを編集。画像選択時は不透明度・画像容量も表示。複数選択時は外観を一括変更できます。</td></tr>
           <tr><td>Layers</td><td>レイヤーの追加・表示/非表示・ロック。図形はレイヤーごとに整理されます。</td></tr>
           <tr><td>Pages</td><td>ページの切替・追加。<strong>ページ追加</strong>で上面/正面/側面などの面の向きを選びます。既にある面は重複追加できません。用紙・縮尺、<strong>参照画像</strong>、<strong>プロジェクトフォント</strong>もこのタブ内。</td></tr>
-          <tr><td>Design</td><td>選択中の図形の座標・<strong>塗り・線色</strong>・線幅などのプロパティ編集。画像選択時は不透明度・画像容量も表示。複数選択時は外観の一括変更も可能。</td></tr>
-          <tr><td>History</td><td>Undo / Redo 履歴の確認。</td></tr>
         </tbody>
       </table>
       <p>パネル右端をドラッグすると幅を変更できます。</p>

@@ -1,6 +1,7 @@
 (function (g) {
   g.__millrectRegisterLocale("en", {
     "toolbar.logo": "MILLRECT",
+    "toolbar.projectMenu.title": "Project menu",
     "toolbar.panelLeft": "Left panel",
     "toolbar.panelRight": "Right panel",
     "toolbar.new": "New",
@@ -166,6 +167,8 @@
     "startup.clearAll.step2.back": "Back",
     "startup.clearAll.step2.confirm": "Delete everything",
     "startup.clearAll.done": "Deleted {count} project(s).",
+    "projectMenu.title": "Project menu",
+    "projectMenu.subtitle": "Import, back up, or delete project data",
     "startup.clearAll.error": "Delete failed: {message}",
     "startup.recentProjects": "Project list",
     "startup.searchProjects": "Search projects",

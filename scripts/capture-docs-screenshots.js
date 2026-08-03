@@ -38,8 +38,6 @@ const LOCALE_CONFIGS = {
   ja: {
     locale: "ja",
     outDir: path.join(ROOT, "docs", "images"),
-    newProject: /新規プロジェクト/,
-    create: "作成",
     projectNameBox: "直方体",
     layerNotes: "注記",
     noteText: "120×80",
@@ -48,8 +46,6 @@ const LOCALE_CONFIGS = {
   en: {
     locale: "en",
     outDir: path.join(ROOT, "docs", "images", "en"),
-    newProject: /New project/i,
-    create: "Create",
     projectNameBox: "Box",
     layerNotes: "Notes",
     noteText: "120×80",
@@ -69,11 +65,9 @@ const SCREENSHOT_FILES = [
   "design-panel-text.png",
   "drawing-text.png",
   "layers-panel.png",
-  "history-panel.png",
   "editing-multiselect.png",
   "help-shortcuts.png",
   "pages-add-view.png",
-  "taste-brief-panel.png",
   "multiview-top-drawing.png",
   "pages-multiview.png",
   "multiview-front-drawing.png",
@@ -105,7 +99,6 @@ const SCENARIO_FILES = {
     "main-window.png",
     "drawing-features.png",
     "pages-add-view.png",
-    "taste-brief-panel.png",
     "multiview-top-drawing.png",
     "pages-multiview.png",
     "multiview-front-drawing.png",
@@ -117,11 +110,9 @@ const SCENARIO_FILES = {
     "tools-panel.png",
     "design-panel.png",
     "layers-panel.png",
-    "history-panel.png",
     "editing-multiselect.png",
     "help-shortcuts.png",
     "pages-multiview.png",
-    "taste-brief-panel.png",
   ],
   annotation_plate: ["design-panel-text.png", "drawing-text.png"],
   sketch_trace_plate: ["sketch-digitize.png", "reference-image-panel.png"],
@@ -139,8 +130,6 @@ const SCENARIO_FILES = {
     "layers-panel.png",
     "pages-add-view.png",
     "pages-multiview.png",
-    "taste-brief-panel.png",
-    "history-panel.png",
     "toolbar.png",
     "tools-panel.png",
     "sketch-digitize.png",
@@ -280,31 +269,47 @@ async function captureSidebarScreenshot(page, outDir, fileName) {
   await setDocsSidebarWidth(page, 260);
 }
 
-async function openNewProject(page, config, name) {
+async function openProjectListDialog(page) {
   await page.setViewportSize({ width: 1440, height: 900 });
   await page.goto(appUrl);
-  await page.getByRole("button", { name: config.newProject }).click();
-  await page.locator("#startup-project-name").fill(name);
-  await page.getByRole("button", { name: config.create }).click();
-  await page.locator("#startup-overlay").waitFor({ state: "hidden" });
   await page.waitForFunction(() =>
     Boolean(window.getState?.() && window.getCurrentPage?.()),
+  );
+  await page.locator("#btn-open").click();
+  await page.locator("#startup-dialog").waitFor({ state: "visible" });
+}
+
+async function openNewProject(page, config, name) {
+  await openProjectListDialog(page);
+  const previousTabCount = await page.evaluate(
+    () => window.getProjectTabs?.().length || 0,
+  );
+  await page.locator("#pl-btn-new").click();
+  await page.locator("#startup-project-name").fill(name);
+  await page.locator("#startup-btn-new").click();
+  await page.locator("#startup-overlay").waitFor({ state: "hidden" });
+  await page.waitForFunction(
+    ({ previousTabCount, name }) =>
+      Boolean(
+        window.getState?.() &&
+          window.getCurrentPage?.() &&
+          window.getProjectTabs?.().length > previousTabCount &&
+          window.getState().projectName === name,
+      ),
+    { previousTabCount, name },
   );
 }
 
 async function captureStartupScenario(page, config) {
   const OUT = config.outDir;
-  await page.setViewportSize({ width: 1440, height: 900 });
-  await page.goto(appUrl);
-  await page.locator("#startup-dialog").waitFor({ state: "visible" });
+  await openProjectListDialog(page);
   await page.screenshot({ path: path.join(OUT, "startup-dialog.png") });
 
-  await page.getByRole("button", { name: config.newProject }).click();
+  await page.locator("#pl-btn-new").click();
   await page.locator("#startup-project-name").waitFor({ state: "visible" });
   await page.screenshot({ path: path.join(OUT, "startup-new-form.png") });
 
-  await page.goto(appUrl);
-  await page.locator("#startup-dialog").waitFor({ state: "visible" });
+  await openProjectListDialog(page);
   await page.locator("#pl-search").waitFor({ state: "visible" });
   await page.screenshot({ path: path.join(OUT, "startup-project-list.png") });
 }
@@ -347,7 +352,6 @@ async function captureDesignPanel(page, config) {
     render();
     uiUpdate();
   });
-  await page.locator('.panel-tab[data-tab="design"]').click();
   await flushRender(page);
   await captureSidebarScreenshot(page, OUT, "design-panel.png");
 }
@@ -387,7 +391,6 @@ async function captureAnnotationPlateScenario(page, config) {
   const OUT = config.outDir;
   await openDrawingFeaturesScenario(page, config);
   await addAnnotationText(page, config);
-  await page.locator('.panel-tab[data-tab="design"]').click();
   await flushRender(page);
   await captureSidebarScreenshot(page, OUT, "design-panel-text.png");
   await page.evaluate(focusShapeInView, "feat-top");
@@ -427,48 +430,6 @@ async function captureLayersPanel(page, config) {
   await captureSidebarScreenshot(page, OUT, "layers-panel.png");
 }
 
-async function captureHistoryPanel(page, config) {
-  const OUT = config.outDir;
-  await page.evaluate(() => {
-    const scale = DOC_DOCS_SCALE;
-    const layout = docBoxTopLayout(DOC_DOCS_MM, scale);
-    const { w, d, ox, oy } = layout;
-    addShape({
-      id: "hist-a",
-      type: "line",
-      x1: ox,
-      y1: oy + d / 2,
-      x2: ox + w,
-      y2: oy + d / 2,
-      stroke: "#94a3b8",
-      strokeWidth: "thin",
-    });
-    addShape({
-      id: "hist-b",
-      type: "rect",
-      x: ox,
-      y: oy,
-      width: w,
-      height: d,
-      stroke: DOC_DOCS_BOX.top.stroke,
-      fill: DOC_DOCS_BOX.top.fill,
-      strokeWidth: "medium",
-    });
-    render();
-    uiUpdate();
-  });
-  await page.locator('.panel-tab[data-tab="history"]').click();
-  await flushRender(page);
-  await captureSidebarScreenshot(page, OUT, "history-panel.png");
-  // 履歴用に足した図形を残すと後続の 3D キャプチャに混入する（色不一致警告も出る）
-  await page.evaluate(() => {
-    deleteShape("hist-a");
-    deleteShape("hist-b");
-    render();
-    uiUpdate();
-  });
-}
-
 async function captureEditingDemo(page, config) {
   const OUT = config.outDir;
   await page.evaluate(applyEditingDemoScenario);
@@ -488,58 +449,6 @@ async function captureHelpPopover(page, config) {
     path: path.join(OUT, "help-shortcuts.png"),
   });
   await page.locator("#btn-help-close").click();
-}
-
-async function captureTasteBriefPanel(page, config) {
-  const OUT = config.outDir;
-  await page.evaluate((locale) => {
-    const brief = {
-      intent:
-        locale === "ja"
-          ? "治具用の穴付きパネル。加工しやすく、後から寸法を追える図面にする。"
-          : "Mounting plate for a jig. Keep it manufacturable and easy to revise from dimensions.",
-      phase: "brief",
-      designPrinciples: [
-        {
-          id: "doc-principle-1",
-          statement:
-            locale === "ja"
-              ? "穴ピッチと外形寸法を優先して見せる"
-              : "Prioritize hole pitch and outer dimensions",
-          polarity: "prefer",
-          sources: ["docs"],
-        },
-      ],
-      decisions: [
-        {
-          id: "doc-decision-1",
-          outcome: "accept",
-          reason:
-            locale === "ja"
-              ? "2D 図面と 3D を同じ作例で説明できるため"
-              : "It explains the 2D drawing and 3D result with one specimen",
-          createdAt: new Date().toISOString(),
-        },
-      ],
-    };
-    getState().projectBrief =
-      typeof normalizeProjectBrief === "function"
-        ? normalizeProjectBrief(brief)
-        : brief;
-    if (typeof updateTasteBriefPanel === "function") updateTasteBriefPanel();
-    render();
-    uiUpdate();
-  }, config.locale);
-  await page.locator('.panel-tab[data-tab="pages"]').click();
-  await flushRender(page);
-  await page.waitForFunction(() =>
-    Boolean(document.querySelector("#taste-brief-panel")?.textContent?.trim()),
-  );
-  const tasteSection = page.locator('[data-section="panel.taste.title"]');
-  await tasteSection.scrollIntoViewIfNeeded();
-  await tasteSection.screenshot({
-    path: path.join(OUT, "taste-brief-panel.png"),
-  });
 }
 
 async function captureSketchTracePlateScenario(page, config) {
@@ -616,7 +525,6 @@ async function captureModuleJoint1Scenario(page, config) {
     path: path.join(OUT, "tools-panel.png"),
   });
 
-  await page.locator('.panel-tab[data-tab="design"]').click();
   await flushRender(page);
   await captureSidebarScreenshot(page, OUT, "design-panel.png");
 
@@ -625,7 +533,6 @@ async function captureModuleJoint1Scenario(page, config) {
     render();
     uiUpdate();
   });
-  await page.locator('.panel-tab[data-tab="design"]').click();
   await flushRender(page);
   await captureSidebarScreenshot(page, OUT, "design-panel-text.png");
 
@@ -637,10 +544,8 @@ async function captureModuleJoint1Scenario(page, config) {
   await flushRender(page);
   await captureSidebarScreenshot(page, OUT, "pages-add-view.png");
   await captureSidebarScreenshot(page, OUT, "pages-multiview.png");
-  await captureSidebarScreenshot(page, OUT, "taste-brief-panel.png");
   await captureSidebarScreenshot(page, OUT, "reference-image-panel.png");
 
-  await captureHistoryPanel(page, config);
   await page.evaluate(focusModuleJoint);
   await flushRender(page);
 
@@ -658,7 +563,6 @@ async function captureModuleJoint1Scenario(page, config) {
     render();
     uiUpdate();
   });
-  await page.locator('.panel-tab[data-tab="design"]').click();
   await page.locator('.panel-tab[data-tab="pages"]').click();
   await flushRender(page);
   await page.screenshot({
@@ -746,8 +650,6 @@ async function captureWorkspaceOrientationScenario(page, config) {
   });
   await captureDesignPanel(page, config);
   await captureLayersPanel(page, config);
-  await captureTasteBriefPanel(page, config);
-  await captureHistoryPanel(page, config);
   await captureEditingDemo(page, config);
   await captureHelpPopover(page, config);
   await captureMultiviewScreens(page, config, { pagesOnly: true });

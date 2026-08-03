@@ -238,6 +238,9 @@ function updateAll() {
 }
 
 function bindToolbar() {
+  document.getElementById("btn-project-menu").addEventListener("click", () => {
+    showProjectActionsMenu();
+  });
   document.getElementById("btn-new").addEventListener("click", () => {
     // 新規ボタン: 名称未設定プロジェクトを新しいタブで直接開く（モーダル無し）
     if (typeof openUntitledProjectTab === "function") {
@@ -2728,6 +2731,204 @@ function updateOrientationOptionLabels() {
     );
 }
 
+function confirmDeleteAllProjects(parentOverlay, projectCount) {
+  return new Promise((resolve) => {
+    const confirmOverlay = document.createElement("div");
+    confirmOverlay.className = "pl-confirm-overlay";
+    confirmOverlay.innerHTML = `
+      <div class="pl-confirm-dialog" role="dialog" aria-modal="true" aria-labelledby="pl-confirm-title">
+        <h3 id="pl-confirm-title"></h3>
+        <p id="pl-confirm-message"></p>
+        <div class="pl-confirm-actions">
+          <button type="button" class="pl-btn-secondary" id="pl-confirm-cancel">${t("startup.cancel")}</button>
+          <button type="button" class="startup-primary" id="pl-confirm-next"></button>
+        </div>
+      </div>
+    `;
+    parentOverlay.appendChild(confirmOverlay);
+
+    const title = confirmOverlay.querySelector("#pl-confirm-title");
+    const message = confirmOverlay.querySelector("#pl-confirm-message");
+    const cancel = confirmOverlay.querySelector("#pl-confirm-cancel");
+    const next = confirmOverlay.querySelector("#pl-confirm-next");
+    let step = 1;
+
+    const close = (confirmed) => {
+      confirmOverlay.remove();
+      resolve(confirmed);
+    };
+    const renderStep = () => {
+      if (step === 1) {
+        title.textContent = t("startup.clearAll.step1.title");
+        message.textContent = t("startup.clearAll.step1.message", {
+          count: projectCount,
+        });
+        cancel.textContent = t("startup.cancel");
+        next.textContent = t("startup.clearAll.step1.continue");
+        next.classList.remove("pl-confirm-delete");
+      } else {
+        title.textContent = t("startup.clearAll.step2.title");
+        message.textContent = t("startup.clearAll.step2.message");
+        cancel.textContent = t("startup.clearAll.step2.back");
+        next.textContent = t("startup.clearAll.step2.confirm");
+        next.classList.add("pl-confirm-delete");
+      }
+    };
+
+    cancel.addEventListener("click", () => {
+      if (step === 2) {
+        step = 1;
+        renderStep();
+      } else {
+        close(false);
+      }
+    });
+    next.addEventListener("click", () => {
+      if (step === 1) {
+        step = 2;
+        renderStep();
+      } else {
+        close(true);
+      }
+    });
+    confirmOverlay.addEventListener("click", (event) => {
+      if (event.target === confirmOverlay) close(false);
+    });
+    confirmOverlay.addEventListener("keydown", (event) => {
+      if (event.key === "Escape") close(false);
+    });
+    renderStep();
+    cancel.focus();
+  });
+}
+
+function showProjectActionsMenu() {
+  if (document.getElementById("project-actions-overlay")) return;
+
+  const overlay = document.createElement("div");
+  overlay.id = "project-actions-overlay";
+  overlay.className = "project-actions-overlay";
+  overlay.innerHTML = `
+    <div id="project-actions-dialog" role="dialog" aria-modal="true" aria-labelledby="project-actions-title">
+      <div class="pl-header">
+        <h2 id="project-actions-title">${t("projectMenu.title")}</h2>
+        <p class="pl-subtitle">${t("projectMenu.subtitle")}</p>
+        <button type="button" class="pl-btn-close" aria-label="${t("startup.cancel")}">✕</button>
+      </div>
+      <div class="pl-actions-secondary">
+        <button type="button" id="pl-btn-import" class="pl-btn-secondary">${t("startup.importJson")}</button>
+        <button type="button" id="pl-btn-export-all" class="pl-btn-secondary">${t("startup.exportAll")}</button>
+        <button type="button" id="pl-btn-import-all" class="pl-btn-secondary">${t("startup.importAll")}</button>
+        <button type="button" id="pl-btn-clear-all" class="pl-btn-secondary pl-btn-danger">${t("startup.clearAll")}</button>
+      </div>
+    </div>
+  `;
+  document.body.appendChild(overlay);
+
+  const close = () => overlay.remove();
+  overlay.querySelector(".pl-btn-close").addEventListener("click", close);
+  overlay.addEventListener("click", (event) => {
+    if (event.target === overlay) close();
+  });
+  overlay.addEventListener("keydown", (event) => {
+    if (event.key === "Escape" && !overlay.querySelector(".pl-confirm-overlay")) {
+      close();
+    }
+  });
+
+  overlay.querySelector("#pl-btn-import").addEventListener("click", async () => {
+    try {
+      const result = await importProjectJsonFromFile();
+      const project = {
+        projectId: null,
+        json: result?.data ?? result,
+        paper: "A4",
+        orientation: "landscape",
+        scale: { numerator: 1, denominator: 10 },
+      };
+      close();
+      if (typeof openProjectInNewTab === "function") {
+        await openProjectInNewTab(project);
+      } else {
+        await applyOpenedProject(project);
+      }
+    } catch (error) {
+      if (error.message === "No file") return;
+      if (error.code === "NotMillrectProject") {
+        alert(t("common.alert.notMillrectProject"));
+        return;
+      }
+      if (error instanceof SyntaxError) {
+        alert(t("common.alert.projectJsonParseError", { message: error.message }));
+        return;
+      }
+      console.warn(error);
+    }
+  });
+
+  overlay.querySelector("#pl-btn-export-all").addEventListener("click", async (event) => {
+    const button = event.currentTarget;
+    button.disabled = true;
+    try {
+      const count = await exportAllProjectsBackup();
+      alert(t("startup.exportAllDone", { count }));
+    } catch (error) {
+      console.warn(error);
+      alert(t("startup.exportAllError", { message: error.message }));
+    } finally {
+      button.disabled = false;
+    }
+  });
+
+  overlay.querySelector("#pl-btn-import-all").addEventListener("click", async () => {
+    try {
+      const count = await importAllProjectsFromFile();
+      alert(t("startup.importAllDone", { count }));
+    } catch (error) {
+      if (error.message === "No file") return;
+      if (error.code === "NotMillrectBackup") {
+        alert(t("common.alert.notMillrectBackup"));
+        return;
+      }
+      if (error instanceof SyntaxError) {
+        alert(t("common.alert.projectJsonParseError", { message: error.message }));
+        return;
+      }
+      console.warn(error);
+    }
+  });
+
+  const clearAllButton = overlay.querySelector("#pl-btn-clear-all");
+  dbListProjects().then((projects) => {
+    clearAllButton.disabled = projects.length === 0;
+  });
+  clearAllButton.addEventListener("click", async () => {
+    const projects = await dbListProjects();
+    if (projects.length === 0) return;
+    if (!(await confirmDeleteAllProjects(overlay, projects.length))) return;
+
+    clearAllButton.disabled = true;
+    try {
+      if (typeof resetProjectTabsForDeleteAll === "function") {
+        const reset = await resetProjectTabsForDeleteAll();
+        if (!reset) return;
+      }
+      const count = await dbDeleteAllProjects();
+      alert(t("startup.clearAll.done", { count }));
+      close();
+      if (typeof openUntitledProjectTab === "function") {
+        await openUntitledProjectTab();
+      }
+    } catch (error) {
+      console.warn(error);
+      alert(t("startup.clearAll.error", { message: error.message }));
+      clearAllButton.disabled = false;
+    }
+  });
+
+  overlay.querySelector(".pl-btn-close").focus();
+}
+
 function showProjectList() {
   return new Promise((resolve) => {
     const overlay = document.createElement("div");
@@ -2741,12 +2942,6 @@ function showProjectList() {
         </div>
         <div class="pl-actions">
           <button id="pl-btn-new" class="startup-primary pl-action-primary">${t("startup.newProject")}</button>
-          <div class="pl-actions-secondary">
-            <button id="pl-btn-import" class="pl-btn-secondary">${t("startup.importJson")}</button>
-            <button id="pl-btn-export-all" class="pl-btn-secondary">${t("startup.exportAll")}</button>
-            <button id="pl-btn-import-all" class="pl-btn-secondary">${t("startup.importAll")}</button>
-            <button id="pl-btn-clear-all" class="pl-btn-secondary pl-btn-danger">${t("startup.clearAll")}</button>
-          </div>
         </div>
         <div class="pl-section">
           <div class="pl-section-label">${t("startup.recentProjects")}</div>
@@ -2785,77 +2980,6 @@ function showProjectList() {
     const newForm = overlay.querySelector("#pl-new-form");
     const plActions = overlay.querySelector(".pl-actions");
     const plSection = overlay.querySelector(".pl-section");
-
-    function confirmDeleteAllProjects(projectCount) {
-      return new Promise((confirmResolve) => {
-        const confirmOverlay = document.createElement("div");
-        confirmOverlay.className = "pl-confirm-overlay";
-        confirmOverlay.innerHTML = `
-          <div class="pl-confirm-dialog" role="dialog" aria-modal="true" aria-labelledby="pl-confirm-title">
-            <h3 id="pl-confirm-title"></h3>
-            <p id="pl-confirm-message"></p>
-            <div class="pl-confirm-actions">
-              <button type="button" class="pl-btn-secondary" id="pl-confirm-cancel">${t("startup.cancel")}</button>
-              <button type="button" class="startup-primary" id="pl-confirm-next"></button>
-            </div>
-          </div>
-        `;
-        overlay.appendChild(confirmOverlay);
-
-        const title = confirmOverlay.querySelector("#pl-confirm-title");
-        const message = confirmOverlay.querySelector("#pl-confirm-message");
-        const cancel = confirmOverlay.querySelector("#pl-confirm-cancel");
-        const next = confirmOverlay.querySelector("#pl-confirm-next");
-        let step = 1;
-
-        const close = (confirmed) => {
-          confirmOverlay.remove();
-          confirmResolve(confirmed);
-        };
-        const renderStep = () => {
-          if (step === 1) {
-            title.textContent = t("startup.clearAll.step1.title");
-            message.textContent = t("startup.clearAll.step1.message", {
-              count: projectCount,
-            });
-            cancel.textContent = t("startup.cancel");
-            next.textContent = t("startup.clearAll.step1.continue");
-            next.classList.remove("pl-confirm-delete");
-          } else {
-            title.textContent = t("startup.clearAll.step2.title");
-            message.textContent = t("startup.clearAll.step2.message");
-            cancel.textContent = t("startup.clearAll.step2.back");
-            next.textContent = t("startup.clearAll.step2.confirm");
-            next.classList.add("pl-confirm-delete");
-          }
-        };
-
-        cancel.addEventListener("click", () => {
-          if (step === 2) {
-            step = 1;
-            renderStep();
-          } else {
-            close(false);
-          }
-        });
-        next.addEventListener("click", () => {
-          if (step === 1) {
-            step = 2;
-            renderStep();
-          } else {
-            close(true);
-          }
-        });
-        confirmOverlay.addEventListener("click", (event) => {
-          if (event.target === confirmOverlay) close(false);
-        });
-        confirmOverlay.addEventListener("keydown", (event) => {
-          if (event.key === "Escape") close(false);
-        });
-        renderStep();
-        cancel.focus();
-      });
-    }
 
     function showNewProjectForm() {
       plSection.hidden = true;
@@ -2897,8 +3021,6 @@ function showProjectList() {
     async function renderGrid() {
       const query = (search?.value || "").trim().toLowerCase();
       const allProjects = await dbListProjects();
-      const clearAllButton = overlay.querySelector("#pl-btn-clear-all");
-      if (clearAllButton) clearAllButton.disabled = allProjects.length === 0;
       const projects = allProjects.filter((proj) => {
         if (!query) return true;
         return (proj.name || t("default.unnamed"))
@@ -2973,105 +3095,6 @@ function showProjectList() {
       });
     });
 
-    overlay
-      .querySelector("#pl-btn-import")
-      .addEventListener("click", async () => {
-        try {
-          const result = await importProjectJsonFromFile();
-          overlay.remove();
-          resolve({
-            projectId: null,
-            json: result?.data ?? result,
-            paper: "A4",
-            orientation: "landscape",
-            scale: { numerator: 1, denominator: 10 },
-          });
-        } catch (e) {
-          if (e.message === "No file") return;
-          if (e.code === "NotMillrectProject") {
-            alert(t("common.alert.notMillrectProject"));
-            return;
-          }
-          if (e instanceof SyntaxError) {
-            alert(
-              t("common.alert.projectJsonParseError", { message: e.message }),
-            );
-            return;
-          }
-          console.warn(e);
-        }
-      });
-
-    overlay
-      .querySelector("#pl-btn-export-all")
-      .addEventListener("click", async (e) => {
-        const btn = e.currentTarget;
-        const original = btn.textContent;
-        btn.disabled = true;
-        try {
-          const count = await exportAllProjectsBackup();
-          alert(t("startup.exportAllDone", { count }));
-        } catch (err) {
-          console.warn(err);
-          alert(t("startup.exportAllError", { message: err.message }));
-        } finally {
-          btn.disabled = false;
-          btn.textContent = original;
-        }
-      });
-
-    overlay
-      .querySelector("#pl-btn-import-all")
-      .addEventListener("click", async (e) => {
-        const btn = e.currentTarget;
-        try {
-          const count = await importAllProjectsFromFile();
-          await renderGrid();
-          alert(t("startup.importAllDone", { count }));
-        } catch (err) {
-          if (err.message === "No file") return;
-          if (err.code === "NotMillrectBackup") {
-            alert(t("common.alert.notMillrectBackup"));
-            return;
-          }
-          if (err instanceof SyntaxError) {
-            alert(
-              t("common.alert.projectJsonParseError", {
-                message: err.message,
-              }),
-            );
-            return;
-          }
-          console.warn(err);
-        }
-      });
-
-    overlay
-      .querySelector("#pl-btn-clear-all")
-      .addEventListener("click", async (e) => {
-        const btn = e.currentTarget;
-        const projects = await dbListProjects();
-        if (projects.length === 0) return;
-        if (!(await confirmDeleteAllProjects(projects.length))) return;
-
-        btn.disabled = true;
-        try {
-          if (typeof resetProjectTabsForDeleteAll === "function") {
-            const reset = await resetProjectTabsForDeleteAll();
-            if (!reset) return;
-          }
-          const count = await dbDeleteAllProjects();
-          if (search) search.value = "";
-          await renderGrid();
-          alert(t("startup.clearAll.done", { count }));
-        } catch (err) {
-          console.warn(err);
-          alert(t("startup.clearAll.error", { message: err.message }));
-        } finally {
-          const remaining = await dbListProjects().catch(() => []);
-          btn.disabled = remaining.length === 0;
-        }
-      });
   });
 }
 

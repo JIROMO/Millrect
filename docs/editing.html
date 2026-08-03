@@ -53,18 +53,18 @@
 
       <figure class="docs-figure docs-figure-wide">
         <img src="images/editing-multiselect.png" alt="くり抜き前の外枠と内枠の複数選択">
-        <figcaption>上面矩形を選択 — Design タブでサイズ・塗り色を編集。</figcaption>
+        <figcaption>上面矩形を選択 — プロパティ領域でサイズ・塗り色を編集。</figcaption>
       </figure>
 
-      <h2 id="design">Design タブ（プロパティ）</h2>
+      <h2 id="design">プロパティ領域</h2>
       <p>
-        右パネルの <strong>Design</strong> タブでは、選択中の図形の座標・サイズ・<strong>塗り・線色</strong>・線幅などを編集できます。
+        右パネル上部の<strong>プロパティ領域</strong>では、選択中の図形の座標・サイズ・<strong>塗り・線色</strong>・線幅などを編集できます。
         複数選択時は整列ボタンに加え、外観の一括変更もできます。
       </p>
 
       <figure class="docs-figure docs-figure-sidebar">
-        <img src="images/design-panel.png" alt="Design タブで path のプロパティを編集">
-        <figcaption>くり抜き後の枠を選択した状態。Design タブで塗り・線色、寸法線の追加も可能。</figcaption>
+        <img src="images/design-panel.png" alt="プロパティ領域で path のプロパティを編集">
+        <figcaption>くり抜き後の枠を選択した状態。プロパティ領域で塗り・線色、寸法線の追加も可能。</figcaption>
       </figure>
 
       <h3 id="appearance">外観（塗り・線色）</h3>
@@ -96,7 +96,7 @@
 
       <h3 id="bulk-size">サイズの一括編集</h3>
       <p>
-        <strong>同じタイプの図形を 2 つ以上</strong>選択すると、Design タブに <strong>サイズ（一括）</strong> セクションが表示され、
+        <strong>同じタイプの図形を 2 つ以上</strong>選択すると、プロパティ領域に <strong>サイズ（一括）</strong> セクションが表示され、
         選択中のすべての図形に同じ寸法を一度に適用できます。たとえば複数の円を選択して半径をまとめて揃える、といった操作ができます。
       </p>
       <table>
@@ -118,7 +118,7 @@
       </div>
 
       <h2 id="align">整列・均等配置</h2>
-      <p>2 つ以上の図形を選択すると、Design タブに整列ボタンが表示されます。</p>
+      <p>2 つ以上の図形を選択すると、プロパティ領域に整列ボタンが表示されます。</p>
       <table>
         <thead><tr><th>操作</th><th>説明</th></tr></thead>
         <tbody>
@@ -149,7 +149,7 @@
 
       <h2 id="text-outline">テキストのアウトライン化</h2>
       <p>
-        テキスト図形を選択すると、Design タブに <strong>テキスト編集</strong> と <strong>アウトライン化</strong> ボタンが表示されます。
+        テキスト図形を選択すると、プロパティ領域に <strong>テキスト編集</strong> と <strong>アウトライン化</strong> ボタンが表示されます。
         右クリックメニューからも同じ操作ができます。
       </p>
       <ul>
@@ -161,8 +161,8 @@
         文字色（線色）は path の塗り色として引き継がれます。
       </p>
       <figure class="docs-figure docs-figure-sidebar">
-        <img src="images/design-panel-text.png" alt="テキスト選択時の Design タブ。アウトライン化ボタン">
-        <figcaption>テキスト選択時の Design タブ。「テキスト編集」「アウトライン化」ボタンが表示されます。</figcaption>
+        <img src="images/design-panel-text.png" alt="テキスト選択時のプロパティ領域。アウトライン化ボタン">
+        <figcaption>テキスト選択時のプロパティ領域。「テキスト編集」「アウトライン化」ボタンが表示されます。</figcaption>
       </figure>
       <div class="docs-callout docs-callout-warn">
         <strong>デスクトップ版のみ</strong>
@@ -170,7 +170,7 @@
       </div>
 
       <h2 id="boolean">合成・くり抜き（Boolean）</h2>
-      <p>2 つ以上の<strong>閉じた輪郭</strong>（矩形・円・閉じたベジェ・path など）を選択すると、輪郭演算が使えます。右クリック →「ブール演算」、または Design タブのボタンから実行できます。</p>
+      <p>2 つ以上の<strong>閉じた輪郭</strong>（矩形・円・閉じたベジェ・path など）を選択すると、輪郭演算が使えます。右クリック →「ブール演算」、またはプロパティ領域のボタンから実行できます。</p>
       <table>
         <thead><tr><th>操作</th><th>ショートカット</th><th>説明</th></tr></thead>
         <tbody>
@@ -183,21 +183,12 @@
       </table>
       <p>結果は新しい path 図形として生成され、3D の輪郭としても利用できます。</p>
 
-      <h2 id="history">Undo / Redo と History タブ</h2>
+      <h2 id="history">Undo / Redo</h2>
       <p>
         図形の追加・移動・削除など、ドキュメントに影響する操作は Undo 対象です。
         ツールバーの Undo/Redo ボタン、または <strong>Ctrl+Z / Ctrl+Y</strong>（Mac: Cmd+Z / Cmd+Shift+Z）で元に戻せます。
       </p>
-      <p>
-        右パネルの <strong>History</strong> タブでは、操作履歴の一覧が表示されます。
-        行をクリックすると、その時点の状態にジャンプできます。
-        ズームやパン、ツール切替は履歴に含まれません。
-      </p>
-
-      <figure class="docs-figure docs-figure-sidebar">
-        <img src="images/history-panel.png" alt="History タブに操作履歴が表示">
-        <figcaption>図形を追加したあとの履歴。現在位置がハイライトされます。</figcaption>
-      </figure>
+      <p>ズームやパン、ツール切替は Undo / Redo の対象には含まれません。</p>
 
       <h2 id="layers-lock">レイヤーのロック</h2>
       <p>

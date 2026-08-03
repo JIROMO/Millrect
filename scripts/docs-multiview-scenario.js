@@ -451,7 +451,7 @@ function applyDrawingFeaturesScenario() {
   };
 }
 
-/** 編集デモ — 上面矩形を選択（Design タブ） */
+/** 編集デモ — 上面矩形を選択（プロパティ領域） */
 function applyEditingDemoScenario() {
   function docLocalized(ja, en) {
     try {
