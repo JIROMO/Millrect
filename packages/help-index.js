@@ -143,12 +143,12 @@ var HELP_INDEX = [
     summary: "上部バーのファイル操作と 3D プレビュー",
   },
   {
-    title: "ツールパレット（左）",
+    title: "ツールパレット（上部）",
     section: "画面構成",
     page: "interface.html",
     anchor: "tools",
     keywords: ["ツール", "パレット", "描画", "選択"],
-    summary: "左側の描画ツール一覧",
+    summary: "2D／3D切替の右隣にある描画ツール一覧",
   },
   {
     title: "キャンバス（中央）",
@@ -171,7 +171,7 @@ var HELP_INDEX = [
       "Google Fonts",
     ],
     summary:
-      "上部のプロパティ領域と、下部のレイヤー・ページタブ。Pages 内に参照画像とフォント",
+      "画面右端の固定列。上部のプロパティ領域と、下部のレイヤー・ページタブ。Pages 内に参照画像とフォント",
   },
   {
     title: "プロジェクトフォント（右パネル）",
@@ -824,10 +824,10 @@ var HELP_INDEX_EN = {
     summary: "File actions and 3D preview on the top bar",
   },
   "interface.html#tools": {
-    title: "Tool palette (left)",
+    title: "Tool palette (top)",
     section: "Interface",
     keywords: ["tool", "palette", "draw", "select", "tools"],
-    summary: "Drawing tools on the left",
+    summary: "Drawing tools beside the 2D / 3D switch",
   },
   "interface.html#canvas": {
     title: "Canvas (center)",
@@ -847,7 +847,7 @@ var HELP_INDEX_EN = {
       "sidebar",
     ],
     summary:
-      "Top properties area plus the Layers and Pages tabs, reference images, and project fonts",
+      "Full-height right column with properties, Layers and Pages tabs, reference images, and project fonts",
   },
   "interface.html#project-fonts-panel": {
     title: "Project fonts (right panel)",

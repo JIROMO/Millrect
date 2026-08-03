@@ -15,6 +15,9 @@ class MillrectToolbar extends HTMLElement {
         <button id="btn-mode-3d" class="toolbar-mode-btn" data-mode="3d" aria-pressed="false" data-i18n="toolbar.mode.3d">3D</button>
       </div>
 
+      <div class="toolbar-sep"></div>
+      <millrect-left-sidebar class="sidebar" id="sidebar-left"></millrect-left-sidebar>
+
       <div class="toolbar-sep toolbar-menu-action"></div>
 
       <div class="toolbar-group toolbar-menu-action">

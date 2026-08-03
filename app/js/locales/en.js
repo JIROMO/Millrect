@@ -2,7 +2,7 @@
   g.__millrectRegisterLocale("en", {
     "toolbar.logo": "MILLRECT",
     "toolbar.projectMenu.title": "Project menu",
-    "toolbar.panelLeft": "Left panel",
+    "toolbar.panelLeft": "Tool palette",
     "toolbar.panelRight": "Right panel",
     "toolbar.new": "New",
     "toolbar.new.title": "New (Ctrl+N)",
@@ -168,7 +168,6 @@
     "startup.clearAll.step2.confirm": "Delete everything",
     "startup.clearAll.done": "Deleted {count} project(s).",
     "projectMenu.title": "Menu",
-    "projectMenu.subtitle": "Choose an action",
     "projectMenu.section.file": "File",
     "projectMenu.section.importExport": "Import & export",
     "projectMenu.section.viewEdit": "View & edit",

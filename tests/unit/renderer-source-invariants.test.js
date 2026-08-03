@@ -119,6 +119,33 @@ test("fast selection move finalizes with a live update instead of full render", 
   assert.doesNotMatch(mouseUpBody, /if \(_ds\.fastActive\) render\(\)/);
 });
 
+test("selection drag auto-pans the canvas near every viewport edge", () => {
+  assert.match(interactionSource, /const SELECTION_AUTO_PAN_EDGE_PX = 56/);
+  assert.match(
+    interactionSource,
+    /const SELECTION_AUTO_PAN_MAX_PX_PER_SECOND = 720/,
+  );
+
+  const velocityBody = functionBody(
+    interactionSource,
+    "_selectionAutoPanVelocity",
+  );
+  assert.match(velocityBody, /value < min \+ edge/);
+  assert.match(velocityBody, /value > max - edge/);
+
+  const updateBody = functionBody(
+    interactionSource,
+    "_updateSelectionAutoPanPointer",
+  );
+  assert.match(updateBody, /state\.panX \+=/);
+  assert.match(updateBody, /state\.panY \+=/);
+  assert.match(updateBody, /applyViewportTransform\(\)/);
+  assert.match(updateBody, /handleSelMove\(pt, autoPan\.shiftKey\)/);
+
+  const mouseUpBody = functionBody(interactionSource, "onMouseUp");
+  assert.match(mouseUpBody, /_stopSelectionAutoPan\(\)/);
+});
+
 test("keypoint snapping caches drag candidates and skips tiny recalculations", () => {
   assert.match(interactionSource, /const _KEYPOINT_SNAP_RECALC_SCREEN_PX = 2/);
   const snapBody = functionBody(interactionSource, "_moveKeypointSnap");

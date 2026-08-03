@@ -1323,14 +1323,14 @@ pre code {
   max-width: 480px;
 }
 
-/* ツールパレット（左フロート） */
+/* ツールパレット（上部横並び） */
 .docs-figure-tools img {
   width: auto;
-  max-width: 72px;
+  max-width: min(100%, 480px);
 }
 
 .docs-figure-tools figcaption {
-  max-width: 240px;
+  max-width: 480px;
   margin-left: auto;
   margin-right: auto;
 }

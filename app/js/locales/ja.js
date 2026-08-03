@@ -2,7 +2,7 @@
   g.__millrectRegisterLocale("ja", {
     "toolbar.logo": "MILLRECT",
     "toolbar.projectMenu.title": "プロジェクトメニュー",
-    "toolbar.panelLeft": "左パネル",
+    "toolbar.panelLeft": "ツールパレット",
     "toolbar.panelRight": "右パネル",
     "toolbar.new": "新規",
     "toolbar.new.title": "新規 (Ctrl+N)",
@@ -165,7 +165,6 @@
     "startup.clearAll.step2.confirm": "すべて削除する",
     "startup.clearAll.done": "{count} 件のプロジェクトを削除しました。",
     "projectMenu.title": "メニュー",
-    "projectMenu.subtitle": "機能を選択してください",
     "projectMenu.section.file": "ファイル",
     "projectMenu.section.importExport": "読み込み・出力",
     "projectMenu.section.viewEdit": "表示・編集",

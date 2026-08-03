@@ -2561,6 +2561,7 @@ function _canvasSize() {
 
 function _leftOffset() {
   const tf = document.getElementById("tools-float");
+  if (tf?.closest("#toolbar")) return 0;
   const cc =
     document.getElementById("canvas-container") ||
     document.getElementById("main-svg");
@@ -2574,7 +2575,8 @@ function _leftOffset() {
 
 function _rightOffset() {
   const sr = document.getElementById("sidebar-right");
-  return sr ? sr.offsetWidth + 16 : 0;
+  if (!sr?.closest("#workspace")) return 0;
+  return sr.classList.contains("panel-hidden") ? 0 : sr.offsetWidth + 16;
 }
 
 function fitPage() {
@@ -2818,7 +2820,6 @@ function showProjectActionsMenu() {
     <div id="project-actions-dialog" role="dialog" aria-modal="true" aria-labelledby="project-actions-title">
       <div class="pl-header">
         <h2 id="project-actions-title">${t("projectMenu.title")}</h2>
-        <p class="pl-subtitle">${t("projectMenu.subtitle")}</p>
         <button type="button" class="pl-btn-close" aria-label="${t("startup.cancel")}">✕</button>
       </div>
       <div class="project-menu-sections">
@@ -3182,6 +3183,14 @@ document.addEventListener("DOMContentLoaded", () => {
   svgEl.addEventListener("mousedown", (e) => onMouseDown(e, svgEl));
   svgEl.addEventListener("mousemove", (e) => onMouseMove(e, svgEl));
   svgEl.addEventListener("mouseup", (e) => onMouseUp(e, svgEl));
+  // SVG の外まで選択図形をドラッグしても移動と mouseup を追跡する。
+  // SVG 内のイベントは既存リスナーに任せ、二重処理を避ける。
+  window.addEventListener("mousemove", (e) => {
+    if ((_ds || _panning) && !svgEl.contains(e.target)) onMouseMove(e, svgEl);
+  });
+  window.addEventListener("mouseup", (e) => {
+    if ((_ds || _panning) && !svgEl.contains(e.target)) onMouseUp(e, svgEl);
+  });
   const canvasArea = document.getElementById("canvas-area");
   const onCanvasWheel = (e) => onWheel(e, svgEl);
   canvasArea?.addEventListener("wheel", onCanvasWheel, {

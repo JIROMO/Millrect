@@ -4,13 +4,6 @@ class MillrectLeftSidebar extends HTMLElement {
   connectedCallback() {
     this.innerHTML = `
       <div id="tools-float">
-        <div id="tools-drag-handle" data-i18n-title="tools.dragHandle.title">
-          <svg width="12" height="12" viewBox="0 0 16 16" fill="currentColor">
-            <circle cx="5" cy="4" r="1.2"/><circle cx="11" cy="4" r="1.2"/>
-            <circle cx="5" cy="8" r="1.2"/><circle cx="11" cy="8" r="1.2"/>
-            <circle cx="5" cy="12" r="1.2"/><circle cx="11" cy="12" r="1.2"/>
-          </svg>
-        </div>
         <div id="tool-panel">
           <button class="tool-btn active" data-tool="select" data-i18n-title="tools.select.title">
             <span class="tool-icon"><i data-lucide="mouse-pointer-2"></i></span>

@@ -9,6 +9,95 @@ let _ds = null,
 let _vertexEditId = null;
 let _textClickState = null;
 
+// 選択図形を表示領域の端へドラッグしたとき、ポインターを止めたままでも
+// キャンバスを送り続ける。速度は端に近いほど上がり、倍率には依存しない。
+const SELECTION_AUTO_PAN_EDGE_PX = 56;
+const SELECTION_AUTO_PAN_MAX_PX_PER_SECOND = 720;
+let _selectionAutoPan = null;
+
+function _selectionAutoPanVelocity(clientX, clientY, rect) {
+  const edge = Math.min(
+    SELECTION_AUTO_PAN_EDGE_PX,
+    rect.width / 3,
+    rect.height / 3,
+  );
+  const axis = (value, min, max) => {
+    if (value < min + edge) {
+      return (
+        SELECTION_AUTO_PAN_MAX_PX_PER_SECOND *
+        Math.min(1, (min + edge - value) / edge)
+      );
+    }
+    if (value > max - edge) {
+      return (
+        -SELECTION_AUTO_PAN_MAX_PX_PER_SECOND *
+        Math.min(1, (value - (max - edge)) / edge)
+      );
+    }
+    return 0;
+  };
+  return {
+    x: axis(clientX, rect.left, rect.right),
+    y: axis(clientY, rect.top, rect.bottom),
+  };
+}
+
+function _stopSelectionAutoPan() {
+  if (_selectionAutoPan?.raf) cancelAnimationFrame(_selectionAutoPan.raf);
+  _selectionAutoPan = null;
+}
+
+function _updateSelectionAutoPanPointer(e, svgEl) {
+  if (!_selectionAutoPan) {
+    _selectionAutoPan = {
+      svgEl,
+      clientX: e.clientX,
+      clientY: e.clientY,
+      shiftKey: e.shiftKey,
+      lastTime: performance.now(),
+      raf: 0,
+    };
+    const tick = (now) => {
+      const autoPan = _selectionAutoPan;
+      if (!autoPan || !_ds || _ds.action !== "move") {
+        _stopSelectionAutoPan();
+        return;
+      }
+      const rect = autoPan.svgEl.getBoundingClientRect();
+      const velocity = _selectionAutoPanVelocity(
+        autoPan.clientX,
+        autoPan.clientY,
+        rect,
+      );
+      const elapsed = Math.min(32, Math.max(0, now - autoPan.lastTime));
+      autoPan.lastTime = now;
+      if (velocity.x || velocity.y) {
+        const state = getState();
+        state.panX += (velocity.x * elapsed) / 1000;
+        state.panY += (velocity.y * elapsed) / 1000;
+        applyViewportTransform();
+
+        // ポインターがウィンドウ外へ出ても、表示領域の端を掴んだ状態として
+        // 図形の移動量を再計算する。
+        const sx =
+          Math.max(rect.left, Math.min(rect.right, autoPan.clientX)) - rect.left;
+        const sy =
+          Math.max(rect.top, Math.min(rect.bottom, autoPan.clientY)) - rect.top;
+        const { pt } = getSnapped(sx, sy, { gridOnly: true });
+        _lastPP = pt;
+        handleSelMove(pt, autoPan.shiftKey);
+      }
+      autoPan.raf = requestAnimationFrame(tick);
+    };
+    _selectionAutoPan.raf = requestAnimationFrame(tick);
+    return;
+  }
+  _selectionAutoPan.svgEl = svgEl;
+  _selectionAutoPan.clientX = e.clientX;
+  _selectionAutoPan.clientY = e.clientY;
+  _selectionAutoPan.shiftKey = e.shiftKey;
+}
+
 function _drawStyle() {
   const s = getState();
   return {
@@ -355,6 +444,7 @@ function onMouseMove(e, svgEl) {
   }
   if (tool === "select" && _ds?.action === "move") {
     document.body.classList.add("dragging");
+    _updateSelectionAutoPanPointer(e, svgEl);
     if (e.altKey && !_ds.duplicated) {
       _beginDuplicate([...state.selectedShapeIds]);
     }
@@ -419,6 +509,7 @@ function onMouseMove(e, svgEl) {
 }
 
 function onMouseUp(e, svgEl) {
+  _stopSelectionAutoPan();
   if (e.button === 1 || _panning) {
     removeSnapIndicator();
     _panning = false;
