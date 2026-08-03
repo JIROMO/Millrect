@@ -119,7 +119,7 @@ test("fast selection move finalizes with a live update instead of full render", 
   assert.doesNotMatch(mouseUpBody, /if \(_ds\.fastActive\) render\(\)/);
 });
 
-test("selection drag auto-pans the canvas near every viewport edge", () => {
+test("selection move and marquee drags auto-pan near every viewport edge", () => {
   assert.match(interactionSource, /const SELECTION_AUTO_PAN_EDGE_PX = 56/);
   assert.match(
     interactionSource,
@@ -141,6 +141,14 @@ test("selection drag auto-pans the canvas near every viewport edge", () => {
   assert.match(updateBody, /state\.panY \+=/);
   assert.match(updateBody, /applyViewportTransform\(\)/);
   assert.match(updateBody, /handleSelMove\(pt, autoPan\.shiftKey\)/);
+  assert.match(updateBody, /setMarquee\(_ds\.startPP, pt\)/);
+
+  const mouseMoveBody = functionBody(interactionSource, "onMouseMove");
+  const marqueeBlock = mouseMoveBody.match(
+    /if \(tool === "select" && _ds\?\.action === "marquee"\) \{([\s\S]*?)\n  \}/,
+  );
+  assert.ok(marqueeBlock, "marquee drag branch should exist");
+  assert.match(marqueeBlock[1], /_updateSelectionAutoPanPointer\(e, svgEl\)/);
 
   const mouseUpBody = functionBody(interactionSource, "onMouseUp");
   assert.match(mouseUpBody, /_stopSelectionAutoPan\(\)/);

@@ -59,7 +59,11 @@ function _updateSelectionAutoPanPointer(e, svgEl) {
     };
     const tick = (now) => {
       const autoPan = _selectionAutoPan;
-      if (!autoPan || !_ds || _ds.action !== "move") {
+      if (
+        !autoPan ||
+        !_ds ||
+        (_ds.action !== "move" && _ds.action !== "marquee")
+      ) {
         _stopSelectionAutoPan();
         return;
       }
@@ -85,7 +89,12 @@ function _updateSelectionAutoPanPointer(e, svgEl) {
           Math.max(rect.top, Math.min(rect.bottom, autoPan.clientY)) - rect.top;
         const { pt } = getSnapped(sx, sy, { gridOnly: true });
         _lastPP = pt;
-        handleSelMove(pt, autoPan.shiftKey);
+        if (_ds.action === "move") {
+          handleSelMove(pt, autoPan.shiftKey);
+        } else {
+          setMarquee(_ds.startPP, pt);
+          render();
+        }
       }
       autoPan.raf = requestAnimationFrame(tick);
     };
@@ -394,6 +403,7 @@ function onMouseMove(e, svgEl) {
     return;
   }
   if (tool === "select" && _ds?.action === "marquee") {
+    _updateSelectionAutoPanPointer(e, svgEl);
     setMarquee(_ds.startPP, pp);
     render();
     return;
