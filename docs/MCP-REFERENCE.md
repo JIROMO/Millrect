@@ -28,6 +28,7 @@ For schemas, coordinates, and drawing rules, read `agent-manual` first.
 | `create_part` | `createPart` | Semantic part (`box` + features) |
 | `create_multiview_box` | `createMultiviewBox` | Multiview box in mm |
 | `layout_rect_mm` | `layoutRectOnPageMm` | Centered rect on current page (mm) |
+| `add_dimensions` | `addDimensionsMm` | Add dimension batches; coordinates and offsets are all mm |
 | `set_reference_scale_anchor` | `setReferenceImageScaleAnchor` | 2-point scale calibration (mm) |
 | `digitize_sketch` | `applyDigitizeProposals` | Vision proposals → ghost shapes |
 | `confirm_digitize_proposals` | `confirmDigitizeProposals` | Confirm ghosts → normal shapes |
@@ -56,6 +57,25 @@ For schemas, coordinates, and drawing rules, read `agent-manual` first.
 The browser connects to `/mcp/ws?session=<id>`. The public MCP endpoint is
 `/mcp?session=<id>`; the session value is a capability key and must not be published.
 
+### Dimension-first workflow
+
+Prefer `add_dimensions` over low-level `apply_commands.addDimension`. It accepts `from` and
+`to` as `{x_mm, y_mm}`, plus `offset_mm`. Omit styling to use drafting-safe defaults
+(`text_size_mm: 3`, `line_width_mm: 0.25`, `arrow_style: "dot"`). Text size is limited to
+1–6 mm so pixel-like values such as `12` cannot produce oversized labels. Labels use a white
+backing by default (`label_bg: true`) so dimension lines do not strike through the text.
+
+```json
+{
+  "dimensions": [{
+    "dimension_type": "horizontal",
+    "from": { "x_mm": 10, "y_mm": 20 },
+    "to": { "x_mm": 110, "y_mm": 20 },
+    "offset_mm": -8
+  }]
+}
+```
+
 ## `apply_commands` actions
 
 | action | Description |
@@ -70,6 +90,9 @@ The browser connects to `/mcp/ws?session=<id>`. The public MCP endpoint is
 | `setPageScale` | Scale |
 | `setProjectName` | Project name |
 | `addPage` | Add page |
+
+For low-level `addDimension`, `from` / `to` / `offset` use real units (1 mm = 10), but
+`textSize` and `lineWidth` use paper mm. `textSize` is limited to 1–6 mm; omit it for 3 mm.
 | `addConstraint` | Add constraint |
 | `removeConstraint` | Remove constraint |
 | `applyConstraints` | Apply all constraints immediately |

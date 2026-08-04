@@ -31,6 +31,7 @@ Use **high-level MCP tools** before raw `apply_commands`. They accept **mm** and
 | `create_multiview_box` | `createMultiviewBox` | Box from `width_mm` / `depth_mm` / `height_mm` → top + front (+ optional right) pages |
 | `create_part` | `createPart` | Semantic part: `kind: "box"` + `features[]` (e.g. `hole_grid` on top view) |
 | `layout_rect_mm` | `layoutRectOnPageMm` | Centered rect on current page |
+| `add_dimensions` | `addDimensionsMm` | Add dimensions using mm-only coordinates and safe drafting defaults |
 | `validate_3d_readiness` | `validate3DReadiness` | Structured pre-check (axes, closed contours, issues[]) |
 
 Example flow:
@@ -244,6 +245,10 @@ realUnit  = paperUnit × denominator / numerator
 ```
 
 ## Dimension schema (stored in `page.dimensions[]`)
+
+For MCP work, prefer `add_dimensions`. Its `from`, `to`, and `offset_mm` fields are all in mm;
+`text_size_mm` defaults to 3 and is limited to 1–6 mm. The low-level schema below uses real
+units for geometry (1 mm = 10 real units), while `textSize` and `lineWidth` are paper mm, not px.
 
 ```js
 {

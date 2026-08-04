@@ -31,6 +31,7 @@ Hono Worker はリモート `/mcp` エンドポイントから本書を Resource
 | `create_multiview_box` | `createMultiviewBox` | mm 直方体 → 上面+正面（+右側面） |
 | `create_part` | `createPart` | セマンティック Part（`box` + `features[]`） |
 | `layout_rect_mm` | `layoutRectOnPageMm` | 現在ページに mm 矩形を中央配置 |
+| `add_dimensions` | `addDimensionsMm` | mm座標と安全な製図既定値で寸法線を一括追加 |
 | `validate_3d_readiness` | `validate3DReadiness` | 3D 生成前の構造化チェック |
 
 Part DSL 系: `compile_part_dsl` / `apply_part_dsl` / `update_part_param` / `validate_manufacturability` — 詳細は [AGENT.md](AGENT.md) の Part DSL 章。
@@ -189,6 +190,10 @@ realUnit  = paperUnit × denominator / numerator
 ```
 
 ## Dimension スキーマ（page.dimensions[] に格納）
+
+MCPから寸法を書く場合は `add_dimensions` を優先する。`from`・`to`・`offset_mm` はすべてmm、
+`text_size_mm` は既定3mm・許容1〜6mm。以下の低レベルschemaでは座標がreal units
+（1mm = 10 real units）である一方、`textSize` と `lineWidth` はpxではなく紙面上のmm。
 
 ```js
 {

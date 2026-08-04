@@ -2,6 +2,8 @@
 
 /** real units: 1 mm = 10 paper units（state.js の REAL_PER_MM と同値） */
 const AGENT_REAL_PER_MM = 10;
+const DIMENSION_TEXT_SIZE_MIN_MM = 1;
+const DIMENSION_TEXT_SIZE_MAX_MM = 6;
 
 /** 用紙中央に mm 指定の矩形を配置（real units で返す） */
 function layoutCenteredRectMm(mmW, mmH, paperMm, scale) {
@@ -119,6 +121,83 @@ function mmToAgentReal(mm) {
   return mm * AGENT_REAL_PER_MM;
 }
 
+/**
+ * MCP向けのmm寸法指定を、アプリ内部のdimension schemaへ変換する。
+ * 座標とoffsetだけをreal unitsへ変換し、文字・線幅は紙面上のmm値を維持する。
+ */
+function buildDimensionSpecsMm(specs = []) {
+  const dimensions = [];
+  const errors = [];
+  for (let index = 0; index < specs.length; index++) {
+    const spec = specs[index] || {};
+    const dimensionType = spec.dimension_type;
+    const from = spec.from;
+    const to = spec.to;
+    const textSize = spec.text_size_mm ?? 3;
+    const lineWidth = spec.line_width_mm ?? 0.25;
+    const offsetMm = spec.offset_mm ?? -8;
+    const coords = [from?.x_mm, from?.y_mm, to?.x_mm, to?.y_mm, offsetMm];
+
+    if (!["horizontal", "vertical"].includes(dimensionType)) {
+      errors.push({
+        index,
+        message: "dimension_type must be horizontal or vertical",
+      });
+      continue;
+    }
+    if (!coords.every(Number.isFinite)) {
+      errors.push({
+        index,
+        message: "from/to/offset coordinates must be finite mm values",
+      });
+      continue;
+    }
+    if (
+      !Number.isFinite(textSize) ||
+      textSize < DIMENSION_TEXT_SIZE_MIN_MM ||
+      textSize > DIMENSION_TEXT_SIZE_MAX_MM
+    ) {
+      errors.push({
+        index,
+        message: `text_size_mm must be ${DIMENSION_TEXT_SIZE_MIN_MM}–${DIMENSION_TEXT_SIZE_MAX_MM} mm (recommended: 3 mm)`,
+      });
+      continue;
+    }
+    if (!Number.isFinite(lineWidth) || lineWidth <= 0 || lineWidth > 2) {
+      errors.push({
+        index,
+        message: "line_width_mm must be greater than 0 and at most 2 mm",
+      });
+      continue;
+    }
+
+    const dimension = {
+      type: "dimension",
+      dimensionType,
+      from: {
+        x: mmToAgentReal(from.x_mm),
+        y: mmToAgentReal(from.y_mm),
+      },
+      to: {
+        x: mmToAgentReal(to.x_mm),
+        y: mmToAgentReal(to.y_mm),
+      },
+      offset: mmToAgentReal(offsetMm),
+      textSize,
+      lineWidth,
+      color: spec.color ?? "#1a1a2e",
+      arrowStyle: spec.arrow_style ?? "dot",
+      labelBg: spec.label_bg ?? true,
+    };
+    if (spec.id) dimension.id = spec.id;
+    if (spec.prefix != null) dimension.prefix = spec.prefix;
+    if (spec.suffix != null) dimension.suffix = spec.suffix;
+    if (spec.decimals != null) dimension.decimals = spec.decimals;
+    dimensions.push(dimension);
+  }
+  return { dimensions, errors };
+}
+
 /** 円輪郭 ring（real units） */
 function circleRing(cx, cy, r, segments = 128) {
   const ring = [];
@@ -224,12 +303,15 @@ function buildRectDimensionSpecs(rect, opts = {}) {
 if (typeof module !== "undefined" && module.exports) {
   module.exports = {
     REAL_PER_MM: AGENT_REAL_PER_MM,
+    DIMENSION_TEXT_SIZE_MIN_MM,
+    DIMENSION_TEXT_SIZE_MAX_MM,
     layoutCenteredRectMm,
     boxViewSizesMm,
     VIEW_AXIS,
     normalizeViewType,
     analyzeMultiviewReadiness,
     buildRectDimensionSpecs,
+    buildDimensionSpecsMm,
     rectRingFromShape,
     mmToAgentReal,
     circleRing,
@@ -245,6 +327,7 @@ if (typeof window !== "undefined") {
   window.analyzeMultiviewReadiness = analyzeMultiviewReadiness;
   window.normalizeViewType = normalizeViewType;
   window.REAL_PER_MM = AGENT_REAL_PER_MM;
+  window.buildDimensionSpecsMm = buildDimensionSpecsMm;
   window.buildRectDimensionSpecs = buildRectDimensionSpecs;
   window.buildHoleGridHoleRings = buildHoleGridHoleRings;
   window.buildRectWithHolesPathShape = buildRectWithHolesPathShape;

@@ -19,6 +19,69 @@ import { z } from "zod";
 type ToolDef = { name: string; description: string; action: string };
 const TOOL_DEFS = MCP_TOOL_DEFS as ToolDef[];
 
+const dimensionPointMmSchema = z.object({
+  x_mm: z.number().describe("X座標 mm"),
+  y_mm: z.number().describe("Y座標 mm"),
+});
+
+const dimensionMmSchema = z.object({
+  id: z.string().optional().describe("省略時は自動採番"),
+  dimension_type: z.enum(["horizontal", "vertical"]),
+  from: dimensionPointMmSchema,
+  to: dimensionPointMmSchema,
+  offset_mm: z.number().optional().describe("寸法線オフセット mm（既定 -8）"),
+  prefix: z.string().optional(),
+  suffix: z.string().optional(),
+  decimals: z.number().int().min(0).max(6).optional(),
+  text_size_mm: z
+    .number()
+    .min(1)
+    .max(6)
+    .optional()
+    .describe("紙面上の文字サイズ mm（既定・推奨 3）"),
+  line_width_mm: z
+    .number()
+    .positive()
+    .max(2)
+    .optional()
+    .describe("紙面上の線幅 mm（既定 0.25）"),
+  color: z.string().optional(),
+  arrow_style: z.enum(["dot", "arrow", "slash", "open"]).optional(),
+  label_bg: z.boolean().optional().describe("文字背面を白抜き（既定true）"),
+});
+
+const lowLevelDimensionSchema = z
+  .object({
+    id: z.string(),
+    type: z.literal("dimension").optional(),
+    dimensionType: z.enum(["horizontal", "vertical"]),
+    from: z
+      .object({ x: z.number(), y: z.number() })
+      .describe("内部real units（1mm=10）"),
+    to: z
+      .object({ x: z.number(), y: z.number() })
+      .describe("内部real units（1mm=10）"),
+    offset: z.number().optional().describe("内部real units（1mm=10）"),
+    prefix: z.string().optional(),
+    suffix: z.string().optional(),
+    decimals: z.number().int().min(0).max(6).optional(),
+    textSize: z
+      .number()
+      .min(1)
+      .max(6)
+      .optional()
+      .describe("紙面上のmm。既定・推奨3。pxではない"),
+    lineWidth: z
+      .number()
+      .positive()
+      .max(2)
+      .optional()
+      .describe("紙面上のmm。既定0.25"),
+    color: z.string().optional(),
+    arrowStyle: z.enum(["dot", "arrow", "slash", "open"]).optional(),
+  })
+  .passthrough();
+
 function defOf(name: string): ToolDef {
   const found = TOOL_DEFS.find((d) => d.name === name);
   if (!found) {
@@ -116,6 +179,12 @@ const PARAM_SHAPES: Record<string, z.ZodRawShape> = {
     add_dimensions: z.boolean().optional().describe("外周寸法線を追加"),
     fill: z.string().optional().describe("塗り色（例: #8fb7ff）"),
     stroke: z.string().optional().describe("線色"),
+  },
+  add_dimensions: {
+    dimensions: z
+      .array(dimensionMmSchema)
+      .min(1)
+      .describe("追加する寸法線。全座標・offsetはmm"),
   },
   list_docs_scenarios: {},
   run_docs_scenario: {
@@ -218,9 +287,11 @@ const PARAM_SHAPES: Record<string, z.ZodRawShape> = {
             .describe("実行するアクション"),
           shape: z.any().optional().describe("addShape 用シェイプオブジェクト"),
           dimension: z
-            .any()
+            .union([lowLevelDimensionSchema, z.string()])
             .optional()
-            .describe("addDimension 用寸法オブジェクト。{ id, type:'dimension', from:{x,y}, to:{x,y}, offset, ... }"),
+            .describe(
+              "addDimension用。座標/offsetは内部real units（1mm=10）。textSizeは紙面mm（1〜6、推奨3）。通常はadd_dimensionsを使用",
+            ),
           id: z.string().optional().describe("updateShape / deleteShape / updateDimension 用 ID"),
           values: z.any().optional().describe("updateShape / updateDimension 用更新値"),
           ids: z.array(z.string()).optional().describe("selectShapes 用 ID 配列"),
@@ -303,6 +374,8 @@ function toBrowserParams(name: string, params: Record<string, unknown>): Record<
           ...(params.stroke ? { stroke: params.stroke } : {}),
         },
       };
+    case "add_dimensions":
+      return { specs: params.dimensions };
     case "run_docs_scenario":
       return {
         scenarioId: params.scenario,

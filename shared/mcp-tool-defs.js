@@ -149,6 +149,12 @@ export const MCP_TOOL_DEFS = [
     action: "layoutRectOnPageMm",
   },
   {
+    name: "add_dimensions",
+    description:
+      "現在ページへ寸法線を一括追加する寸法専用Intent API。座標・オフセットはすべてmm。文字サイズは省略時3mmで、1〜6mmのみ許可する。低レベルのapply_commandsより本ツールを優先する。",
+    action: "addDimensionsMm",
+  },
+  {
     name: "list_docs_scenarios",
     description:
       "ドキュメント用シナリオ ID 一覧（run_docs_scenario 用）。ブラウザ上で再現可能なシーンを返す。",

@@ -135,6 +135,14 @@ function startWebSocketServer(port = WS_PORT) {
                   from:          d.from,
                   to:            d.to,
                   offset:        d.offset,
+                  from_mm:       { x: realToMM(d.from.x), y: realToMM(d.from.y) },
+                  to_mm:         { x: realToMM(d.to.x), y: realToMM(d.to.y) },
+                  offset_mm:     realToMM(d.offset || 0),
+                  value_mm:      dimensionValueMM(d),
+                  text_size_mm:  d.textSize ?? 3,
+                  line_width_mm: d.lineWidth ?? 0.25,
+                  prefix:        d.prefix ?? "",
+                  suffix:        d.suffix ?? "",
                 })),
                 // Profile（閉じた輪郭として 3D 生成に使える図形）
                 profiles: profiles.map(p => ({
@@ -459,6 +467,17 @@ function startWebSocketServer(port = WS_PORT) {
             (() => {
               try {
                 return layoutRectOnPageMm(${mmW}, ${mmH}, ${style});
+              } catch (e) {
+                return { ok: false, error: e.message };
+              }
+            })()
+          `);
+        } else if (action === "addDimensionsMm") {
+          const specs = JSON.stringify(msg.specs ?? []);
+          result = await _win.webContents.executeJavaScript(`
+            (() => {
+              try {
+                return addDimensionsMm(${specs});
               } catch (e) {
                 return { ok: false, error: e.message };
               }

@@ -8,9 +8,10 @@ const WORKFLOW = `# Millrect MCP 操作チェックリスト
 1. Resource \`millrect://docs/agent-manual\` を読む
 2. \`get_project_context\` → \`validate_3d_readiness\` で現状を確認
 3. \`apply_part_dsl\` / \`create_multiview_box\` / \`layout_rect_mm\` を優先
-4. 細部編集は \`apply_commands\` でまとめて適用
-5. \`get_svg\` で結果を確認
-6. 3D が必要なら \`update_3d_scene\` → \`get_3d_scene_status\`
+4. 寸法線はmm専用の \`add_dimensions\` を優先
+5. その他の細部編集は \`apply_commands\` でまとめて適用
+6. \`get_svg\` で結果を確認
+7. 3D が必要なら \`update_3d_scene\` → \`get_3d_scene_status\`
 
 2D 図面が唯一の正であり、3D は正投影図から再生成する。`;
 
@@ -20,9 +21,10 @@ const OPERATE_DRAWING_PROMPT = `Millrect の図面を操作してください。
 1. Resource \`millrect://docs/agent-manual\` を読む
 2. \`get_project_context\` → \`validate_3d_readiness\` で現状確認
 3. Intent API（\`apply_part_dsl\` / \`create_multiview_box\` / \`layout_rect_mm\`）を優先
-4. 細部編集は \`apply_commands\` を使う
-5. \`get_svg\` で結果確認
-6. 必要なら \`update_3d_scene\` → \`get_3d_scene_status\`
+4. 寸法線はmm専用の \`add_dimensions\` を優先
+5. その他の細部編集は \`apply_commands\` を使う
+6. \`get_svg\` で結果確認
+7. 必要なら \`update_3d_scene\` → \`get_3d_scene_status\`
 
 禁止: feature.depth による押し出し、dimension を layer.shapes に混ぜること。`;
 

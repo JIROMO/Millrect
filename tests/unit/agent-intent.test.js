@@ -7,6 +7,7 @@ const {
   boxViewSizesMm,
   analyzeMultiviewReadiness,
   buildRectDimensionSpecs,
+  buildDimensionSpecsMm,
   buildHoleGridHoleRings,
   buildRectWithHolesPathShape,
   applyReferenceScaleAnchor,
@@ -62,6 +63,38 @@ describe("agent-intent", () => {
     assert.equal(specs.length, 2);
     assert.equal(specs[0].dimensionType, "horizontal");
     assert.equal(specs[1].dimensionType, "vertical");
+  });
+
+  it("buildDimensionSpecsMm — MCPのmm座標だけをreal unitsへ変換する", () => {
+    const result = buildDimensionSpecsMm([
+      {
+        dimension_type: "horizontal",
+        from: { x_mm: 10, y_mm: 20 },
+        to: { x_mm: 30, y_mm: 20 },
+        offset_mm: -8,
+        prefix: "P=",
+      },
+    ]);
+    assert.deepEqual(result.errors, []);
+    assert.deepEqual(result.dimensions[0].from, { x: 100, y: 200 });
+    assert.deepEqual(result.dimensions[0].to, { x: 300, y: 200 });
+    assert.equal(result.dimensions[0].offset, -80);
+    assert.equal(result.dimensions[0].textSize, 3);
+    assert.equal(result.dimensions[0].lineWidth, 0.25);
+    assert.equal(result.dimensions[0].labelBg, true);
+  });
+
+  it("buildDimensionSpecsMm — 巨大な寸法文字を拒否する", () => {
+    const result = buildDimensionSpecsMm([
+      {
+        dimension_type: "horizontal",
+        from: { x_mm: 0, y_mm: 0 },
+        to: { x_mm: 10, y_mm: 0 },
+        text_size_mm: 12,
+      },
+    ]);
+    assert.equal(result.dimensions.length, 0);
+    assert.match(result.errors[0].message, /1–6 mm/);
   });
 
   it("buildHoleGridHoleRings — 2×2 grid", () => {

@@ -33,6 +33,41 @@ function _addDimensionsToPage(page, rectShape, opts = {}) {
   }
 }
 
+/**
+ * MCP向け: 現在ページへ、座標・offsetをすべてmmで指定して寸法線を一括追加する。
+ * text_size_mm等の紙面スタイルも安全な範囲で検証される。
+ */
+function addDimensionsMm(specs = []) {
+  const built = buildDimensionSpecsMm(specs);
+  if (built.errors.length) {
+    return { ok: false, added: 0, dimensionIds: [], errors: built.errors };
+  }
+  if (!built.dimensions.length) {
+    return {
+      ok: false,
+      added: 0,
+      dimensionIds: [],
+      errors: [{ message: "dimensions must contain at least one item" }],
+    };
+  }
+
+  const page = getCurrentPage();
+  if (!page.dimensions) page.dimensions = [];
+  const dimensionIds = [];
+  for (const dimension of built.dimensions) {
+    if (!dimension.id || findShapeById(dimension.id))
+      dimension.id = genId("dim");
+    normalizeDimensionGeometry(dimension);
+    page.dimensions.push(dimension);
+    dimensionIds.push(dimension.id);
+    if (typeof markShapeDirty === "function") markShapeDirty(dimension.id);
+  }
+  pushHistory("MCP寸法線追加");
+  render();
+  uiUpdate();
+  return { ok: true, added: dimensionIds.length, dimensionIds, errors: [] };
+}
+
 function _findPageByView(state, viewType) {
   const target = normalizeViewType(viewType);
   return state.pages.find(

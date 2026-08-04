@@ -30,6 +30,7 @@ const WORKFLOW_CHEATSHEET = `# Millrect MCP 操作チェックリスト
   - \`import_part_dsl_file\` — \`.mlr-part.json\` から Part 生成
   - \`validate_manufacturability\` — 製造ルール DSL 検証
   - \`layout_rect_mm\` — 現在ページに mm 矩形を中央配置
+  - \`add_dimensions\` — 座標・offsetをすべてmm指定して寸法線を一括追加（推奨）
   - \`validate_3d_readiness\` — 3D 生成前チェック
   - \`load_reference_image\` / \`set_reference_scale_anchor\` — スケッチ下絵 + スケール校正
   - \`digitize_sketch\` / \`confirm_digitize_proposals\` — Vision 提案 → ゴースト → 確定
@@ -166,6 +167,69 @@ function normalizeCommand(cmd) {
     normalized.scale = parseJsonField(normalized.scale, "scale");
   return normalized;
 }
+
+const dimensionPointMmSchema = z.object({
+  x_mm: z.number().describe("X座標 mm"),
+  y_mm: z.number().describe("Y座標 mm"),
+});
+
+const dimensionMmSchema = z.object({
+  id: z.string().optional().describe("省略時は自動採番"),
+  dimension_type: z.enum(["horizontal", "vertical"]),
+  from: dimensionPointMmSchema,
+  to: dimensionPointMmSchema,
+  offset_mm: z.number().optional().describe("寸法線オフセット mm（既定 -8）"),
+  prefix: z.string().optional(),
+  suffix: z.string().optional(),
+  decimals: z.number().int().min(0).max(6).optional(),
+  text_size_mm: z
+    .number()
+    .min(1)
+    .max(6)
+    .optional()
+    .describe("紙面上の文字サイズ mm（既定・推奨 3）"),
+  line_width_mm: z
+    .number()
+    .positive()
+    .max(2)
+    .optional()
+    .describe("紙面上の線幅 mm（既定 0.25）"),
+  color: z.string().optional(),
+  arrow_style: z.enum(["dot", "arrow", "slash", "open"]).optional(),
+  label_bg: z.boolean().optional().describe("文字背面を白抜き（既定true）"),
+});
+
+const lowLevelDimensionSchema = z
+  .object({
+    id: z.string(),
+    type: z.literal("dimension").optional(),
+    dimensionType: z.enum(["horizontal", "vertical"]),
+    from: z
+      .object({ x: z.number(), y: z.number() })
+      .describe("内部real units（1mm=10）"),
+    to: z
+      .object({ x: z.number(), y: z.number() })
+      .describe("内部real units（1mm=10）"),
+    offset: z.number().optional().describe("内部real units（1mm=10）"),
+    prefix: z.string().optional(),
+    suffix: z.string().optional(),
+    decimals: z.number().int().min(0).max(6).optional(),
+    textSize: z
+      .number()
+      .min(1)
+      .max(6)
+      .optional()
+      .describe("紙面上のmm。既定・推奨3。pxではない"),
+    lineWidth: z
+      .number()
+      .positive()
+      .max(2)
+      .optional()
+      .describe("紙面上のmm。既定0.25"),
+    color: z.string().optional(),
+    arrowStyle: z.enum(["dot", "arrow", "slash", "open"]).optional(),
+  })
+  .passthrough();
 
 // ── MCP Server ──────────────────────────────────────────────────
 
@@ -839,6 +903,24 @@ server.tool(
   },
 );
 
+// add_dimensions — coordinates and offsets are all expressed in mm.
+server.tool(
+  "add_dimensions",
+  "現在ページへ寸法線を一括追加する寸法専用Intent API。座標・オフセットはすべてmm。文字サイズは省略時3mmで、1〜6mmのみ許可する。低レベルのapply_commandsより本ツールを優先する。",
+  {
+    dimensions: z
+      .array(dimensionMmSchema)
+      .min(1)
+      .describe("追加する寸法線。全座標・offsetはmm"),
+  },
+  async ({ dimensions }) => {
+    const result = await call("addDimensionsMm", { specs: dimensions });
+    return {
+      content: [{ type: "text", text: JSON.stringify(result, null, 2) }],
+    };
+  },
+);
+
 // list_docs_scenarios
 server.tool(
   "list_docs_scenarios",
@@ -1441,10 +1523,10 @@ shape/dimension オブジェクトは必ず id フィールドを含めること
             .describe("実行するアクション"),
           shape: z.any().optional().describe("addShape 用シェイプオブジェクト"),
           dimension: z
-            .any()
+            .union([lowLevelDimensionSchema, z.string()])
             .optional()
             .describe(
-              "addDimension 用寸法オブジェクト。{ id, type:'dimension', from:{x,y}, to:{x,y}, offset, ... }",
+              "addDimension用。座標/offsetは内部real units（1mm=10）。textSizeは紙面mm（1〜6、推奨3）。通常はadd_dimensionsを使用",
             ),
           id: z
             .string()
