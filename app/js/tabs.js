@@ -301,6 +301,40 @@ async function openUntitledProjectTab() {
   await openProjectInNewTab(newUntitledProjectResult());
 }
 
+// 起動時: 前回アクティブだった保存済みプロジェクトを開く。
+// DBから削除済み・読み込み失敗・未保存の新規プロジェクトなら白紙へフォールバックする。
+async function restoreLastOpenedProjectTab() {
+  const projectId =
+    typeof getLastOpenedProjectId === "function"
+      ? getLastOpenedProjectId()
+      : null;
+  if (projectId && typeof dbLoadProject === "function") {
+    try {
+      const row = await dbLoadProject(projectId);
+      if (row?.data) {
+        await openProjectInNewTab({
+          projectId: row.id,
+          projectName: row.name,
+          json: row.data,
+          savedAt: row.updatedAt,
+        });
+        return { restored: true, projectId: row.id };
+      }
+    } catch (e) {
+      console.warn("[tabs] last project restore failed:", e);
+    }
+    if (typeof clearLastOpenedProjectId === "function") {
+      clearLastOpenedProjectId();
+    }
+  }
+  await openUntitledProjectTab();
+  return {
+    restored: false,
+    projectId:
+      typeof getCurrentProjectId === "function" ? getCurrentProjectId() : null,
+  };
+}
+
 // 「開く」/「＋」ボタンから: プロジェクトリストを出して保存済みを選ぶ（新規作成も可）
 async function promptNewProjectTab() {
   const result = await showProjectList();

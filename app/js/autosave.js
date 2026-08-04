@@ -1,6 +1,7 @@
 "use strict";
 
 const AUTOSAVE_DELAY = 2000;
+const LAST_OPENED_PROJECT_STORAGE_KEY = "millrect-last-opened-project-id";
 
 let _autosaveTimer = null;
 let _lastSavedAt = null;
@@ -13,10 +14,32 @@ let _refImageCache = new Map();
 function setCurrentProjectId(id) {
   if (id !== _currentProjectId) _refImageCache = new Map();
   _currentProjectId = id;
+  try {
+    if (id) localStorage.setItem(LAST_OPENED_PROJECT_STORAGE_KEY, id);
+    else localStorage.removeItem(LAST_OPENED_PROJECT_STORAGE_KEY);
+  } catch {
+    // localStorageが無効でも、現在セッション内のプロジェクト操作は継続する。
+  }
 }
 
 function getCurrentProjectId() {
   return _currentProjectId;
+}
+
+function getLastOpenedProjectId() {
+  try {
+    return localStorage.getItem(LAST_OPENED_PROJECT_STORAGE_KEY) || null;
+  } catch {
+    return null;
+  }
+}
+
+function clearLastOpenedProjectId() {
+  try {
+    localStorage.removeItem(LAST_OPENED_PROJECT_STORAGE_KEY);
+  } catch {
+    // localStorageが無効なら消去対象も存在しない。
+  }
 }
 
 function markProjectSaved(at) {

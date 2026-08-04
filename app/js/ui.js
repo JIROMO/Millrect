@@ -3162,14 +3162,14 @@ document.addEventListener("DOMContentLoaded", () => {
   initAutosaveCheckbox();
   setAutosaveStatus("off");
 
-  // 起動時はモーダルを出さず、名称未設定プロジェクト（A4・横・1/1）を直接開く。
-  // 保存済みを開くにはツールバーの「開く」かタブの「＋」を使う。
+  // 起動時は前回アクティブだった保存済みプロジェクトを復元する。
+  // 対象が無い（初回・削除済み・未保存）場合だけ名称未設定プロジェクトを開く。
   const hideBootLoader = () =>
     document.getElementById("boot-loading")?.classList.add("hidden");
   // フェイルセーフ: 初回描画が何らかの理由で完了しなくてもローダーで固まらないよう、
   // 最大8秒で必ず消す（Web 版向け。デスクトップ版は CSS で最初から非表示）。
   setTimeout(hideBootLoader, 8000);
-  openUntitledProjectTab()
+  restoreLastOpenedProjectTab()
     .then(() => {
       requestAnimationFrame(() => {
         fitPage();
