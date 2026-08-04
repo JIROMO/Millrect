@@ -154,6 +154,18 @@ test("selection move and marquee drags auto-pan near every viewport edge", () =>
   assert.match(mouseUpBody, /_stopSelectionAutoPan\(\)/);
 });
 
+test("dimension labels support an optional diameter symbol", () => {
+  const body = functionBody(rendererSource, "renderDimensionSVG");
+  assert.match(body, /dim\.diameterSymbol === true/);
+  assert.match(body, /\"⌀\"/);
+  assert.match(body, /\^\[⌀Øφ\]/);
+});
+
+test("dimension snapping expands grouped children for precise endpoints", () => {
+  const body = functionBody(interactionSource, "getSnapped");
+  assert.match(body, /expandGroups: state\.activeTool === "dimension"/);
+});
+
 test("keypoint snapping caches drag candidates and skips tiny recalculations", () => {
   assert.match(interactionSource, /const _KEYPOINT_SNAP_RECALC_SCREEN_PX = 2/);
   const snapBody = functionBody(interactionSource, "_moveKeypointSnap");

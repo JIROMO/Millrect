@@ -1006,6 +1006,19 @@ function updatePropertiesPanel() {
       uiUpdate();
     });
   }
+  const cbDimDiameterSymbol = c.querySelector("#prop-dim-diameter-symbol");
+  if (cbDimDiameterSymbol) {
+    cbDimDiameterSymbol.addEventListener("change", () => {
+      const r = findShapeById(state.selectedShapeIds[0]);
+      if (!r || r.shape.type !== "dimension") return;
+      if (cbDimDiameterSymbol.checked) r.shape.diameterSymbol = true;
+      else delete r.shape.diameterSymbol;
+      if (typeof markShapeDirty === "function") markShapeDirty(r.shape.id);
+      pushHistory();
+      render();
+      uiUpdate();
+    });
+  }
   // Path/bezier edit-mode toggles now live under the rotation control
   // (bindAlignPositionEvents → #btn-pathedit-toggle).
   const btnTE = c.querySelector("#btn-text-edit");
@@ -1915,10 +1928,9 @@ function buildPropsHTML(s) {
     const isOverridden =
       s.value !== undefined && Math.abs(dimensionValueMM(s) - autoValMM) > 0.01;
     geometry.push(
-      `<div class="prop-row prop-readonly"><label>${t("props.autoValue")}</label><span>${fmtNum(autoValMM)} mm</span></div>`,
       `<div class="prop-row">
-        <label>${t("props.overrideValue")}</label>
-        <input type="number" step="0.1" data-key="value" value="${s.value ?? ""}" placeholder="${t("props.overridePlaceholder")}" style="${isOverridden ? "color:#e55;" : ""}">
+        <label>${t("props.dimensionValue")}</label>
+        <div class="prop-unit-field"><input type="number" step="0.1" data-key="value" value="${fmtNum(dimensionValueMM(s))}" style="${isOverridden ? "color:#e55;" : ""}"><span class="prop-unit-suffix">mm</span></div>
       </div>`,
       pRO(t("props.direction"), s.dimensionType),
       pRowMm(t("props.fromXmm"), "from.x", s.from.x),
@@ -1935,6 +1947,7 @@ function buildPropsHTML(s) {
       `<label class="prop-checkbox-row"><input type="checkbox" id="prop-dim-label-bg"${s.labelBg === true ? " checked" : ""}/> <span>${t("props.dimLabelBg")}</span></label>`,
     ];
     dimFormat = [
+      `<label class="prop-checkbox-row"><input type="checkbox" id="prop-dim-diameter-symbol"${s.diameterSymbol === true ? " checked" : ""}/> <span>${t("props.diameterSymbol")}</span></label>`,
       `<div class="prop-row"><label>${t("props.prefix")}</label><input type="text" data-key="prefix" value="${s.prefix || ""}" placeholder="${t("props.prefixPlaceholder")}"></div>`,
       `<div class="prop-row"><label>${t("props.suffix")}</label><input type="text" data-key="suffix" value="${s.suffix || ""}" placeholder="${t("props.suffixPlaceholder")}"></div>`,
       pRow(t("props.decimals"), "decimals", s.decimals ?? 0),

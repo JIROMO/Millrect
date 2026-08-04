@@ -192,7 +192,10 @@ function renderDimensionSVG(dim, scale) {
   function formatDimValue(rawVal) {
     const decimals = dim.decimals != null ? dim.decimals : 0;
     const numStr = Number(rawVal).toFixed(decimals);
-    return `${dim.prefix || ""}${numStr}${dim.suffix || ""}`;
+    const prefix = dim.prefix || "";
+    const diameter =
+      dim.diameterSymbol === true && !/^[⌀Øφ]/.test(prefix) ? "⌀" : "";
+    return `${diameter}${prefix}${numStr}${dim.suffix || ""}`;
   }
 
   // Helper: add text label with optional offset + leader line

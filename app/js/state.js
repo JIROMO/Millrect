@@ -575,7 +575,14 @@ function _groupSnapAABB(group, ancestors) {
   return aabb;
 }
 
-function _collectSnapGeometry(shapes, scale, excludeIds, onPoint, onSegment) {
+function _collectSnapGeometry(
+  shapes,
+  scale,
+  excludeIds,
+  onPoint,
+  onSegment,
+  expandGroups = false,
+) {
   const rtp = (v) => realToPaperDist(v, scale);
 
   function makeXf(s, ancestors) {
@@ -593,6 +600,12 @@ function _collectSnapGeometry(shapes, scale, excludeIds, onPoint, onSegment) {
   function collect(s, ancestors) {
     if (excludeIds && excludeIds.has(s.id)) return;
     if (s.type === "group") {
+      if (expandGroups) {
+        for (const child of s.children || []) {
+          collect(child, [...ancestors, s]);
+        }
+        return;
+      }
       // グループはスナップ上「1 つの塊」として扱い、内部の全頂点を展開しない。
       // 子が多い/複雑なグループでも毎フレームのスナップ計算を bbox（9 点 + 4 辺）
       // に抑え、「グループが在るだけで全体がもっさり」を防ぐ。
@@ -705,7 +718,7 @@ function _collectSnapGeometry(shapes, scale, excludeIds, onPoint, onSegment) {
 // hover / transform-only ドラッグ中は図面が変わらないため毎フレーム再構築せず
 // 再利用でき、複雑な path を含む図面でもマウス移動が O(候補数) のフィルタだけで済む。
 let _snapGeomCache = null;
-function _snapGeometryFor(shapes, scale, excludeIds) {
+function _snapGeometryFor(shapes, scale, excludeIds, expandGroups = false) {
   const build = () => {
     const points = [];
     const segments = [];
@@ -715,6 +728,7 @@ function _snapGeometryFor(shapes, scale, excludeIds) {
       excludeIds || null,
       (x, y, snapType, priority) => points.push({ x, y, snapType, priority }),
       (seg) => segments.push(seg),
+      expandGroups,
     );
     return { points, segments };
   };
@@ -727,7 +741,7 @@ function _snapGeometryFor(shapes, scale, excludeIds) {
   const sc = scale ? `${scale.numerator}/${scale.denominator}` : "1/1";
   const excludeKey =
     excludeIds && excludeIds.size ? [...excludeIds].sort().join(",") : "";
-  const key = `${ver}|${pageId}|${sc}|${excludeKey}`;
+  const key = `${ver}|${pageId}|${sc}|${excludeKey}|${expandGroups ? "expanded" : "compact"}`;
   if (_snapGeomCache && _snapGeomCache.key === key) return _snapGeomCache;
   const g = build();
   _snapGeomCache = { key, points: g.points, segments: g.segments };
@@ -768,7 +782,12 @@ function snapToShapes(
   }
 
   // ── 各 shape からキーポイントを収集（hover はキャッシュ）─────────
-  const geom = _snapGeometryFor(shapes, scale, opts.excludeIds || null);
+  const geom = _snapGeometryFor(
+    shapes,
+    scale,
+    opts.excludeIds || null,
+    opts.expandGroups === true,
+  );
   for (const p of geom.points) add(p.x, p.y, p.snapType, p.priority);
   const segments = geom.segments; // [{ x1,y1,x2,y2 }] (paper座標)
 

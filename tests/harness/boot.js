@@ -106,6 +106,8 @@ const EXPORT_NAMES = [
   "getCurrentLayer",
   "getShapeBBox",
   "getPageCanvasMM",
+  "snapToShapes",
+  "dimensionValueMM",
   // history
   "undo",
   "redo",

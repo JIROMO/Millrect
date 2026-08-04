@@ -217,6 +217,9 @@ function getSnapped(sx, sy, opts = {}) {
       const threshold = SNAP_SCREEN_PX / (state.zoom || 1);
       const snap = snapToShapes(pt, shapes, page.scale, threshold, guides, {
         excludeIds: opts.excludeIds,
+        // 寸法はグループ外接枠ではなく、子図形の実際の端点・中心へ吸着させる。
+        // 通常操作では従来の軽量な外接枠スナップを維持する。
+        expandGroups: state.activeTool === "dimension",
       });
       if (snap) return { pt: snap, snapped: true, snapType: snap.snapType };
     }
