@@ -21,7 +21,7 @@
 
 import { createMcpHonoApp } from "@modelcontextprotocol/hono";
 import { createMcpHandler, McpServer } from "@modelcontextprotocol/server";
-import { Hono } from "hono";
+import { Hono, type Context } from "hono";
 import { registerResourcesAndPrompts } from "./mcp-content.js";
 import { registerAllTools } from "./tools/registry.js";
 import { SessionRelay } from "./session-do.js";
@@ -31,6 +31,30 @@ export { SessionRelay };
 type Env = CloudflareBindings;
 
 const app = new Hono<{ Bindings: Env }>();
+
+// Cloudflare Bot Management's JavaScript Detection rewrites HTML responses by
+// injecting an inline bootstrap script. The app intentionally uses a strict CSP,
+// so that injected script would be blocked and reported in the browser console.
+// `no-transform` keeps the response intact without weakening the CSP.
+async function serveStatic(c: Context<{ Bindings: Env }>) {
+  const response = await c.env.ASSETS.fetch(c.req.raw);
+  const contentType = response.headers.get("content-type")?.toLowerCase() ?? "";
+  if (!contentType.startsWith("text/html")) return response;
+
+  const headers = new Headers(response.headers);
+  const cacheControl = headers.get("cache-control");
+  if (!cacheControl) {
+    headers.set("cache-control", "no-transform");
+  } else if (!/(?:^|,)\s*no-transform\s*(?:,|$)/i.test(cacheControl)) {
+    headers.set("cache-control", `${cacheControl}, no-transform`);
+  }
+
+  return new Response(response.body, {
+    status: response.status,
+    statusText: response.statusText,
+    headers,
+  });
+}
 
 // ── MCP: WebSocket relay (browser tab side) ──────────────────────────────────
 app.get("/mcp/ws", async (c) => {
@@ -87,7 +111,9 @@ app.get("/health", (c) => c.json({ ok: true, service: "millrect" }));
 // Listed explicitly (rather than a single bare "*") so the site's URL structure is visible
 // here as the one place that owns routing: "/" is the landing page, "/app" is the drawing
 // app, "/docs" is the user guide.
-const STATIC_SECTIONS = ["/", "/app/*", "/docs/*", "/site/*", "/packages/*"];
+app.all("/app/*", serveStatic);
+
+const STATIC_SECTIONS = ["/", "/docs/*", "/site/*", "/packages/*"];
 for (const pattern of STATIC_SECTIONS) {
   app.all(pattern, (c) => c.env.ASSETS.fetch(c.req.raw));
 }

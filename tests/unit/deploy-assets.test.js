@@ -105,4 +105,16 @@ describe("static deploy assets", () => {
       `unresolved deploy assets:\n${problems.join("\n")}`,
     );
   });
+
+  it("prevents Cloudflare from injecting inline JavaScript into HTML", () => {
+    const workerSource = fs.readFileSync(
+      path.join(__dirname, "../../worker/src/index.ts"),
+      "utf8",
+    );
+
+    assert.match(workerSource, /contentType\.startsWith\("text\/html"\)/);
+    assert.match(workerSource, /headers\.set\("cache-control", "no-transform"\)/);
+    assert.match(workerSource, /app\.all\("\/app\/\*", serveStatic\)/);
+    assert.doesNotMatch(workerSource, /script-src[^\n]*unsafe-inline/);
+  });
 });
