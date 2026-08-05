@@ -1842,6 +1842,7 @@ function liveDragByTransform(ids, dxPaper, dyPaper) {
     const node =
       root.querySelector(sel) || (dimRoot && dimRoot.querySelector(sel));
     if (!node) return false; // ノード未生成 → 呼び出し側で従来パスにフォールバック
+    _setComplexPathLivePreview(node, true);
     apply(node);
   }
   // 選択ハンドルも同じ変位で追従（ドラッグ開始時に一度だけ描かれている）
@@ -1859,6 +1860,71 @@ function clearLiveDragTransforms() {
     if (base) node.setAttribute("transform", base);
     else node.removeAttribute("transform");
     node.removeAttribute("data-drag-base");
+    _setComplexPathLivePreview(node, false);
+  }
+}
+
+// 多頂点 path は transform だけでも Chromium が正確な全輪郭を再ラスタライズし、
+// 移動がカクつく。操作中だけ既存の軽量 hit proxy を同じ色で表示し、確定時に
+// 正確な path へ戻す。ドキュメントの輪郭データには触れない。
+function _setComplexPathLivePreview(node, active) {
+  const exact = node?.querySelector?.('[data-exact-complex-path="true"]');
+  const proxy = node?.querySelector?.('[data-hit-proxy="simplified-path"]');
+  if (!exact || !proxy) return false;
+  if (active) {
+    exact.setAttribute("visibility", "hidden");
+    proxy.setAttribute("fill", proxy.getAttribute("data-preview-fill") || "none");
+    proxy.setAttribute(
+      "stroke",
+      proxy.getAttribute("data-preview-stroke") || "none",
+    );
+    proxy.setAttribute(
+      "stroke-width",
+      proxy.getAttribute("data-preview-stroke-width") || "0",
+    );
+  } else {
+    exact.removeAttribute("visibility");
+    proxy.setAttribute("fill", "transparent");
+    proxy.setAttribute("stroke", "transparent");
+    proxy.setAttribute("stroke-width", "1");
+  }
+  return true;
+}
+
+function liveResizePathByTransform(id, txPaper, tyPaper, scaleX, scaleY) {
+  const root = _shapeRootCache && _shapeRootCache.node;
+  if (!root || !root.isConnected) return false;
+  const node = root.querySelector(`[data-id="${_cssEsc(id)}"]`);
+  if (!node || !_setComplexPathLivePreview(node, true)) return false;
+  if (!node.hasAttribute("data-resize-base")) {
+    node.setAttribute("data-resize-base", node.getAttribute("transform") || "");
+  }
+  const base = node.getAttribute("data-resize-base");
+  const tr = `translate(${txPaper},${tyPaper}) scale(${scaleX},${scaleY})`;
+  node.setAttribute("transform", base ? `${tr} ${base}` : tr);
+
+  const handles = _vp.querySelector("#sel-handles");
+  if (handles) {
+    if (!handles.hasAttribute("data-resize-base")) {
+      handles.setAttribute(
+        "data-resize-base",
+        handles.getAttribute("transform") || "",
+      );
+    }
+    const handlesBase = handles.getAttribute("data-resize-base");
+    handles.setAttribute("transform", handlesBase ? `${tr} ${handlesBase}` : tr);
+  }
+  return true;
+}
+
+function clearLiveResizeTransforms() {
+  if (!_vp) return;
+  for (const node of _vp.querySelectorAll("[data-resize-base]")) {
+    const base = node.getAttribute("data-resize-base");
+    if (base) node.setAttribute("transform", base);
+    else node.removeAttribute("transform");
+    node.removeAttribute("data-resize-base");
+    _setComplexPathLivePreview(node, false);
   }
 }
 
@@ -1893,7 +1959,7 @@ function pencilPathToD(points, scale) {
   return d;
 }
 
-function renderShape(shape, scale, selIds) {
+function renderShape(shape, scale, selIds, options = {}) {
   const sw = resolveStrokeWidthMm(shape.strokeWidth);
   const stroke = shape.stroke || "#1a1a2e";
   const fill = shape.fill || "none";
@@ -2150,12 +2216,15 @@ function renderShape(shape, scale, selIds) {
     );
   } else if (shape.type === "path") {
     let d = "";
+    let vertexCount = 0;
     for (const polygon of shape.contours) {
       for (const ring of polygon) {
         if (!ring.length) continue;
+        vertexCount += ring.length;
         d += `M ${ring.map(([x, y]) => `${realToPaper(x, scale)},${realToPaper(y, scale)}`).join(" L ")} Z `;
       }
     }
+    const complexHitPath = options.interactive !== false && vertexCount > 512;
     g.appendChild(
       se("path", {
         d: d.trim(),
@@ -2163,9 +2232,42 @@ function renderShape(shape, scale, selIds) {
         "stroke-width": sw,
         fill,
         "fill-rule": shape.fillRule || "evenodd",
-        "pointer-events": "all",
+        ...(complexHitPath ? { "data-exact-complex-path": "true" } : {}),
+        // 巨大な Boolean path を直接 hit-test させると、Chromium が
+        // mousemove ごとに全輪郭の point-in-path を評価してしまう。
+        "pointer-events": complexHitPath ? "none" : "all",
       }),
     );
+    if (complexHitPath && typeof _simplifySnapRing === "function") {
+      let hitD = "";
+      for (const polygon of shape.contours) {
+        for (const ring of polygon) {
+          if (!ring.length) continue;
+          const paperRing = _simplifySnapRing(
+            ring.map(([x, y]) => [realToPaper(x, scale), realToPaper(y, scale)]),
+            0.2,
+          );
+          if (!paperRing.length) continue;
+          hitD += `M ${paperRing.map(([x, y]) => `${x},${y}`).join(" L ")} Z `;
+        }
+      }
+      // 見た目は上の正確な path、クリック判定だけを軽い透明 path が担当する。
+      // evenodd を揃えるため穴や輪郭間の隙間でも誤選択しない。
+      g.appendChild(
+        se("path", {
+          d: hitD.trim(),
+          fill: "transparent",
+          stroke: "transparent",
+          "stroke-width": Math.max(sw, 1),
+          "fill-rule": shape.fillRule || "evenodd",
+          "pointer-events": "all",
+          "data-hit-proxy": "simplified-path",
+          "data-preview-fill": fill,
+          "data-preview-stroke": stroke,
+          "data-preview-stroke-width": sw,
+        }),
+      );
+    }
   } else if (shape.type === "bezier") {
     const d = bezierPathToD(shape.nodes, shape.closed, scale);
     if (d) {
@@ -2213,7 +2315,7 @@ function renderShape(shape, scale, selIds) {
     return renderDimensionSVG(shape, scale);
   } else if (shape.type === "group") {
     for (const child of shape.children) {
-      const cel = renderShape(child, scale, []);
+      const cel = renderShape(child, scale, [], options);
       if (cel) g.appendChild(cel);
     }
   }

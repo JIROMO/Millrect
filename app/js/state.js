@@ -613,7 +613,7 @@ function _simplifySnapOpen(points, toleranceSq) {
   return left.slice(0, -1).concat(right);
 }
 
-function _simplifySnapRing(points) {
+function _simplifySnapRing(points, tolerance = _SNAP_PATH_TOLERANCE) {
   if (points.length <= 4) return points;
   const clean = points.slice();
   const first = clean[0],
@@ -622,7 +622,7 @@ function _simplifySnapRing(points) {
   if (clean.length <= 4) return clean;
   // 閉曲線を半周ずつの開曲線に分けると、始終点が同じでも RDP を適用できる。
   const mid = Math.floor(clean.length / 2);
-  const toleranceSq = _SNAP_PATH_TOLERANCE ** 2;
+  const toleranceSq = tolerance ** 2;
   const firstHalf = _simplifySnapOpen(clean.slice(0, mid + 1), toleranceSq);
   const secondHalf = _simplifySnapOpen(
     clean.slice(mid).concat([clean[0]]),

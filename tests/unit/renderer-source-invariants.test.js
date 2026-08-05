@@ -180,6 +180,24 @@ test("keypoint snapping caches drag candidates and skips tiny recalculations", (
   assert.match(snapBody, /cache\.excludeIds = new Set\(ids\)/);
 });
 
+test("complex paths use a simplified SVG hit proxy", () => {
+  assert.match(
+    rendererSource,
+    /const complexHitPath = options\.interactive !== false && vertexCount > 512/,
+  );
+  assert.match(
+    rendererSource,
+    /"pointer-events": complexHitPath \? "none" : "all"/,
+  );
+  assert.match(rendererSource, /"data-hit-proxy": "simplified-path"/);
+  assert.match(rendererSource, /_simplifySnapRing/);
+  assert.match(rendererSource, /function _setComplexPathLivePreview/);
+  assert.match(rendererSource, /function liveResizePathByTransform/);
+  assert.match(rendererSource, /function clearLiveResizeTransforms/);
+  assert.match(interactionSource, /_ds\.pathResizeFast =/);
+  assert.match(interactionSource, /if \(_ds\.pathResizeFast\)/);
+});
+
 test("renderer delegates viewport culling decisions to the shared package", () => {
   assert.match(
     rendererSource,

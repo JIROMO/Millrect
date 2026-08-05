@@ -22,6 +22,19 @@ describe("boolean path snapping", () => {
     assert.deepEqual(simplified[0], ring[0]);
   });
 
+  it("描画ヒット判定向けには指定した許容誤差でさらに軽量化できる", () => {
+    const ring = Array.from({ length: 128 }, (_, i) => {
+      const a = (Math.PI * 2 * i) / 128;
+      return [10 * Math.cos(a), 10 * Math.sin(a)];
+    });
+    ring.push(ring[0]);
+
+    const snapRing = app._simplifySnapRing(ring);
+    const hitRing = app._simplifySnapRing(ring, 0.2);
+    assert.ok(hitRing.length < snapRing.length);
+    assert.deepEqual(hitRing[0], ring[0]);
+  });
+
   it("簡略化後も path と別図形の交点へスナップできる", () => {
     const path = {
       id: "boolean-result",

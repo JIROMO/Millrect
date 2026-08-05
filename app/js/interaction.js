@@ -598,6 +598,31 @@ function onMouseUp(e, svgEl) {
     return;
   }
   if (tool === "select" && _ds?.action === "resize") {
+    if (_ds.pathResizeFast) {
+      const { nx1, ny1, ox1, oy1, scaleX, scaleY } = _ds.pathResizeFast;
+      const res = findShapeById(_ds.shapeId);
+      if (res?.shape?.type === "path") {
+        res.shape.contours = _ds.origShape.contours.map((poly) =>
+          poly.map((ring) =>
+            ring.map(([x, y]) => [
+              nx1 + (x - ox1) * scaleX,
+              ny1 + (y - oy1) * scaleY,
+            ]),
+          ),
+        );
+      }
+      if (typeof clearLiveResizeTransforms === "function")
+        clearLiveResizeTransforms();
+      if (typeof markShapeDirty === "function") markShapeDirty(_ds.shapeId);
+      pushHistory();
+      if (typeof liveUpdateShapes === "function")
+        liveUpdateShapes([_ds.shapeId]);
+      else render();
+      _ds = null;
+      svgEl.style.cursor = "default";
+      document.body.classList.remove("dragging");
+      return;
+    }
     if (typeof setTextNativeLiveTransform === "function") {
       const res = findShapeById(_ds.shapeId);
       if (res?.shape?.type === "text") {
@@ -776,6 +801,8 @@ function onKeyDown(e) {
       uiUpdate();
       return;
     }
+    if (typeof clearLiveResizeTransforms === "function")
+      clearLiveResizeTransforms();
     _ds = null;
     cancelDim();
     cancelMeasure();
@@ -1630,6 +1657,28 @@ function handleResize(rp, shiftKey) {
     ny1 = Math.min(ny1, ny2 - MIN);
     const sw = (nx2 - nx1) / (ox2 - ox1 || 1),
       sh = (ny2 - ny1) / (oy2 - oy1 || 1);
+    if (
+      !_xf &&
+      typeof liveResizePathByTransform === "function" &&
+      liveResizePathByTransform(
+        shapeId,
+        realToPaperDist(nx1 - ox1 * sw, getCurrentPage().scale),
+        realToPaperDist(ny1 - oy1 * sh, getCurrentPage().scale),
+        sw,
+        sh,
+      )
+    ) {
+      _ds.pathResizeFast = {
+        nx1,
+        ny1,
+        ox1,
+        oy1,
+        scaleX: sw,
+        scaleY: sh,
+      };
+      _updatePathSizeFields(nx2 - nx1, ny2 - ny1);
+      return;
+    }
     shape.contours = origShape.contours.map((poly) =>
       poly.map((ring) =>
         ring.map(([x, y]) => [nx1 + (x - ox1) * sw, ny1 + (y - oy1) * sh]),
@@ -1820,17 +1869,21 @@ function _updatePathSizeDisplay(shape) {
           if (x > maxX) maxX = x;
           if (y > maxY) maxY = y;
         }
-    const wEl = document.querySelector('[data-key="path-w"]'),
-      hEl = document.querySelector('[data-key="path-h"]');
-    // Panel fields are in mm; convert from real units to match the initial render.
-    if (wEl) wEl.value = fmtNum(realToMM(maxX - minX));
-    if (hEl) hEl.value = fmtNum(realToMM(maxY - minY));
+    _updatePathSizeFields(maxX - minX, maxY - minY);
   } else if (shape.type === "rect") {
     const wEl = document.querySelector('[data-key="width"]'),
       hEl = document.querySelector('[data-key="height"]');
     if (wEl) wEl.value = fmtNum(realToMM(shape.width));
     if (hEl) hEl.value = fmtNum(realToMM(shape.height));
   }
+}
+
+function _updatePathSizeFields(widthReal, heightReal) {
+  const wEl = document.querySelector('[data-key="path-w"]'),
+    hEl = document.querySelector('[data-key="path-h"]');
+  // Panel fields are in mm; convert from real units to match the initial render.
+  if (wEl) wEl.value = fmtNum(realToMM(widthReal));
+  if (hEl) hEl.value = fmtNum(realToMM(heightReal));
 }
 function handleSelMove(pp, shiftKey) {
   if (!_ds || _ds.action !== "move" || !_selOrig) return;

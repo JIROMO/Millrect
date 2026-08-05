@@ -809,7 +809,7 @@ function buildPageSVG(page, options = {}) {
     if (!layer.visible) continue;
     const g = se("g", { id: layer.id });
     for (const shape of layer.shapes) {
-      const el = renderShape(shape, page.scale, []);
+      const el = renderShape(shape, page.scale, [], { interactive: false });
       if (el) g.appendChild(el);
     }
     svg.appendChild(g);
@@ -817,7 +817,7 @@ function buildPageSVG(page, options = {}) {
   if (includeDimensions && page.dimensions?.length) {
     const dg = se("g", { id: "dimension-root" });
     for (const dim of page.dimensions) {
-      const el = renderShape(dim, page.scale, []);
+      const el = renderShape(dim, page.scale, [], { interactive: false });
       if (el) dg.appendChild(_prepareDimensionForExport(el));
     }
     svg.appendChild(dg);
