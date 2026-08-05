@@ -210,6 +210,13 @@ test("complex paths use a simplified SVG hit proxy", () => {
   );
 });
 
+test("selection size badge uses the same precision as the side panel", () => {
+  const body = functionBody(rendererSource, "formatMmBadge");
+  assert.match(body, /typeof fmtNum === "function"/);
+  assert.match(body, /return fmtNum\(v\)/);
+  assert.match(body, /toFixed\(2\)/);
+});
+
 test("renderer delegates viewport culling decisions to the shared package", () => {
   assert.match(
     rendererSource,

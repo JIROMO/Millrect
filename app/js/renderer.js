@@ -2655,8 +2655,13 @@ function buildSelectionTransform(shape, scale) {
 }
 
 function formatMmBadge(v) {
-  const n = Math.round(v * 10) / 10;
-  return Number.isInteger(n) ? String(n) : n.toFixed(1);
+  // サイドナビの数値欄と同じ規則（小数第2位まで・末尾ゼロ除去）を使う。
+  // renderer.js は ui.js より先に読み込まれるが、実際の描画時には fmtNum が
+  // 定義済み。単体利用時だけ同じ実装のフォールバックを使う。
+  if (typeof fmtNum === "function") return fmtNum(v);
+  const n = Number(v);
+  if (!Number.isFinite(n)) return "0";
+  return String(parseFloat(n.toFixed(2)));
 }
 
 function appendSelectionSizeBadge(g, bb, zoom, scale, labelBB) {
