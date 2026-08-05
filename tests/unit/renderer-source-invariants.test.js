@@ -196,6 +196,18 @@ test("complex paths use a simplified SVG hit proxy", () => {
   assert.match(rendererSource, /function clearLiveResizeTransforms/);
   assert.match(interactionSource, /_ds\.pathResizeFast =/);
   assert.match(interactionSource, /if \(_ds\.pathResizeFast\)/);
+  assert.match(interactionSource, /const proxyHit = e\.target\.closest/);
+  assert.match(interactionSource, /if \(!picked\) picked = findTopShapeAtRealPoint/);
+  assert.match(interactionSource, /function _captureSelectionMoveOrigins/);
+  assert.match(
+    interactionSource,
+    /_selOrig = _captureSelectionMoveOrigins\(state\.selectedShapeIds\)/,
+  );
+  assert.match(interactionSource, /!\(_ds\.lastDxR \|\| _ds\.lastDyR\)/);
+  assert.match(
+    interactionSource,
+    /tool === "select" \|\| tool === "hand"[\s\S]*?\{ gridOnly: true \}/,
+  );
 });
 
 test("renderer delegates viewport culling decisions to the shared package", () => {

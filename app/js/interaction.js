@@ -230,6 +230,7 @@ function getSnapped(sx, sy, opts = {}) {
 
 function onMouseDown(e, svgEl) {
   const state = getState();
+  const tool = state.activeTool;
   const sv = screenToSVG(e, svgEl);
   const _altOnShape =
     e.altKey &&
@@ -250,7 +251,10 @@ function onMouseDown(e, svgEl) {
     return;
   }
   if (e.button !== 0) return;
-  const anchorSnap = isReferenceScaleAnchorActive?.() ? { gridOnly: true } : {};
+  const anchorSnap =
+    isReferenceScaleAnchorActive?.() || tool === "select" || tool === "hand"
+      ? { gridOnly: true }
+      : {};
   const { pt: pp } = getSnapped(sv.x, sv.y, anchorSnap);
   const rp = paperToReal(pp.x, pp.y);
   if (
@@ -260,7 +264,6 @@ function onMouseDown(e, svgEl) {
     e.preventDefault();
     return;
   }
-  const tool = state.activeTool;
   if (
     (tool === "select" || tool === "hand") &&
     typeof handleReferenceImagePointerDown === "function" &&
@@ -539,10 +542,12 @@ function onMouseUp(e, svgEl) {
     svgEl.style.cursor = "";
     return;
   }
-  const sv = screenToSVG(e, svgEl);
-  const { pt: pp } = getSnapped(sv.x, sv.y);
-  const rp = paperToReal(pp.x, pp.y);
   const tool = getState().activeTool;
+  const sv = screenToSVG(e, svgEl);
+  const releaseSnap =
+    tool === "select" || tool === "hand" ? { gridOnly: true } : {};
+  const { pt: pp } = getSnapped(sv.x, sv.y, releaseSnap);
+  const rp = paperToReal(pp.x, pp.y);
   if ((tool === "select" || tool === "hand") && _ds?.action === "pan") {
     _ds = null;
     svgEl.style.cursor = tool === "hand" ? "grab" : "default";
@@ -637,6 +642,17 @@ function onMouseUp(e, svgEl) {
     return;
   }
   if (tool === "select" && _ds?.action === "move") {
+    // 選択だけのクリックでは図形も履歴も変わらない。巨大 path の JSON 化と
+    // dirty/render 更新を完全に省き、mouseup を即時終了する。
+    if (!_ds.duplicated && !(_ds.lastDxR || _ds.lastDyR)) {
+      if (_ds.fastActive && typeof clearLiveDragTransforms === "function")
+        clearLiveDragTransforms();
+      _selOrig = null;
+      _ds = null;
+      svgEl.style.cursor = "default";
+      document.body.classList.remove("dragging");
+      return;
+    }
     // 1px も動いていない Alt+クリックは複製として確定させない。見えない複製が
     // 同座標に積み重なり、直後の Undo が「何も起きない」ように見えてしまう。
     if (_ds.duplicated && !(_ds.lastDxR || _ds.lastDyR)) {
@@ -669,6 +685,7 @@ function onMouseUp(e, svgEl) {
       if (typeof liveUpdateShapes === "function") liveUpdateShapes(movedIds);
       else render();
     }
+    _selOrig = null;
     _ds = null;
     svgEl.style.cursor = "default";
     document.body.classList.remove("dragging");
@@ -843,6 +860,15 @@ function cancelDim() {
 
 // ── Marquee ───────────────────────────────────────────────────
 let _selOrig = null;
+function _captureSelectionMoveOrigins(ids) {
+  const origins = {};
+  for (const id of ids || []) {
+    const res = findShapeById(id);
+    if (res) origins[id] = deepClone(res.shape);
+  }
+  return origins;
+}
+
 function commitMarquee(a, b) {
   const state = getState();
   const page = getCurrentPage();
@@ -1100,11 +1126,11 @@ function handleSelDown(e, svgEl, pp, rp) {
       if (!state.selectedShapeIds.includes(did)) {
         state.selectedShapeIds = [did];
       }
-      _selOrig = {};
-      for (const selId of state.selectedShapeIds) {
-        const r = findShapeById(selId);
-        if (r) _selOrig[selId] = JSON.parse(JSON.stringify(r.shape));
-      }
+      // 単純クリックでは複雑な path を複製しない。実際にドラッグが始まる
+      // 最初の mousemove まで遅延する（Alt 複製だけは即時に必要）。
+      _selOrig = e.altKey
+        ? _captureSelectionMoveOrigins(state.selectedShapeIds)
+        : null;
       _ds = { action: "move", startPP: pp };
       svgEl.style.cursor = "move";
       if (e.altKey) {
@@ -1118,7 +1144,23 @@ function handleSelDown(e, svgEl, pp, rp) {
     }
   }
 
-  const picked = findTopShapeAtRealPoint(rp);
+  // 複雑な Boolean path の透明 hit proxy は、穴を含む evenodd 判定を Chromium が
+  // 軽量輪郭で済ませた結果。その結果を信頼し、正確な全頂点を JS で再走査しない。
+  let picked = null;
+  const proxyHit = e.target.closest?.('[data-hit-proxy="simplified-path"]');
+  if (
+    proxyHit &&
+    proxyHit.getAttribute("data-preview-fill") !== "none" &&
+    !e.ctrlKey
+  ) {
+    const domId = svgClosest(proxyHit, "[data-id]")?.getAttribute("data-id");
+    const topId = domId ? resolveToTopLevelId(domId) : null;
+    const domRes = topId ? findShapeById(topId) : null;
+    if (domRes && domRes.page === getCurrentPage() && !domRes.shape.locked) {
+      picked = domRes.shape;
+    }
+  }
+  if (!picked) picked = findTopShapeAtRealPoint(rp);
   if (picked) {
     const id = picked.id;
 
@@ -1161,11 +1203,9 @@ function handleSelDown(e, svgEl, pp, rp) {
     if (!state.selectedShapeIds.includes(id)) {
       state.selectedShapeIds = [id];
     }
-    _selOrig = {};
-    for (const selId of state.selectedShapeIds) {
-      const res = findShapeById(selId);
-      if (res) _selOrig[selId] = JSON.parse(JSON.stringify(res.shape));
-    }
+    _selOrig = e.altKey
+      ? _captureSelectionMoveOrigins(state.selectedShapeIds)
+      : null;
     if (clickedShape?.type === "text") {
       _ds = { action: "move-pending", startPP: pp };
       svgEl.style.cursor = "text";
@@ -1886,10 +1926,14 @@ function _updatePathSizeFields(widthReal, heightReal) {
   if (hEl) hEl.value = fmtNum(realToMM(heightReal));
 }
 function handleSelMove(pp, shiftKey) {
-  if (!_ds || _ds.action !== "move" || !_selOrig) return;
+  if (!_ds || _ds.action !== "move") return;
   const state = getState(),
     page = getCurrentPage(),
     scale = page.scale;
+  if (!_selOrig) {
+    _selOrig = _captureSelectionMoveOrigins(state.selectedShapeIds);
+    if (!Object.keys(_selOrig).length) return;
+  }
   let dxR = paperToRealDist(pp.x - _ds.startPP.x, scale);
   let dyR = paperToRealDist(pp.y - _ds.startPP.y, scale);
   if (shiftKey) {
@@ -3026,10 +3070,13 @@ function showSizePopover(tool, rp, clientX, clientY) {
 function beginAltDuplicate() {
   const state = getState();
   if (!_ds || _ds.action !== "move" || _ds.duplicated) return;
+  if (!_selOrig)
+    _selOrig = _captureSelectionMoveOrigins(state.selectedShapeIds);
   _beginDuplicate([...state.selectedShapeIds]);
 }
 
 function _beginDuplicate(origIds) {
+  if (!_selOrig) _selOrig = _captureSelectionMoveOrigins(origIds);
   // ライブドラッグ（transform のみ）から複製へ移る場合、元ノードに被せた
   // translate を素に戻してから複製する（以降は従来パスで座標を動かす）。
   if (typeof clearLiveDragTransforms === "function") clearLiveDragTransforms();
