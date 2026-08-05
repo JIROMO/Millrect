@@ -107,6 +107,7 @@ const EXPORT_NAMES = [
   "getShapeBBox",
   "getPageCanvasMM",
   "snapToShapes",
+  "_simplifySnapRing",
   "dimensionValueMM",
   // history
   "undo",

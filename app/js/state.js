@@ -575,6 +575,62 @@ function _groupSnapAABB(group, ancestors) {
   return aabb;
 }
 
+// polygon-clipping 用の円・楕円は 128 分割されるが、その全頂点をスナップ候補に
+// しても操作精度は上がらず、mousemove の負荷だけが増える。表示・保存ジオメトリは
+// 一切変更せず、スナップ用の折れ線だけを paper 0.05mm 以内で簡略化する。
+const _SNAP_PATH_TOLERANCE = 0.05;
+
+function _snapPointSegmentDistSq(point, a, b) {
+  const dx = b[0] - a[0],
+    dy = b[1] - a[1];
+  const len2 = dx * dx + dy * dy;
+  let t =
+    len2 < 1e-12
+      ? 0
+      : ((point[0] - a[0]) * dx + (point[1] - a[1]) * dy) / len2;
+  t = Math.max(0, Math.min(1, t));
+  const px = a[0] + t * dx,
+    py = a[1] + t * dy;
+  return (point[0] - px) ** 2 + (point[1] - py) ** 2;
+}
+
+function _simplifySnapOpen(points, toleranceSq) {
+  if (points.length <= 2) return points.slice();
+  let maxDistSq = toleranceSq;
+  let split = -1;
+  const first = points[0],
+    last = points[points.length - 1];
+  for (let i = 1; i < points.length - 1; i++) {
+    const distSq = _snapPointSegmentDistSq(points[i], first, last);
+    if (distSq > maxDistSq) {
+      maxDistSq = distSq;
+      split = i;
+    }
+  }
+  if (split < 0) return [first, last];
+  const left = _simplifySnapOpen(points.slice(0, split + 1), toleranceSq);
+  const right = _simplifySnapOpen(points.slice(split), toleranceSq);
+  return left.slice(0, -1).concat(right);
+}
+
+function _simplifySnapRing(points) {
+  if (points.length <= 4) return points;
+  const clean = points.slice();
+  const first = clean[0],
+    last = clean[clean.length - 1];
+  if (first[0] === last[0] && first[1] === last[1]) clean.pop();
+  if (clean.length <= 4) return clean;
+  // 閉曲線を半周ずつの開曲線に分けると、始終点が同じでも RDP を適用できる。
+  const mid = Math.floor(clean.length / 2);
+  const toleranceSq = _SNAP_PATH_TOLERANCE ** 2;
+  const firstHalf = _simplifySnapOpen(clean.slice(0, mid + 1), toleranceSq);
+  const secondHalf = _simplifySnapOpen(
+    clean.slice(mid).concat([clean[0]]),
+    toleranceSq,
+  );
+  return firstHalf.slice(0, -1).concat(secondHalf.slice(0, -1));
+}
+
 function _collectSnapGeometry(
   shapes,
   scale,
@@ -627,10 +683,10 @@ function _collectSnapGeometry(
       onPoint(x1, cy, "midpoint", 3);
       onPoint(x2, cy, "midpoint", 3);
       onPoint(cx, cy, "center", 4);
-      onSegment({ x1, y1, x2, y2: y1 });
-      onSegment({ x1: x2, y1, x2, y2 });
-      onSegment({ x1, y1: y2, x2, y2 });
-      onSegment({ x1, y1, x2: x1, y2 });
+      onSegment({ x1, y1, x2, y2: y1, shapeId: s.id });
+      onSegment({ x1: x2, y1, x2, y2, shapeId: s.id });
+      onSegment({ x1, y1: y2, x2, y2, shapeId: s.id });
+      onSegment({ x1, y1, x2: x1, y2, shapeId: s.id });
       return;
     }
     const xf = makeXf(s, ancestors);
@@ -641,7 +697,7 @@ function _collectSnapGeometry(
     const seg = (ax, ay, bx, by) => {
       const [x1, y1] = xf(ax, ay);
       const [x2, y2] = xf(bx, by);
-      onSegment({ x1, y1, x2, y2 });
+      onSegment({ x1, y1, x2, y2, shapeId: s.id });
     };
 
     if (s.type === "line") {
@@ -697,14 +753,16 @@ function _collectSnapGeometry(
         seg(last.x, last.y, first.x, first.y);
       }
     } else if (s.type === "path" && s.contours) {
-      // path の各リングの頂点
+      // path の各リング。クリッピング結果の密な円弧などは、スナップ用途に
+      // 必要な精度を保ったまま候補数を減らす。
       for (const contour of s.contours) {
         for (const ring of contour) {
-          for (let i = 0; i < ring.length; i++) {
-            addPt(ring[i][0], ring[i][1], "endpoint", 1);
-            if (i > 0) {
-              seg(ring[i - 1][0], ring[i - 1][1], ring[i][0], ring[i][1]);
-            }
+          const paperRing = _simplifySnapRing(ring.map(([x, y]) => xf(x, y)));
+          for (let i = 0; i < paperRing.length; i++) {
+            const [x, y] = paperRing[i];
+            onPoint(x, y, "endpoint", 1);
+            const [nx, ny] = paperRing[(i + 1) % paperRing.length];
+            onSegment({ x1: x, y1: y, x2: nx, y2: ny, shapeId: s.id });
           }
         }
       }
@@ -718,6 +776,82 @@ function _collectSnapGeometry(
 // hover / transform-only ドラッグ中は図面が変わらないため毎フレーム再構築せず
 // 再利用でき、複雑な path を含む図面でもマウス移動が O(候補数) のフィルタだけで済む。
 let _snapGeomCache = null;
+
+// Boolean の結果は、たとえば 100 個の円なら約 13,000 頂点を持つ 1 個の
+// path になる。候補をキャッシュするだけでは mousemove ごとに全頂点・全辺を
+// 走査してしまうため、paper 座標の固定グリッドにも登録して近傍だけを検索する。
+const _SNAP_INDEX_CELL = 16;
+const _SNAP_INDEX_MAX_SEGMENT_CELLS = 64;
+
+function _snapCellKey(x, y) {
+  return `${x},${y}`;
+}
+
+function _pushSnapBucket(buckets, key, value) {
+  let bucket = buckets.get(key);
+  if (!bucket) buckets.set(key, (bucket = []));
+  bucket.push(value);
+}
+
+function _buildSnapSpatialIndex(points, segments) {
+  const pointBuckets = new Map();
+  const segmentBuckets = new Map();
+  const wideSegments = [];
+  for (const point of points) {
+    const cx = Math.floor(point.x / _SNAP_INDEX_CELL);
+    const cy = Math.floor(point.y / _SNAP_INDEX_CELL);
+    _pushSnapBucket(pointBuckets, _snapCellKey(cx, cy), point);
+  }
+  for (const segment of segments) {
+    const minCX = Math.floor(
+      Math.min(segment.x1, segment.x2) / _SNAP_INDEX_CELL,
+    );
+    const maxCX = Math.floor(
+      Math.max(segment.x1, segment.x2) / _SNAP_INDEX_CELL,
+    );
+    const minCY = Math.floor(
+      Math.min(segment.y1, segment.y2) / _SNAP_INDEX_CELL,
+    );
+    const maxCY = Math.floor(
+      Math.max(segment.y1, segment.y2) / _SNAP_INDEX_CELL,
+    );
+    const cellCount = (maxCX - minCX + 1) * (maxCY - minCY + 1);
+    // 非常に長い斜線を bbox の全セルへ複製するとメモリを浪費する。数の少ない
+    // wideSegments として保持し、問い合わせ時だけ距離判定する。
+    if (cellCount > _SNAP_INDEX_MAX_SEGMENT_CELLS) {
+      wideSegments.push(segment);
+      continue;
+    }
+    for (let cx = minCX; cx <= maxCX; cx++) {
+      for (let cy = minCY; cy <= maxCY; cy++) {
+        _pushSnapBucket(segmentBuckets, _snapCellKey(cx, cy), segment);
+      }
+    }
+  }
+  return { pointBuckets, segmentBuckets, wideSegments };
+}
+
+function _snapGeometryNear(geom, queryPoints, threshold) {
+  const points = new Set();
+  const segments = new Set(geom.index.wideSegments);
+  for (const pt of queryPoints) {
+    const minCX = Math.floor((pt.x - threshold) / _SNAP_INDEX_CELL);
+    const maxCX = Math.floor((pt.x + threshold) / _SNAP_INDEX_CELL);
+    const minCY = Math.floor((pt.y - threshold) / _SNAP_INDEX_CELL);
+    const maxCY = Math.floor((pt.y + threshold) / _SNAP_INDEX_CELL);
+    for (let cx = minCX; cx <= maxCX; cx++) {
+      for (let cy = minCY; cy <= maxCY; cy++) {
+        const key = _snapCellKey(cx, cy);
+        for (const point of geom.index.pointBuckets.get(key) || [])
+          points.add(point);
+        for (const segment of geom.index.segmentBuckets.get(key) || [])
+          segments.add(segment);
+      }
+    }
+  }
+  return { points: [...points], segments: [...segments] };
+}
+
 function _snapGeometryFor(shapes, scale, excludeIds, expandGroups = false) {
   const build = () => {
     const points = [];
@@ -744,7 +878,12 @@ function _snapGeometryFor(shapes, scale, excludeIds, expandGroups = false) {
   const key = `${ver}|${pageId}|${sc}|${excludeKey}|${expandGroups ? "expanded" : "compact"}`;
   if (_snapGeomCache && _snapGeomCache.key === key) return _snapGeomCache;
   const g = build();
-  _snapGeomCache = { key, points: g.points, segments: g.segments };
+  _snapGeomCache = {
+    key,
+    points: g.points,
+    segments: g.segments,
+    index: _buildSnapSpatialIndex(g.points, g.segments),
+  };
   return _snapGeomCache;
 }
 
@@ -788,8 +927,9 @@ function snapToShapes(
     opts.excludeIds || null,
     opts.expandGroups === true,
   );
-  for (const p of geom.points) add(p.x, p.y, p.snapType, p.priority);
-  const segments = geom.segments; // [{ x1,y1,x2,y2 }] (paper座標)
+  const nearby = _snapGeometryNear(geom, [pt], threshold);
+  for (const p of nearby.points) add(p.x, p.y, p.snapType, p.priority);
+  const segments = nearby.segments; // [{ x1,y1,x2,y2 }] (paper座標)
 
   // 交点・垂線・ガイド交点の候補はすべてセグメント上の点であり、add() は
   // threshold 以内しか採用しない。pt から threshold より遠いセグメントは
@@ -807,6 +947,14 @@ function snapToShapes(
   // pt 近傍セグメントペアの交点を計算
   for (let i = 0; i < nearSegments.length; i++) {
     for (let j = i + 1; j < nearSegments.length; j++) {
+      // polygon-clipping が返す path は自己交差しない。同じ図形内の辺同士は
+      // 共有端点（既に endpoint 候補）しか作らないため、組合せから除外する。
+      // 多頂点 path の近くで 48C2 回の無意味な交差判定が毎フレーム走るのを防ぐ。
+      if (
+        nearSegments[i].shapeId &&
+        nearSegments[i].shapeId === nearSegments[j].shapeId
+      )
+        continue;
       const ix = _segmentIntersection(nearSegments[i], nearSegments[j]);
       if (ix) add(ix.x, ix.y, "intersection", 2);
     }
@@ -877,8 +1025,9 @@ function _pointSegmentDist(pt, seg) {
 function snapDragPoints(dragPoints, targetShapes, scale, threshold, opts = {}) {
   if (!dragPoints.length) return null;
   const geom = _snapGeometryFor(targetShapes, scale, opts.excludeIds || null);
-  const targetPts = geom.points.slice();
-  const segments = geom.segments;
+  const nearby = _snapGeometryNear(geom, dragPoints, threshold);
+  const targetPts = nearby.points.slice();
+  const segments = nearby.segments;
 
   // 交点候補: いずれかの dragPoint の threshold 近傍にあるセグメントのみ対象
   // （snapToShapes と同様の O(S²) 爆発対策）
@@ -890,6 +1039,11 @@ function snapDragPoints(dragPoints, targetShapes, scale, threshold, opts = {}) {
   }
   for (let i = 0; i < nearSegments.length; i++) {
     for (let j = i + 1; j < nearSegments.length; j++) {
+      if (
+        nearSegments[i].shapeId &&
+        nearSegments[i].shapeId === nearSegments[j].shapeId
+      )
+        continue;
       const ix = _segmentIntersection(nearSegments[i], nearSegments[j]);
       if (ix)
         targetPts.push({
