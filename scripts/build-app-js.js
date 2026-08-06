@@ -2,7 +2,6 @@
 
 const fs = require("node:fs");
 const path = require("node:path");
-const { transformSync } = require("esbuild");
 const scriptOrder = require("./app-script-order");
 
 const ROOT = path.resolve(__dirname, "..");
@@ -37,15 +36,11 @@ function buildAppBundle(outfile = DEFAULT_OUTFILE, options = {}) {
       return `/* ${relativePath} */\n${fs.readFileSync(filename, "utf8")}`;
     })
     .join("\n;\n");
-  const result = transformSync(source, {
-    loader: "js",
-    minify: true,
-    target: "es2022",
-    legalComments: "inline",
-  });
-
   fs.mkdirSync(path.dirname(outfile), { recursive: true });
-  fs.writeFileSync(outfile, result.code);
+  // Keep the builder dependency-free: production intentionally skips the root
+  // npm install and only installs worker dependencies. The sources are classic
+  // scripts, so ordered concatenation preserves their shared global scope.
+  fs.writeFileSync(outfile, source);
   const buildDate = formatBuildDate(options.date);
   const indexFile =
     options.indexFile ||
@@ -54,7 +49,7 @@ function buildAppBundle(outfile = DEFAULT_OUTFILE, options = {}) {
   return {
     outfile,
     sourceCount: scriptOrder.length,
-    bytes: Buffer.byteLength(result.code),
+    bytes: Buffer.byteLength(source),
     buildDate,
   };
 }
