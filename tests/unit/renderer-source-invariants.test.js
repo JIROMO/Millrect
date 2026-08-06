@@ -210,6 +210,22 @@ test("complex paths use a simplified SVG hit proxy", () => {
   );
 });
 
+test("geometry hit testing includes the visible stroke width", () => {
+  const toleranceBody = functionBody(interactionSource, "_pickTolReal");
+  assert.match(
+    toleranceBody,
+    /resolveStrokeWidthMm\(shape\?\.strokeWidth\) \/ 2/,
+  );
+  assert.match(
+    toleranceBody,
+    /_PICK_TOL_PX \/ zoom \+ halfStrokePaper/,
+  );
+  assert.match(
+    functionBody(interactionSource, "realPointInShapeGeometry"),
+    /_pickTolReal\(scale, shape\)/,
+  );
+});
+
 test("selection size badge uses the same precision as the side panel", () => {
   const body = functionBody(rendererSource, "formatMmBadge");
   assert.match(body, /typeof fmtNum === "function"/);

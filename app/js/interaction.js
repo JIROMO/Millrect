@@ -2271,9 +2271,13 @@ function realPointInPaperBBox(rp, bb, scale) {
 // 誤選択になる。実形状（塗り内 or 輪郭近傍）で当たり判定する。
 const _PICK_TOL_PX = 6; // クリック許容（画面 px）
 
-function _pickTolReal(scale) {
+function _pickTolReal(scale, shape) {
   const zoom = getState().zoom || 1;
-  return paperToRealDist(_PICK_TOL_PX / zoom, scale);
+  // The outline coordinates describe the stroke centerline. Include half of
+  // the rendered stroke so every visible part of a thick line remains
+  // clickable, then add the fixed screen-space allowance outside it.
+  const halfStrokePaper = resolveStrokeWidthMm(shape?.strokeWidth) / 2;
+  return paperToRealDist(_PICK_TOL_PX / zoom + halfStrokePaper, scale);
 }
 
 function _distPointToSeg(px, py, ax, ay, bx, by) {
@@ -2436,7 +2440,7 @@ function realPointInShapeGeometry(rp, shape, scale, ancestorGroups = []) {
     (shape.fill && shape.fill !== "none");
   if (outline.closed && areaType && _pointInRings(rp.x, rp.y, outline.rings))
     return true;
-  const tol = _pickTolReal(scale);
+  const tol = _pickTolReal(scale, shape);
   return _nearAnyRing(rp.x, rp.y, outline.rings, tol, outline.closed);
 }
 
