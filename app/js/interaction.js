@@ -285,6 +285,14 @@ function onMouseDown(e, svgEl) {
     exitBezierEditMode();
     render();
   }
+  // 選択ハンドルは現在の描画ツールより優先する。図形を描いた直後は
+  // rect/circle/line ツールが継続しているため、ここで先に拾わないと
+  // リサイズカーソルが出ていても新しい図形の描画が始まってしまう。
+  if (e.target.closest("[data-handle]")) {
+    handleSelDown(e, svgEl, pp, rp);
+    e.preventDefault();
+    return;
+  }
   if (tool === "select") handleSelDown(e, svgEl, pp, rp);
   else if (tool === "hand") {
     _ds = {
@@ -310,7 +318,7 @@ function onMouseDown(e, svgEl) {
 
 function _getSelectSnapOpts() {
   const tool = getState().activeTool;
-  if (tool !== "select" || !_ds) return {};
+  if (!_ds) return {};
   if (_ds.action === "resize" && _ds.shapeId) {
     const res = findShapeById(_ds.shapeId);
     if (res?.shape?.type === "dimension") return { gridOnly: true };
@@ -321,9 +329,9 @@ function _getSelectSnapOpts() {
     return { excludeIds: new Set([_ds.shapeId]) };
   }
   if (
-    _ds.action === "move" ||
-    _ds.action === "move-pending" ||
-    _ds.action === "multi-resize"
+    _ds.action === "multi-resize" ||
+    (tool === "select" &&
+      (_ds.action === "move" || _ds.action === "move-pending"))
   ) {
     const ids = getState().selectedShapeIds;
     if (
@@ -358,7 +366,9 @@ function onMouseMove(e, svgEl) {
     return;
   }
   // 鉛筆はスナップを使わない（生のカーソルで雑に描く）
-  if (state.activeTool === "pencil") {
+  const isHandleResize =
+    _ds?.action === "resize" || _ds?.action === "multi-resize";
+  if (state.activeTool === "pencil" && !isHandleResize) {
     removeSnapIndicator();
     if (_pencil) handlePencilMove(e, svgEl);
     const rp0 = _rawReal(e, svgEl);
@@ -441,7 +451,7 @@ function onMouseMove(e, svgEl) {
     handleMultiRotate(paperToReal(rawPP.x, rawPP.y), e.shiftKey);
     return;
   }
-  if (tool === "select" && _ds?.action === "multi-resize") {
+  if (_ds?.action === "multi-resize") {
     document.body.classList.add("dragging");
     handleMultiResize(rp, e.shiftKey);
     return;
@@ -453,7 +463,7 @@ function onMouseMove(e, svgEl) {
     if (Math.hypot(dx, dy) >= thresh) _ds.action = "move";
     else return;
   }
-  if (tool === "select" && _ds?.action === "resize") {
+  if (_ds?.action === "resize") {
     document.body.classList.add("dragging");
     handleResize(rp, e.shiftKey);
     return;
@@ -592,7 +602,7 @@ function onMouseUp(e, svgEl) {
     uiUpdate();
     return;
   }
-  if (tool === "select" && _ds?.action === "multi-resize") {
+  if (_ds?.action === "multi-resize") {
     if (typeof markShapeDirty === "function") {
       for (const id of getState().selectedShapeIds) markShapeDirty(id);
     }
@@ -602,7 +612,7 @@ function onMouseUp(e, svgEl) {
     document.body.classList.remove("dragging");
     return;
   }
-  if (tool === "select" && _ds?.action === "resize") {
+  if (_ds?.action === "resize") {
     if (_ds.pathResizeFast) {
       const { nx1, ny1, ox1, oy1, scaleX, scaleY } = _ds.pathResizeFast;
       const res = findShapeById(_ds.shapeId);

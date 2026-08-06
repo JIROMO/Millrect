@@ -96,6 +96,39 @@ test("selection move updates handles without drawing snap residue", () => {
   assert.doesNotMatch(handleMoveBody, /renderSnapIndicator\(/);
 });
 
+test("resize handles take priority while a drawing tool remains active", () => {
+  const mouseDownBody = functionBody(interactionSource, "onMouseDown");
+  const handlePriority = mouseDownBody.indexOf(
+    'e.target.closest("[data-handle]")',
+  );
+  const drawingDispatch = mouseDownBody.indexOf('tool === "rect"');
+  assert.ok(handlePriority >= 0, "mousedown should detect selection handles");
+  assert.ok(
+    handlePriority < drawingDispatch,
+    "selection handles should be handled before drawing-tool dispatch",
+  );
+  assert.match(
+    mouseDownBody.slice(handlePriority, drawingDispatch),
+    /handleSelDown\(e, svgEl, pp, rp\)/,
+  );
+
+  const mouseMoveBody = functionBody(interactionSource, "onMouseMove");
+  assert.match(mouseMoveBody, /if \(_ds\?\.action === "resize"\)/);
+  assert.match(mouseMoveBody, /if \(_ds\?\.action === "multi-resize"\)/);
+  assert.doesNotMatch(
+    mouseMoveBody,
+    /tool === "select" && _ds\?\.action === "(?:multi-)?resize"/,
+  );
+
+  const mouseUpBody = functionBody(interactionSource, "onMouseUp");
+  assert.match(mouseUpBody, /if \(_ds\?\.action === "resize"\)/);
+  assert.match(mouseUpBody, /if \(_ds\?\.action === "multi-resize"\)/);
+  assert.doesNotMatch(
+    mouseUpBody,
+    /tool === "select" && _ds\?\.action === "(?:multi-)?resize"/,
+  );
+});
+
 test("selection move fast path is not limited to single groups", () => {
   const handleMoveBody = functionBody(interactionSource, "handleSelMove");
   const fastBlock = handleMoveBody.match(
