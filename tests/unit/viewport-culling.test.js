@@ -1,8 +1,6 @@
 "use strict";
 
 const assert = require("node:assert/strict");
-const fs = require("node:fs");
-const path = require("node:path");
 const test = require("node:test");
 
 const {
@@ -10,8 +8,6 @@ const {
   isShapeVisibleInCull,
   visibleShapesForRender,
 } = require("../../packages/viewport-culling");
-
-const ROOT = path.resolve(__dirname, "../..");
 
 test("boxIntersects treats missing boxes as visible", () => {
   assert.equal(boxIntersects(null, { x: 0, y: 0, w: 10, h: 10 }), true);
@@ -73,10 +69,10 @@ test("isShapeVisibleInCull returns true when culling is disabled", () => {
   );
 });
 
-test("viewport culling package is loaded before renderer in the app shell", () => {
-  const html = fs.readFileSync(path.join(ROOT, "app/index.html"), "utf8");
-  const cullingIndex = html.indexOf("../packages/viewport-culling.js");
-  const rendererIndex = html.indexOf('src="js/renderer.js"');
+test("viewport culling package is bundled before renderer", () => {
+  const scriptOrder = require("../../scripts/app-script-order");
+  const cullingIndex = scriptOrder.indexOf("../packages/viewport-culling.js");
+  const rendererIndex = scriptOrder.indexOf("js/renderer.js");
 
   assert.notEqual(cullingIndex, -1);
   assert.notEqual(rendererIndex, -1);

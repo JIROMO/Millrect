@@ -10,6 +10,7 @@ CLAUDE.md
 TODO.md
 dist/
 dist-site/
+app/js/app.bundle.js
 .mcp.json
 .DS_Store
 .playwright-artifacts/

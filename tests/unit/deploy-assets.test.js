@@ -77,6 +77,18 @@ describe("static deploy assets", () => {
     assert.equal(fs.readFileSync(marker, "utf8"), "keep me\n");
   });
 
+  it("publishes the app runtime as one generated bundle", () => {
+    const html = fs.readFileSync(path.join(outDir, "app/index.html"), "utf8");
+    const scripts = [...html.matchAll(/<script\b[^>]*\bsrc="([^"]+)"/g)].map(
+      (match) => match[1],
+    );
+    assert.deepEqual(scripts, ["js/google-tag.js", "js/app.bundle.js"]);
+    assert.ok(
+      fs.statSync(path.join(outDir, "app/js/app.bundle.js")).size > 0,
+      "generated app bundle should not be empty",
+    );
+  });
+
   it("every local asset in every published HTML resolves within the build", () => {
     const htmlFiles = htmlFilesIn(outDir);
     assert.ok(htmlFiles.length > 0, "should produce published HTML files");

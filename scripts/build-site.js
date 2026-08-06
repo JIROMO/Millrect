@@ -7,6 +7,7 @@
 const fs = require("node:fs");
 const path = require("node:path");
 const manifest = require("./site-manifest");
+const { buildAppBundle } = require("./build-app-js");
 
 const ROOT = path.resolve(__dirname, "..");
 
@@ -51,6 +52,10 @@ function buildSite(outDirAbs) {
     fs.cpSync(src, dest, { recursive: true });
     copied += 1;
   }
+
+  // app/index.html references the generated bundle. Build it directly in the
+  // deploy tree so dist stays complete without committing generated output.
+  buildAppBundle(path.join(OUT, "app", "js", "app.bundle.js"));
 
   return { outDir: OUT, copied };
 }
