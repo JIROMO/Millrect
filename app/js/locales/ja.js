@@ -205,8 +205,6 @@
 
     "toast.boolean.failed":
       "ブール演算に失敗しました（図形の重なりを確認してください）",
-    "toast.fillet.failed":
-      "フィレット/面取りに失敗しました（半径を確認してください）",
 
     "help.title": "ショートカット",
     "help.button.title": "ショートカット一覧",
@@ -392,9 +390,6 @@
     "props.ymm": "Y mm",
     "props.widthMm": "幅 mm",
     "props.heightMm": "高さ mm",
-    "props.filletRadiusMm": "フィレット半径 mm",
-    "props.applyFillet": "フィレット適用",
-    "props.applyChamfer": "面取り適用",
     "props.cxMm": "CX mm",
     "props.cyMm": "CY mm",
     "props.rxMm": "RX mm",
@@ -419,6 +414,14 @@
     "props.boolean.intersect": "交差",
     "props.boolean.exclude": "除外",
     "props.boolean.flatten": "統合",
+    "panel.design.offset": "オフセット",
+    "props.offset.distance": "距離",
+    "props.offset.inset": "内側に作成",
+    "props.offset.outset": "外側に作成",
+    "props.offset.hint":
+      "元の図形を残して、指定距離だけ内側または外側のパスを作成します。",
+    "toast.offset.failed":
+      "オフセットを作成できません。閉じた図形と有効な距離を確認してください。",
     "props.array.mode": "モード",
     "props.array.mode.linear": "直線",
     "props.array.mode.polar": "円形",

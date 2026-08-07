@@ -126,6 +126,9 @@ const EXPORT_NAMES = [
   "extractProfilesFromPage",
   // boolean 入力（回転焼き込みの回帰テスト用）
   "shapeToClipPolygon",
+  "offsetClipPolygon",
+  "insetClipPolygon",
+  "outsetClipPolygon",
   // ops
   "alignShapes",
   "distributeShapes",
@@ -133,6 +136,7 @@ const EXPORT_NAMES = [
   "ungroupSelectedShapes",
   "subtractSelectedShapes",
   "unionSelectedShapes",
+  "offsetSelectedShapes",
   // constraints
   "getAllConstraints",
   "applyConstraints",

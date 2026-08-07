@@ -44,7 +44,6 @@ module.exports = [
   "js/profiles.js",
   "js/constraints.js",
   "js/renderer.js",
-  "js/fillet.js",
   "js/commands.js",
   "js/export.js",
   "js/dxf-export.js",

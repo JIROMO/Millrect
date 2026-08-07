@@ -915,6 +915,7 @@ function updatePropertiesPanel() {
         buildMultiAppearanceHTML(state.selectedShapeIds),
         true,
       ) +
+      buildOffsetMenuHTML() +
       buildBooleanMenuHTML(state.selectedShapeIds.length) +
       panelSectionHTML(
         "panel.design.group",
@@ -926,6 +927,7 @@ function updatePropertiesPanel() {
       ) +
       _buildArrayDuplicateHTML();
     bindAlignPositionEvents(c, state.selectedShapeIds);
+    bindOffsetMenuEvents(c);
     bindBooleanMenuEvents(c);
     bindPanelSections(c);
     document
@@ -958,6 +960,7 @@ function updatePropertiesPanel() {
       ) +
       buildBooleanMenuHTML(1);
     bindAlignPositionEvents(c, state.selectedShapeIds);
+    bindOffsetMenuEvents(c);
     bindBooleanMenuEvents(c);
     bindPanelSections(c);
     document
@@ -971,10 +974,14 @@ function updatePropertiesPanel() {
   }
   const alignHTML = buildAlignPositionHTML(state.selectedShapeIds);
   c.innerHTML =
-    alignHTML + buildPropsHTML(res.shape) + _buildArrayDuplicateHTML();
+    alignHTML +
+    buildPropsHTML(res.shape) +
+    buildOffsetMenuHTML() +
+    _buildArrayDuplicateHTML();
   if (window.lucide)
     window.lucide.createIcons({ nameAttr: "data-lucide", nodes: [c] });
   bindAlignPositionEvents(c, state.selectedShapeIds);
+  bindOffsetMenuEvents(c);
   const cbSolid = c.querySelector("#prop-solid-intersect");
   if (cbSolid) {
     cbSolid.addEventListener("change", () => {
@@ -1053,27 +1060,6 @@ function updatePropertiesPanel() {
       uiUpdate();
     });
   }
-  const runFillet = (mode) => {
-    const radiusInp = c.querySelector("#fillet-radius");
-    const radiusMm = parseFloat(radiusInp?.value);
-    if (isNaN(radiusMm) || radiusMm <= 0) return;
-    const sid = state.selectedShapeIds[0];
-    const ok = applyFilletToPath(sid, radiusMm, mode);
-    if (!ok) {
-      if (typeof showErrorToast === "function") {
-        showErrorToast(t("toast.fillet.failed"));
-      }
-      return;
-    }
-    render();
-    uiUpdate();
-  };
-  c.querySelector("#btn-apply-fillet")?.addEventListener("click", () =>
-    runFillet("round"),
-  );
-  c.querySelector("#btn-apply-chamfer")?.addEventListener("click", () =>
-    runFillet("chamfer"),
-  );
   const btnTMove = c.querySelector("#btn-transform-move");
   const btnTCopy = c.querySelector("#btn-transform-copy");
   const getTransformDelta = () => {
@@ -1888,15 +1874,6 @@ function buildPropsHTML(s) {
     const hMM = isFinite(minY) ? fmtNum(realToMM(maxY - minY)) : "0";
     geometry.push(pRowUnit(t("props.widthMm"), "path-w", wMM, "mm"));
     geometry.push(pRowUnit(t("props.heightMm"), "path-h", hMM, "mm"));
-    geometry.push(`<div class="prop-row">
-        <label>${t("props.filletRadiusMm")}</label>
-        <div class="prop-unit-field"><input type="number" id="fillet-radius" step="0.1" min="0" value="1"><span class="prop-unit-suffix">mm</span></div>
-      </div>
-      <div class="prop-row">
-        <label></label>
-        <button type="button" id="btn-apply-fillet" class="prop-btn">${t("props.applyFillet")}</button>
-        <button type="button" id="btn-apply-chamfer" class="prop-btn">${t("props.applyChamfer")}</button>
-      </div>`);
   } else if (s.type === "bezier") {
     const bb = bezierBBox(s, { numerator: 1, denominator: 1 });
     const wMM = bb ? fmtNum(realToMM(bb.w)) : "0";

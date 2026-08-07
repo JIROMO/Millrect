@@ -208,7 +208,6 @@
 
     "toast.boolean.failed":
       "Boolean operation failed (check that the shapes overlap)",
-    "toast.fillet.failed": "Fillet/chamfer failed (check the radius)",
 
     "help.title": "Shortcuts",
     "help.button.title": "Shortcut list",
@@ -394,9 +393,6 @@
     "props.ymm": "Y mm",
     "props.widthMm": "Width mm",
     "props.heightMm": "Height mm",
-    "props.filletRadiusMm": "Fillet radius mm",
-    "props.applyFillet": "Apply fillet",
-    "props.applyChamfer": "Apply chamfer",
     "props.cxMm": "CX mm",
     "props.cyMm": "CY mm",
     "props.rxMm": "RX mm",
@@ -421,6 +417,14 @@
     "props.boolean.intersect": "Intersect",
     "props.boolean.exclude": "Exclude",
     "props.boolean.flatten": "Flatten",
+    "panel.design.offset": "Offset",
+    "props.offset.distance": "Distance",
+    "props.offset.inset": "Create inside",
+    "props.offset.outset": "Create outside",
+    "props.offset.hint":
+      "Keeps the original and creates a path offset inward or outward by this distance.",
+    "toast.offset.failed":
+      "Could not create the offset. Check the closed shape and distance.",
     "props.array.mode": "Mode",
     "props.array.mode.linear": "Linear",
     "props.array.mode.polar": "Polar",

@@ -1871,6 +1871,31 @@ input[type="color"].prop-mixed {
 .prop-boolean-menu {
   padding: 0 var(--panel-pad) var(--panel-pad);
 }
+.prop-offset-menu {
+  display: grid;
+  gap: 8px;
+  padding: 0 var(--panel-pad) var(--panel-pad);
+}
+.prop-offset-menu .prop-transform-field {
+  grid-template-columns: 1fr minmax(64px, 92px) auto;
+}
+.prop-offset-actions {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 6px;
+}
+.prop-offset-actions > button {
+  min-height: var(--panel-row-h);
+  border: 1px solid var(--border);
+  border-radius: var(--panel-input-radius);
+  background: var(--panel-input-bg);
+  color: var(--text);
+  font: inherit;
+  cursor: pointer;
+}
+.prop-offset-actions > button:hover:not(:disabled) {
+  background: var(--hover-bg);
+}
 .boolean-item {
   width: 100%;
   display: grid;

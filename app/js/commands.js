@@ -390,20 +390,6 @@ function _mutateShapeVertex(shape, pt, axis, delta) {
   return false;
 }
 
-// path shape の全頂点にフィレット/チャンファーを焼き込む一発コマンド。
-// radiusMm: mm 単位。mode: "round" | "chamfer"
-function applyFilletToPath(id, radiusMm, mode) {
-  const res = findShapeById(id);
-  if (!res || res.isDimension || res.shape.type !== "path") return false;
-  if (res.layer?.locked || res.shape.locked) return false;
-  const radius = mmToReal(radiusMm);
-  const ok = applyFilletToPathShape(res.shape, radius, mode);
-  if (!ok) return false;
-  if (typeof markShapeDirty === "function") markShapeDirty(id);
-  pushHistory(mode === "chamfer" ? "面取り" : "フィレット");
-  return true;
-}
-
 function deleteShape(id) {
   invalidateTextNativePreview(id);
   const res = findShapeById(id);
@@ -1098,6 +1084,270 @@ function flattenSelectedShapes() {
   );
   if (!newShape) return false;
   state.selectedShapeIds = [newShape.id];
+  pushHistory();
+  return true;
+}
+
+// ── Offset (inset) ───────────────────────────────────────────
+// polygon-clipping has no offset primitive.  An inset by r is equivalent to
+// subtracting the r-wide buffer of every contour boundary from the filled
+// polygon.  Building that buffer from round-ended edge capsules keeps concave
+// corners, holes and topology changes in polygon-clipping's robust domain.
+function _offsetCleanRing(ring) {
+  const clean = [];
+  for (const point of ring || []) {
+    if (
+      !Array.isArray(point) ||
+      !Number.isFinite(point[0]) ||
+      !Number.isFinite(point[1])
+    )
+      continue;
+    const prev = clean[clean.length - 1];
+    if (
+      !prev ||
+      Math.abs(prev[0] - point[0]) > 1e-7 ||
+      Math.abs(prev[1] - point[1]) > 1e-7
+    ) {
+      clean.push([point[0], point[1]]);
+    }
+  }
+  if (clean.length > 1) {
+    const first = clean[0],
+      last = clean[clean.length - 1];
+    if (
+      Math.abs(first[0] - last[0]) <= 1e-7 &&
+      Math.abs(first[1] - last[1]) <= 1e-7
+    )
+      clean.pop();
+  }
+  return clean;
+}
+
+function _offsetEdgeCapsule(a, b, radius, capSteps = 8) {
+  const dx = b[0] - a[0],
+    dy = b[1] - a[1];
+  const length = Math.hypot(dx, dy);
+  if (!(length > 1e-7)) return null;
+  const angle = Math.atan2(dy, dx);
+  const ring = [];
+  // Semicircle around b, then semicircle around a (counter-clockwise ring).
+  for (let i = 0; i <= capSteps; i++) {
+    const theta = angle - Math.PI / 2 + (Math.PI * i) / capSteps;
+    ring.push([b[0] + radius * Math.cos(theta), b[1] + radius * Math.sin(theta)]);
+  }
+  for (let i = 0; i <= capSteps; i++) {
+    const theta = angle + Math.PI / 2 + (Math.PI * i) / capSteps;
+    ring.push([a[0] + radius * Math.cos(theta), a[1] + radius * Math.sin(theta)]);
+  }
+  return [[ring]];
+}
+
+function _offsetLineIntersection(pointA, dirA, pointB, dirB) {
+  const cross = dirA[0] * dirB[1] - dirA[1] * dirB[0];
+  if (Math.abs(cross) < 1e-10) return null;
+  const qx = pointB[0] - pointA[0];
+  const qy = pointB[1] - pointA[1];
+  const t = (qx * dirB[1] - qy * dirB[0]) / cross;
+  return [pointA[0] + t * dirA[0], pointA[1] + t * dirA[1]];
+}
+
+// Offset a simple ring with miter joins. Intersecting adjacent shifted edge
+// lines preserves sharp corners (a rectangle remains a rectangle).
+function _offsetRingMiter(sourceRing, distanceReal) {
+  const ring = _offsetCleanRing(sourceRing);
+  if (ring.length < 3) return null;
+  const orientation = Math.sign(_ringSignedArea(ring));
+  if (!orientation) return null;
+  const edges = [];
+  for (let i = 0; i < ring.length; i++) {
+    const a = ring[i];
+    const b = ring[(i + 1) % ring.length];
+    const dx = b[0] - a[0];
+    const dy = b[1] - a[1];
+    const length = Math.hypot(dx, dy);
+    if (!(length > 1e-7)) return null;
+    const dir = [dx / length, dy / length];
+    const normal = [orientation * dir[1], -orientation * dir[0]];
+    edges.push({ dir, normal });
+  }
+
+  return ring.map((point, i) => {
+    const prev = edges[(i - 1 + edges.length) % edges.length];
+    const next = edges[i];
+    const prevPoint = [
+      point[0] + prev.normal[0] * distanceReal,
+      point[1] + prev.normal[1] * distanceReal,
+    ];
+    const nextPoint = [
+      point[0] + next.normal[0] * distanceReal,
+      point[1] + next.normal[1] * distanceReal,
+    ];
+    return (
+      _offsetLineIntersection(prevPoint, prev.dir, nextPoint, next.dir) ||
+      nextPoint
+    );
+  });
+}
+
+function _outsetClipPolygonMiter(multipolygon, distanceReal) {
+  try {
+    const expandedPolygons = [];
+    for (const polygon of multipolygon) {
+      const outer = _offsetRingMiter(polygon?.[0], distanceReal);
+      if (!outer) continue;
+      let expanded = [[outer]];
+      // Outward offset shrinks holes. Reuse the robust erosion path so holes
+      // that collapse disappear instead of turning inside-out.
+      for (const hole of polygon.slice(1)) {
+        const shrunkHole = insetClipPolygon([[hole]], distanceReal);
+        if (shrunkHole?.length) {
+          expanded = polygonClipping.difference(expanded, shrunkHole);
+        }
+      }
+      if (expanded?.length) expandedPolygons.push(expanded);
+    }
+    if (!expandedPolygons.length) return null;
+    const result =
+      expandedPolygons.length === 1
+        ? expandedPolygons[0]
+        : polygonClipping.union(...expandedPolygons);
+    return result?.length ? _normalizeContours(result) : null;
+  } catch (error) {
+    console.error("offset outset failed", error);
+    return null;
+  }
+}
+
+function offsetClipPolygon(multipolygon, distanceReal, direction = "inset") {
+  if (
+    !multipolygon?.length ||
+    !(distanceReal > 0) ||
+    !Number.isFinite(distanceReal) ||
+    (direction !== "inset" && direction !== "outset")
+  )
+    return null;
+  if (direction === "outset") {
+    return _outsetClipPolygonMiter(multipolygon, distanceReal);
+  }
+  const boundaryCapsules = [];
+  for (const polygon of multipolygon) {
+    for (const sourceRing of polygon || []) {
+      const ring = _offsetCleanRing(sourceRing);
+      if (ring.length < 3) continue;
+      for (let i = 0; i < ring.length; i++) {
+        const capsule = _offsetEdgeCapsule(
+          ring[i],
+          ring[(i + 1) % ring.length],
+          distanceReal,
+        );
+        if (capsule) boundaryCapsules.push(capsule);
+      }
+    }
+  }
+  if (!boundaryCapsules.length) return null;
+  try {
+    // Feeding many mutually-overlapping capsules to one sweep occasionally
+    // exposes a degeneracy in polygon-clipping at shared cap vertices. Applying
+    // them one at a time is equivalent and avoids that failure mode.
+    let result = multipolygon;
+    for (const capsule of boundaryCapsules) {
+      result = polygonClipping.difference(result, capsule);
+      if (!result?.length) return null;
+    }
+    return result?.length ? _normalizeContours(result) : null;
+  } catch (error) {
+    console.error("offset inset failed", error);
+    return null;
+  }
+}
+
+function insetClipPolygon(multipolygon, distanceReal) {
+  return offsetClipPolygon(multipolygon, distanceReal, "inset");
+}
+
+function outsetClipPolygon(multipolygon, distanceReal) {
+  return offsetClipPolygon(multipolygon, distanceReal, "outset");
+}
+
+function _offsetRectShape(source, distanceReal, direction) {
+  const sign = direction === "inset" ? 1 : -1;
+  const width = source.width - sign * distanceReal * 2;
+  const height = source.height - sign * distanceReal * 2;
+  if (!(width > 0) || !(height > 0)) return null;
+
+  const result = {
+    ...source,
+    id: genId("rect"),
+    x: source.x + sign * distanceReal,
+    y: source.y + sign * distanceReal,
+    width,
+    height,
+  };
+  const adjustRadius = (value) => {
+    const radius = Number(value) || 0;
+    if (!(radius > 0)) return 0;
+    return direction === "inset"
+      ? Math.max(0, radius - distanceReal)
+      : radius + distanceReal;
+  };
+  if (source.rxMode === "individual") {
+    result.rxTL = adjustRadius(source.rxTL);
+    result.rxTR = adjustRadius(source.rxTR);
+    result.rxBR = adjustRadius(source.rxBR);
+    result.rxBL = adjustRadius(source.rxBL);
+  } else if (source.rx != null) {
+    result.rx = adjustRadius(source.rx);
+  }
+  return result;
+}
+
+/**
+ * Create inset path copies of the selected closed shapes.
+ * The originals remain unchanged; successful copies become the selection.
+ */
+function offsetSelectedShapes(distanceMm = 1, direction = "inset") {
+  const distance = mmToReal(Number(distanceMm));
+  if (
+    !(distance > 0) ||
+    !Number.isFinite(distance) ||
+    (direction !== "inset" && direction !== "outset")
+  )
+    return false;
+
+  const state = getState();
+  const page = getCurrentPage();
+  const ids = [...state.selectedShapeIds];
+  const entries = _findSelectedShapeEntries(ids, page).filter(
+    (entry) => !entry.layer.locked,
+  );
+  if (!entries.length) return false;
+
+  // Work backwards so inserting beside one source does not invalidate the
+  // stored index of another source in the same layer.
+  const created = [];
+  for (const entry of entries.slice().sort((a, b) => b.index - a.index)) {
+    let shape = null;
+    if (entry.shape.type === "rect") {
+      shape = _offsetRectShape(entry.shape, distance, direction);
+    } else {
+      const source = shapeToClipPolygon(entry.shape);
+      if (!source) continue;
+      const contours = offsetClipPolygon(source, distance, direction);
+      if (!contours?.length) continue;
+      shape = {
+        id: genId("path"),
+        type: "path",
+        contours,
+        ..._booleanStyleFromShape(entry.shape),
+      };
+    }
+    if (!shape) continue;
+    entry.layer.shapes.splice(entry.index + 1, 0, shape);
+    if (typeof markShapeDirty === "function") markShapeDirty(shape.id);
+    created.unshift(shape.id);
+  }
+  if (!created.length) return false;
+  state.selectedShapeIds = created;
   pushHistory();
   return true;
 }

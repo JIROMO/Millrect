@@ -91,6 +91,58 @@ function bindBooleanMenuEvents(container) {
   });
 }
 
+function buildOffsetMenuHTML() {
+  const supported = getState().selectedShapeIds.some((id) => {
+    const found = findShapeById(id);
+    const shape = found?.shape;
+    return (
+      !!shape &&
+      (shape.type === "rect" ||
+        shape.type === "circle" ||
+        shape.type === "ellipse" ||
+        shape.type === "path" ||
+        (shape.type === "bezier" && shape.closed))
+    );
+  });
+  if (!supported) return "";
+  return panelSectionHTML(
+    "panel.design.offset",
+    t("panel.design.offset"),
+    `<div class="prop-offset-menu">
+      <label class="prop-transform-field"><span>${t("props.offset.distance")}</span><input type="number" id="offset-distance-mm" value="1" min="0.01" step="0.1"><span class="prop-unit-suffix">mm</span></label>
+      <div class="prop-offset-actions">
+        <button type="button" id="btn-offset-inset">${t("props.offset.inset")}</button>
+        <button type="button" id="btn-offset-outset">${t("props.offset.outset")}</button>
+      </div>
+      <p class="prop-hint">${t("props.offset.hint")}</p>
+    </div>`,
+    true,
+  );
+}
+
+function bindOffsetMenuEvents(container) {
+  const insetButton = container.querySelector("#btn-offset-inset");
+  const outsetButton = container.querySelector("#btn-offset-outset");
+  const input = container.querySelector("#offset-distance-mm");
+  if (!insetButton || !outsetButton || !input) return;
+  const run = (direction) => {
+    const distanceMm = Number(input.value);
+    if (
+      !(distanceMm > 0) ||
+      !offsetSelectedShapes(distanceMm, direction)
+    ) {
+      if (typeof showErrorToast === "function") {
+        showErrorToast(t("toast.offset.failed"));
+      }
+      return;
+    }
+    render();
+    uiUpdate();
+  };
+  insetButton.addEventListener("click", () => run("inset"));
+  outsetButton.addEventListener("click", () => run("outset"));
+}
+
 const BOOLEAN_KEY_MAP = {
   KeyU: { fn: () => mergeSelectedShapes(), minSelection: 2 },
   KeyS: { fn: () => subtractSelectedShapes(), minSelection: 2 },
