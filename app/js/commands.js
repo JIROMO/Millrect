@@ -427,6 +427,22 @@ function deleteSelectedShapes() {
   pushHistory();
 }
 
+// レイヤーパネルの図形行から選択する。additive=true は ⌘/Ctrl クリック用で、
+// 既存選択へ追加し、すでに選択済みなら解除する。
+function selectShapeFromList(id, additive = false) {
+  const res = findShapeById(id);
+  if (!res || res.shape.locked) return false;
+  const state = getState();
+  if (!additive) {
+    state.selectedShapeIds = [id];
+    return true;
+  }
+  const index = state.selectedShapeIds.indexOf(id);
+  if (index === -1) state.selectedShapeIds.push(id);
+  else state.selectedShapeIds.splice(index, 1);
+  return true;
+}
+
 let _clipboard = [];
 
 function hasClipboard() {

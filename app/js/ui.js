@@ -770,12 +770,12 @@ function updateLayersList() {
       row.appendChild(lockBtn);
       row.appendChild(upBtn);
       row.appendChild(dnBtn);
-      row.addEventListener("click", () => {
+      row.addEventListener("click", (e) => {
         if (shape.locked) {
           updateLayersList();
           return;
         }
-        state2.selectedShapeIds = [shape.id];
+        selectShapeFromList(shape.id, e.metaKey || e.ctrlKey);
         render();
         uiUpdate();
       });

@@ -3597,6 +3597,23 @@ function showContextMenu(clientX, clientY, items) {
   }, 0);
 }
 
+function _contextPointHitsCurrentSelection(state, rp, domHitId) {
+  const page = getCurrentPage();
+  return state.selectedShapeIds.some((id) => {
+    const found = findShapeById(id);
+    if (!found || found.page !== page) return false;
+    if (found.isDimension) {
+      if (domHitId === id) return true;
+      const bbox = getShapeBBox(found.shape, page.scale);
+      return Boolean(bbox && realPointInPaperBBox(rp, bbox, page.scale));
+    }
+    if (!found.layer?.visible || found.layer.locked || found.shape.locked) {
+      return false;
+    }
+    return realPointInShapeGeometry(rp, found.shape, page.scale);
+  });
+}
+
 function handleCanvasContextMenu(e, svgEl) {
   e.preventDefault();
   dismissContextMenu();
@@ -3609,8 +3626,15 @@ function handleCanvasContextMenu(e, svgEl) {
       ? dimLabelEl.getAttribute("data-dim-label")
       : resolveToTopLevelId(hitEl.getAttribute("data-id"))
     : null;
+  const rp = _rawReal(e, svgEl);
+  // SVG の DOM ヒットは常に最前面を返す。背面図形を選択した状態で同じ
+  // 輪郭上を右クリックした場合は、現在選択中の図形を幾何判定して優先する。
+  const keepCurrentSelection =
+    !e.shiftKey &&
+    state.selectedShapeIds.length > 0 &&
+    _contextPointHitsCurrentSelection(state, rp, hitId);
 
-  if (hitId) {
+  if (hitId && !keepCurrentSelection) {
     if (e.shiftKey) {
       const idx = state.selectedShapeIds.indexOf(hitId);
       if (idx === -1) state.selectedShapeIds.push(hitId);

@@ -100,6 +100,7 @@ const EXPORT_NAMES = [
   "addShape",
   "updateShape",
   "deleteShape",
+  "selectShapeFromList",
   // lookups
   "findShapeById",
   "getCurrentPage",
