@@ -12,7 +12,7 @@ Millrect is a lightweight, browser-based CAD app. You edit **2D drawings** on pa
 
 ## Try 3D
 
-1. Open **[millrect.com/app](https://millrect.com/app/)**
+1. Open **[millrect.com/app/](https://millrect.com/app/)**
 2. Create a new project
 3. Click **3D** in the toolbar
 4. **Export STL** from the 3D panel
@@ -30,7 +30,7 @@ Step-by-step guide: [`docs/en/getting-started.html`](docs/en/getting-started.htm
 
 ## Run locally
 
-**Browser** | [millrect.com/app](https://millrect.com/app/) — no install
+**Browser** | [millrect.com/app/](https://millrect.com/app/) — no install
 
 ```bash
 npm install

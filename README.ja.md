@@ -12,7 +12,7 @@ Millrect はブラウザで使える軽量CADです。**2D 図面**が本体で�
 
 ## 試してみる
 
-1. **[millrect.com/app](https://millrect.com/app/)** を開く
+1. **[millrect.com/app/](https://millrect.com/app/)** を開く
 2. 新規プロジェクトを作成
 3. ツールバーの **3D** をクリック
 4. 3D パネルで **STL出力**
@@ -30,7 +30,7 @@ Millrect はブラウザで使える軽量CADです。**2D 図面**が本体で�
 
 ## 起動
 
-**ブラウザ** | [millrect.com/app](https://millrect.com/app/) — インストール不要
+**ブラウザ** | [millrect.com/app/](https://millrect.com/app/) — インストール不要
 
 ```bash
 npm install
