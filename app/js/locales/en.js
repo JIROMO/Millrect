@@ -425,6 +425,19 @@
       "Keeps the original and creates a path offset inward or outward by this distance.",
     "toast.offset.failed":
       "Could not create the offset. Check the closed shape and distance.",
+    "panel.design.revolved": "Create revolved solid",
+    "props.revolved.type": "Shape",
+    "props.revolved.cone": "Cone",
+    "props.revolved.frustum": "Frustum",
+    "props.revolved.dome": "Dome",
+    "props.revolved.base": "Base Ø{diameter} mm (selected circle)",
+    "props.revolved.height": "Height",
+    "props.revolved.topDiameter": "Top diameter",
+    "props.revolved.create": "Create front view",
+    "props.revolved.hint":
+      "Automatically creates the front profile and its 3D intersection setting.",
+    "toast.revolved.failed":
+      "Could not create the revolved solid. Check the height and top diameter.",
     "props.array.mode": "Mode",
     "props.array.mode.linear": "Linear",
     "props.array.mode.polar": "Polar",

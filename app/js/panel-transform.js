@@ -143,6 +143,108 @@ function bindOffsetMenuEvents(container) {
   outsetButton.addEventListener("click", () => run("outset"));
 }
 
+const REVOLVED_SHAPE_ICONS = {
+  cone:
+    '<svg viewBox="0 0 48 32" aria-hidden="true"><path d="M7 27 24 5l17 22Z"/></svg>',
+  frustum:
+    '<svg viewBox="0 0 48 32" aria-hidden="true"><path d="M8 27 17 6h14l9 21Z"/></svg>',
+  dome:
+    '<svg viewBox="0 0 48 32" aria-hidden="true"><path d="M7 27C8 14 14 6 24 6s16 8 17 21Z"/></svg>',
+};
+
+function buildRevolvedShapeBuilderHTML(shape) {
+  const page = getCurrentPage();
+  const viewType = page?.viewDefinition?.type || "top";
+  if (
+    shape?.type !== "circle" ||
+    (viewType !== "top" && viewType !== "bottom")
+  ) {
+    return "";
+  }
+  const diameterMm = realToMM(shape.r) * 2;
+  const typeButton = (kind) => `<button type="button"
+      class="prop-revolved-type${kind === "cone" ? " active" : ""}"
+      data-revolved-kind="${kind}" aria-pressed="${kind === "cone"}">
+      ${REVOLVED_SHAPE_ICONS[kind]}
+      <span>${t("props.revolved." + kind)}</span>
+    </button>`;
+  return panelSectionHTML(
+    "panel.design.revolved",
+    t("panel.design.revolved"),
+    `<div class="prop-revolved-builder" data-kind="cone" data-base-diameter="${diameterMm}">
+      <p class="prop-revolved-base">${t("props.revolved.base", { diameter: fmtNum(diameterMm) })}</p>
+      <div class="prop-revolved-types" role="group" aria-label="${t("props.revolved.type")}">
+        ${typeButton("cone")}${typeButton("frustum")}${typeButton("dome")}
+      </div>
+      <label class="prop-transform-field"><span>${t("props.revolved.height")}</span><input type="number" id="revolved-height-mm" value="${fmtNum(diameterMm)}" min="0.01" step="1"><span class="prop-unit-suffix">mm</span></label>
+      <label class="prop-transform-field prop-revolved-top-diameter" hidden><span>${t("props.revolved.topDiameter")}</span><input type="number" id="revolved-top-diameter-mm" value="${fmtNum(diameterMm / 2)}" min="0.01" max="${fmtNum(diameterMm - 0.01)}" step="1"><span class="prop-unit-suffix">mm</span></label>
+      <button type="button" class="prop-revolved-create" id="btn-create-revolved">${t("props.revolved.create")}</button>
+      <p class="prop-hint">${t("props.revolved.hint")}</p>
+    </div>`,
+    true,
+  );
+}
+
+function bindRevolvedShapeBuilderEvents(container) {
+  const builder = container.querySelector(".prop-revolved-builder");
+  if (!builder) return;
+  const typeButtons = builder.querySelectorAll("[data-revolved-kind]");
+  const topDiameterRow = builder.querySelector(
+    ".prop-revolved-top-diameter",
+  );
+  typeButtons.forEach((button) => {
+    button.addEventListener("click", () => {
+      const kind = button.dataset.revolvedKind;
+      builder.dataset.kind = kind;
+      const heightInput = builder.querySelector("#revolved-height-mm");
+      if (heightInput) {
+        const baseDiameter = Number(builder.dataset.baseDiameter);
+        heightInput.value = fmtNum(
+          kind === "dome" ? baseDiameter / 2 : baseDiameter,
+        );
+      }
+      typeButtons.forEach((candidate) => {
+        const active = candidate === button;
+        candidate.classList.toggle("active", active);
+        candidate.setAttribute("aria-pressed", String(active));
+      });
+      topDiameterRow.hidden = kind !== "frustum";
+    });
+  });
+  builder
+    .querySelector("#btn-create-revolved")
+    ?.addEventListener("click", () => {
+      const kind = builder.dataset.kind || "cone";
+      const heightMm = Number(
+        builder.querySelector("#revolved-height-mm")?.value,
+      );
+      const topDiameterMm = Number(
+        builder.querySelector("#revolved-top-diameter-mm")?.value,
+      );
+      if (
+        !createRevolvedShapeFromSelectedCircle({
+          kind,
+          heightMm,
+          topDiameterMm: kind === "frustum" ? topDiameterMm : 0,
+        })
+      ) {
+        if (typeof showErrorToast === "function") {
+          showErrorToast(t("toast.revolved.failed"));
+        }
+        return;
+      }
+      render();
+      uiUpdate();
+      if (
+        typeof is3DMode === "function" &&
+        is3DMode() &&
+        typeof scheduleUpdate3DScene === "function"
+      ) {
+        scheduleUpdate3DScene(0);
+      }
+    });
+}
+
 const BOOLEAN_KEY_MAP = {
   KeyU: { fn: () => mergeSelectedShapes(), minSelection: 2 },
   KeyS: { fn: () => subtractSelectedShapes(), minSelection: 2 },

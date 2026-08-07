@@ -982,6 +982,7 @@ function updatePropertiesPanel() {
     window.lucide.createIcons({ nameAttr: "data-lucide", nodes: [c] });
   bindAlignPositionEvents(c, state.selectedShapeIds);
   bindOffsetMenuEvents(c);
+  bindRevolvedShapeBuilderEvents(c);
   const cbSolid = c.querySelector("#prop-solid-intersect");
   if (cbSolid) {
     cbSolid.addEventListener("change", () => {
@@ -2006,6 +2007,9 @@ function buildPropsHTML(s) {
       ),
     );
   }
+
+  const revolvedBuilder = buildRevolvedShapeBuilderHTML(s);
+  if (revolvedBuilder) sections.push(revolvedBuilder);
 
   sections.push(
     panelSectionHTML(

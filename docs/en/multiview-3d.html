@@ -213,19 +213,22 @@
         <figcaption>Documentation 3D preview — Module Joint 1 as a thin plate</figcaption>
       </figure>
 
-      <h2 id="revolved-shapes">Turn a cylinder into a cone or frustum</h2>
+      <h2 id="revolved-shapes">Create a cone, frustum, or dome</h2>
       <p>
-        Build rotationally symmetric shapes by combining a circle in the top view with a profile in the front view.
-        Change the cylinder's front-view rectangle to an isosceles triangle for a cone, or a trapezoid for a conical frustum.
+        Select a circle in the top view to reveal <strong>Create revolved solid</strong> in the properties panel.
+        Choose a shape card and dimensions; Millrect creates the required front view and 3D setting automatically.
       </p>
       <ol>
         <li>Draw a top-view circle for the base diameter</li>
-        <li>Select the circle and enable <strong>Generate by solid intersection</strong> in the properties area</li>
-        <li>Draw a centered, closed isosceles triangle or trapezoid in the front view</li>
-        <li>Use the same fill color for the top circle and front profile (both may also use None)</li>
-        <li>Refresh the 3D preview</li>
+        <li>Select the circle, then choose <strong>Cone</strong>, <strong>Frustum</strong>, or <strong>Dome</strong></li>
+        <li>Enter the height; a frustum also requires its top diameter</li>
+        <li>Click <strong>Create front view</strong></li>
+        <li>Open or refresh the 3D preview</li>
       </ol>
-      <p>Millrect treats the top-view circle as a rotational shape and revolves the sloped front-view profile into a smooth surface.</p>
+      <p>
+        A dome defaults to a height equal to the base radius. Change the height for a shallower or taller dome.
+        After creation, you can edit the closed front-view profile directly for further shaping.
+      </p>
 
       <h2 id="color">Color mapping</h2>
       <p>

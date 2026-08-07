@@ -422,6 +422,19 @@
       "元の図形を残して、指定距離だけ内側または外側のパスを作成します。",
     "toast.offset.failed":
       "オフセットを作成できません。閉じた図形と有効な距離を確認してください。",
+    "panel.design.revolved": "回転体を作成",
+    "props.revolved.type": "形状",
+    "props.revolved.cone": "円錐",
+    "props.revolved.frustum": "円錐台",
+    "props.revolved.dome": "ドーム",
+    "props.revolved.base": "底面 Ø{diameter} mm（選択中の円）",
+    "props.revolved.height": "高さ",
+    "props.revolved.topDiameter": "上面径",
+    "props.revolved.create": "正面図を作成",
+    "props.revolved.hint":
+      "正面図の輪郭と3D用の立体交差設定を自動作成します。",
+    "toast.revolved.failed":
+      "回転体を作成できません。高さと上面径を確認してください。",
     "props.array.mode": "モード",
     "props.array.mode.linear": "直線",
     "props.array.mode.polar": "円形",

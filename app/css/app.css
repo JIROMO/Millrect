@@ -1896,6 +1896,71 @@ input[type="color"].prop-mixed {
 .prop-offset-actions > button:hover:not(:disabled) {
   background: var(--hover-bg);
 }
+.prop-revolved-builder {
+  display: grid;
+  gap: 9px;
+  padding: 0 var(--panel-pad) var(--panel-pad);
+}
+.prop-revolved-base {
+  margin: 0;
+  color: var(--text-2);
+  font-size: 11px;
+}
+.prop-revolved-types {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 5px;
+}
+.prop-revolved-type {
+  display: grid;
+  justify-items: center;
+  gap: 3px;
+  min-width: 0;
+  padding: 6px 2px 5px;
+  border: 1px solid var(--border);
+  border-radius: var(--panel-input-radius);
+  background: var(--panel-input-bg);
+  color: var(--text-2);
+  font: inherit;
+  font-size: 10px;
+  cursor: pointer;
+}
+.prop-revolved-type svg {
+  width: 40px;
+  height: 27px;
+  fill: color-mix(in srgb, currentColor 13%, transparent);
+  stroke: currentColor;
+  stroke-width: 1.5;
+  stroke-linejoin: round;
+}
+.prop-revolved-type:hover {
+  background: var(--hover-bg);
+  color: var(--text);
+}
+.prop-revolved-type.active {
+  border-color: var(--accent-2);
+  background: color-mix(in srgb, var(--accent-2) 14%, var(--panel-input-bg));
+  color: var(--accent-2);
+}
+.prop-revolved-builder .prop-transform-field {
+  grid-template-columns: 1fr minmax(64px, 92px) auto;
+}
+.prop-revolved-top-diameter[hidden] {
+  display: none;
+}
+.prop-revolved-create {
+  min-height: var(--panel-row-h);
+  border: 1px solid var(--accent-2);
+  border-radius: var(--panel-input-radius);
+  background: var(--accent-2);
+  color: #fff;
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+}
+.prop-revolved-create:hover {
+  filter: brightness(1.08);
+}
 .boolean-item {
   width: 100%;
   display: grid;

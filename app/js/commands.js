@@ -443,6 +443,122 @@ function selectShapeFromList(id, additive = false) {
   return true;
 }
 
+function createRevolvedShapeFromSelectedCircle(options = {}) {
+  const state = getState();
+  if (state.selectedShapeIds.length !== 1) return false;
+  const selected = findShapeById(state.selectedShapeIds[0]);
+  const topPage = selected?.page;
+  const circle = selected?.shape;
+  const viewType = topPage?.viewDefinition?.type || "top";
+  if (
+    !circle ||
+    circle.type !== "circle" ||
+    (viewType !== "top" && viewType !== "bottom")
+  ) {
+    return false;
+  }
+
+  const heightMm = Number(options.heightMm);
+  const topDiameterMm = Number(options.topDiameterMm ?? 0);
+  const kind = options.kind || (topDiameterMm > 0 ? "frustum" : "cone");
+  const baseDiameterMm = realToMM(circle.r * 2);
+  if (
+    !["cone", "frustum", "dome"].includes(kind) ||
+    !(heightMm > 0) ||
+    !Number.isFinite(heightMm) ||
+    (kind === "frustum" &&
+      (topDiameterMm <= 0 ||
+        !Number.isFinite(topDiameterMm) ||
+        topDiameterMm >= baseDiameterMm))
+  )
+    return false;
+
+  let frontPage = state.pages.find(
+    (page) => (page.viewDefinition?.type || "top") === "front",
+  );
+  if (!frontPage) {
+    frontPage = createPage({
+      name: typeof t === "function" ? t("default.frontPage") : "正面図",
+      paper: topPage.paper,
+      orientation: topPage.orientation,
+      scale: { ...topPage.scale },
+      viewDefinition: { type: "front", normal: null, up: null },
+    });
+    state.pages.push(frontPage);
+  }
+
+  let targetLayer = frontPage.layers.find((layer) => !layer.locked);
+  if (!targetLayer) {
+    targetLayer = createLayer({
+      name: typeof t === "function" ? t("default.bodyLayer") : "本体",
+    });
+    frontPage.layers.push(targetLayer);
+  }
+
+  const scale = frontPage.scale || { numerator: 1, denominator: 1 };
+  const paper = getPaperDimensions(frontPage);
+  const width = mmToReal(baseDiameterMm);
+  const height = mmToReal(heightMm);
+  const widthPaper = realToPaperDist(width, scale);
+  const heightPaper = realToPaperDist(height, scale);
+  const x = paperToRealDist((paper.width - widthPaper) / 2, scale);
+  const y = paperToRealDist((paper.height - heightPaper) / 2, scale);
+  const topWidth = mmToReal(topDiameterMm);
+  const topLeft = x + (width - topWidth) / 2;
+  const topRight = topLeft + topWidth;
+  let ring;
+  if (kind === "dome") {
+    const centerX = x + width / 2;
+    ring = [];
+    for (let i = 0; i <= 32; i++) {
+      const angle = Math.PI - (Math.PI * i) / 32;
+      ring.push([
+        centerX + (width / 2) * Math.cos(angle),
+        y + height - height * Math.sin(angle),
+      ]);
+    }
+  } else if (kind === "cone") {
+    ring = [
+      [x, y + height],
+      [x + width, y + height],
+      [x + width / 2, y],
+    ];
+  } else {
+    ring = [
+      [x, y + height],
+      [x + width, y + height],
+      [topRight, y],
+      [topLeft, y],
+    ];
+  }
+  const profile = {
+    id: genId(kind),
+    type: "path",
+    contours: [[ring]],
+    stroke: circle.stroke || "#1a1a2e",
+    fill: circle.fill ?? "none",
+    strokeWidth: circle.strokeWidth || "thin",
+  };
+  targetLayer.shapes.push(profile);
+  circle.solidIntersect = true;
+  if (typeof markShapeDirty === "function") {
+    markShapeDirty(circle.id);
+    markShapeDirty(profile.id);
+  }
+  if (typeof markDocumentDirty === "function") markDocumentDirty();
+  state.currentPageId = frontPage.id;
+  state.currentLayerId = targetLayer.id;
+  state.selectedShapeIds = [profile.id];
+  const historyLabel =
+    kind === "dome"
+      ? "ドームを作成"
+      : kind === "cone"
+        ? "円錐を作成"
+        : "円錐台を作成";
+  pushHistory(historyLabel);
+  return true;
+}
+
 let _clipboard = [];
 
 function hasClipboard() {

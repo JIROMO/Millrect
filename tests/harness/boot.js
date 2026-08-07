@@ -101,6 +101,7 @@ const EXPORT_NAMES = [
   "updateShape",
   "deleteShape",
   "selectShapeFromList",
+  "createRevolvedShapeFromSelectedCircle",
   // lookups
   "findShapeById",
   "getCurrentPage",
