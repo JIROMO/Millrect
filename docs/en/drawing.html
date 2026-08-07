@@ -41,7 +41,6 @@
         <a href="#bezier">Pen (Bezier)</a>
         <a href="#text">Text</a>
         <a href="#project-fonts">Project fonts</a>
-        <a href="#text-outline">Text outline</a>
         <a href="#dimensions">Dimensions</a>
         <a href="#canvas-images">Canvas images</a>
         <a href="#sketch-import">Sketch import</a>
@@ -165,14 +164,14 @@
         </tbody>
       </table>
       <p>
-        Display preview and outline conversion use the HarfBuzz text engine, rendering glyph outlines from registered font TTF bytes.
+        Display preview uses the HarfBuzz text engine, rendering glyph outlines from registered font TTF bytes.
         The same engine works in a browser when served over HTTP (<code>npm run serve</code>).
       </p>
       <div class="docs-callout docs-callout-tip">
         <strong>Using text in 3D</strong>
         <p>
           Text shapes themselves are not 3D outlines.
-          <a href="#text-outline">Convert to outline</a> to turn them into path shapes usable for 3D generation.
+          Use boolean operations to turn them into path shapes usable for 3D generation.
         </p>
       </div>
 
@@ -222,14 +221,14 @@
       <h3>Weight (Regular / Bold)</h3>
       <p>
         On registration, Fontsource resolves TTF URLs for <strong>400 (Regular)</strong> and <strong>700 (Bold)</strong> (Regular only if 700 is unavailable).
-        Setting text weight to Bold uses the Bold TTF for outline conversion and native preview as well.
+        Setting text weight to Bold uses the Bold TTF for native preview as well.
       </p>
       <p>Main fields per registered entry:</p>
       <ul>
         <li><code>family</code> — Font name (e.g. <code>Roboto</code>)</li>
         <li><code>cssUrl</code> — Google Fonts CSS for display (<code>wght@400;700</code> when Bold is supported)</li>
-        <li><code>fileUrl</code> — TTF for outline (400)</li>
-        <li><code>fileUrlBold</code> — TTF for outline (700, optional)</li>
+        <li><code>fileUrl</code> — TTF (400)</li>
+        <li><code>fileUrlBold</code> — TTF (700, optional)</li>
       </ul>
 
       <div class="docs-callout docs-callout-tip">
@@ -239,26 +238,6 @@
           To share with a team, pass the project JSON <code>fonts[]</code> as-is to reproduce the same typeface setup.
         </p>
       </div>
-
-      <h2 id="text-outline">Text outline conversion</h2>
-      <p>
-        Converts text into <strong>path shapes</strong> per glyph.
-        Use when you want logo or engraved text as printable 3D outlines.
-      </p>
-      <ol>
-        <li>Select one text shape</li>
-        <li>Properties area → Outline, or right-click → Outline</li>
-        <li>The original text is replaced by a <strong>group</strong> (collection of paths)</li>
-      </ol>
-      <div class="docs-callout docs-callout-warn">
-        <strong>Desktop only</strong>
-        <p>
-          Outline conversion is available only in the Electron app (Core Text on macOS, fontkit / HarfBuzz elsewhere).
-          The button is disabled in a browser-only setup.
-          Registered fonts download TTF before outlining.
-        </p>
-      </div>
-      <p>See <a href="editing.html#text-outline">Editing — Text outline conversion</a> for detailed editing steps.</p>
 
       <figure class="docs-figure docs-figure-medium">
         <img src="../images/en/drawing-text.png" alt="Text note on the Module Joint 1 drawing">

@@ -40,7 +40,6 @@
         <a href="#bezier">ペン（ベジェ）</a>
         <a href="#text">テキスト</a>
         <a href="#project-fonts">プロジェクトフォント</a>
-        <a href="#text-outline">テキストのアウトライン化</a>
         <a href="#dimensions">寸法線</a>
         <a href="#canvas-images">キャンバス画像</a>
         <a href="#sketch-import">スケッチ取り込み</a>
@@ -162,14 +161,14 @@
         </tbody>
       </table>
       <p>
-        表示プレビューとアウトライン化では HarfBuzz テキストエンジンを使い、登録済みフォントの TTF バイト列からグリフ輪郭を描画します。
+        表示プレビューでは HarfBuzz テキストエンジンを使い、登録済みフォントの TTF バイト列からグリフ輪郭を描画します。
         ブラウザ単体でも HTTP サーバー経由（<code>npm run serve</code>）で同じエンジンが動作します。
       </p>
       <div class="docs-callout docs-callout-tip">
         <strong>3D に文字を使いたい場合</strong>
         <p>
           テキスト図形そのものは 3D 輪郭になりません。
-          <a href="#text-outline">アウトライン化</a> して path 図形に変換すると、3D 生成の対象にできます。
+          Boolean 演算（合成・くり抜き）で path 図形に変換すると、3D 生成の対象にできます。
         </p>
       </div>
 
@@ -219,7 +218,7 @@
       <h3>ウェイト（Regular / Bold）</h3>
       <p>
         登録時に Fontsource から <strong>400（Regular）</strong> と <strong>700（Bold）</strong> の TTF URL を解決します（700 が無いフォントは Regular のみ）。
-        テキストのウェイトを Bold にすると、アウトライン化・ネイティブプレビューでも Bold 用 TTF が使われます。
+        テキストのウェイトを Bold にすると、ネイティブプレビューでも Bold 用 TTF が使われます。
       </p>
       <p>各登録エントリの主なフィールド:</p>
       <ul>
@@ -236,26 +235,6 @@
           チームで共有する場合は、プロジェクト JSON の <code>fonts[]</code> をそのまま渡せば同じ書体構成を再現できます。
         </p>
       </div>
-
-      <h2 id="text-outline">テキストのアウトライン化</h2>
-      <p>
-        テキストをグリフごとの <strong>path 図形</strong> に変換する機能です。
-        ロゴ文字や刻印文字を 3D プリント用の輪郭にしたいときに使います。
-      </p>
-      <ol>
-        <li>テキスト図形を 1 つ選択</li>
-        <li>プロパティ領域の「アウトライン化」、または右クリック →「アウトライン化」</li>
-        <li>元のテキストは <strong>グループ</strong>（path の集合）に置き換わります</li>
-      </ol>
-      <div class="docs-callout docs-callout-warn">
-        <strong>デスクトップ版のみ</strong>
-        <p>
-          アウトライン化は Electron 版でのみ利用できます（macOS では Core Text、それ以外は fontkit / HarfBuzz）。
-          ブラウザ単体ではボタンが無効になります。
-          登録フォントを使う場合は TTF をダウンロードしてから輪郭化します。
-        </p>
-      </div>
-      <p>詳しい編集操作は <a href="editing.html#text-outline">編集操作 — テキストのアウトライン化</a> を参照してください。</p>
 
       <figure class="docs-figure docs-figure-medium">
         <img src="images/drawing-text.png" alt="Module Joint 1 の注記テキスト">

@@ -13,7 +13,6 @@
     "export.html": true,
     "shortcuts.html": true,
     "ai-mcp.html": true,
-    "desktop-download.html": true,
     "developer.html": true,
   };
 
@@ -29,7 +28,6 @@
     "export.html": "保存と出力",
     "shortcuts.html": "ショートカット",
     "ai-mcp.html": "AI 連携",
-    "desktop-download.html": "デスクトップ版",
     "developer.html": "開発者ガイド",
   };
 
@@ -45,7 +43,6 @@
     "export.html": "Save & Export",
     "shortcuts.html": "Shortcuts",
     "ai-mcp.html": "AI / MCP",
-    "desktop-download.html": "Desktop app",
     "developer.html": "Developer guide",
   };
 

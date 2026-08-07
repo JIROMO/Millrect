@@ -32,16 +32,6 @@ const requiredSnippets = [
     label: "browser text-engine bundle",
     snippets: ["ringContainmentFraction", "groupRingsIntoPolygons"],
   },
-  {
-    file: "native/macos/outline-text/main.swift",
-    label: "Core Text outline binary",
-    snippets: [
-      "ringContainmentFraction",
-      "ringMostlyInside(rings[i], rings[j])",
-      "normalizeRingByDepth",
-      "parent[i] = best",
-    ],
-  },
 ];
 
 let failed = false;
@@ -53,10 +43,8 @@ function fail(msg) {
 
 for (const rel of [
   "app/js/text-outline.js",
-  "electron/text-outline-native.js",
   "packages/text-engine-utils.js",
   "packages/text-contour-grouping.js",
-  "native/macos/outline-text/main.swift",
   "app/vendor/millrect-text-engine.mjs",
 ]) {
   const filePath = path.join(root, rel);

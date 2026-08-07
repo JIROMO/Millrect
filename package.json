@@ -12,9 +12,7 @@
     "url": "https://github.com/JIROMO/Millrect/issues"
   },
   "homepage": "https://github.com/JIROMO/Millrect",
-  "main": "main.js",
   "scripts": {
-    "build:native": "node scripts/build-native-outline.js",
     "build:text-engine": "node scripts/build-text-engine-browser.js",
     "build:app-js": "node scripts/build-app-js.js",
     "build:stl-wasm": "node scripts/build-stl-wasm.js",
@@ -29,90 +27,13 @@
     "test": "npm run verify:contours && npm run test:unit && npm run test:integration",
     "build": "npm run build:text-engine && npm run build:stl-wasm && npm run build:site && npm --prefix worker run build",
     "deploy": "npm run build:site && npm --prefix worker run deploy",
-    "desktop:dev": "npm run build:native && npm run build:text-engine && npm run build:stl-wasm && npm run build:app-js && electron .",
-    "desktop:build": "npm run build:native && npm run build:text-engine && npm run build:stl-wasm && npm run build:app-js && electron-builder",
-    "release": "bash scripts/release-build.sh",
     "format": "npx prettier --write \"**/*.js\"",
     "docs:screenshots": "node scripts/capture-docs-screenshots.js",
     "seo:sitemap": "node scripts/generate-sitemap.js"
   },
   "devDependencies": {
     "@playwright/test": "^1.60.0",
-    "electron": "^42.0.1",
-    "electron-builder": "^26.8.1",
     "esbuild": "^0.28.1",
     "harfbuzzjs": "^1.2.0"
-  },
-  "build": {
-    "appId": "com.jiromo.millrect",
-    "productName": "Millrect",
-    "files": [
-      "app/index.html",
-      "main.js",
-      "preload.js",
-      "app/js/**",
-      "packages/**",
-      "app/css/**",
-      "docs/**",
-      "app/fonts/**",
-      "app/vendor/**",
-      "electron/**"
-    ],
-    "extraResources": [
-      {
-        "from": "native/macos/outline-text/bin/outline-text",
-        "to": "native/outline-text",
-        "filter": [
-          "**/*"
-        ]
-      },
-      {
-        "from": "mcp/server.js",
-        "to": "mcp/server.js"
-      },
-      {
-        "from": "mcp/package.json",
-        "to": "mcp/package.json"
-      },
-      {
-        "from": "mcp/package-lock.json",
-        "to": "mcp/package-lock.json"
-      },
-      {
-        "from": "mcp/node_modules",
-        "to": "mcp/node_modules",
-        "filter": [
-          "**/*"
-        ]
-      }
-    ],
-    "icon": "build/icon.icns",
-    "mac": {
-      "category": "public.app-category.graphics-design",
-      "icon": "build/icon.icns",
-      "target": [
-        {
-          "target": "dmg",
-          "arch": [
-            "arm64",
-            "x64"
-          ]
-        }
-      ]
-    },
-    "win": {
-      "target": [
-        {
-          "target": "nsis",
-          "arch": [
-            "x64"
-          ]
-        }
-      ]
-    }
-  },
-  "dependencies": {
-    "fontkit": "^2.0.4",
-    "ws": "^8.20.1"
   }
 }

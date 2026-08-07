@@ -16,6 +16,5 @@ app/js/app.bundle.js
 .playwright-artifacts/
 playwright-report/
 test-results/
-native/macos/outline-text/bin/
 .cursor
 .vscode/

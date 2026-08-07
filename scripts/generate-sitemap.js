@@ -13,11 +13,6 @@ const URLS = [
   { loc: "/app/", changefreq: "weekly", priority: "0.9" },
   { loc: "/docs/", changefreq: "weekly", priority: "0.8" },
   { loc: "/docs/getting-started.html", changefreq: "monthly", priority: "0.7" },
-  {
-    loc: "/docs/desktop-download.html",
-    changefreq: "monthly",
-    priority: "0.8",
-  },
   { loc: "/docs/interface.html", changefreq: "monthly", priority: "0.6" },
   { loc: "/docs/drawing.html", changefreq: "monthly", priority: "0.6" },
   { loc: "/docs/editing.html", changefreq: "monthly", priority: "0.6" },
@@ -30,11 +25,6 @@ const URLS = [
     loc: "/docs/en/getting-started.html",
     changefreq: "monthly",
     priority: "0.7",
-  },
-  {
-    loc: "/docs/en/desktop-download.html",
-    changefreq: "monthly",
-    priority: "0.8",
   },
   { loc: "/docs/en/interface.html", changefreq: "monthly", priority: "0.6" },
   { loc: "/docs/en/drawing.html", changefreq: "monthly", priority: "0.6" },

@@ -14,7 +14,6 @@
     "export.html": true,
     "shortcuts.html": true,
     "ai-mcp.html": true,
-    "desktop-download.html": true,
   };
 
   function buildSrc(page, anchor) {

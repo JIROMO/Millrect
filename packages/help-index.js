@@ -5,20 +5,6 @@
 /** @type {HelpEntry[]} */
 var HELP_INDEX = [
   {
-    title: "デスクトップ版",
-    section: "ガイド",
-    page: "desktop-download.html",
-    keywords: [
-      "ダウンロード",
-      "インストール",
-      "DMG",
-      "Windows",
-      "デスクトップ",
-      "Electron",
-    ],
-    summary: "デスクトップ版のダウンロードと未署名配布時の起動方法",
-  },
-  {
     title: "はじめに",
     section: "ガイド",
     page: "getting-started.html",
@@ -762,20 +748,6 @@ var HELP_INDEX = [
 
 /** @type {Record<string, Omit<HelpEntry, "page" | "anchor">>} */
 var HELP_INDEX_EN = {
-  "desktop-download.html": {
-    title: "Desktop app",
-    section: "Guide",
-    keywords: [
-      "download",
-      "install",
-      "DMG",
-      "Windows",
-      "desktop",
-      "Electron",
-      "unsigned",
-    ],
-    summary: "Download the desktop app and open unsigned builds",
-  },
   "getting-started.html": {
     title: "Getting started",
     section: "Guide",

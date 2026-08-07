@@ -176,27 +176,18 @@
         <p>Groups themselves are not 3D outlines. Each shape inside a group is profiled individually.</p>
       </div>
 
-      <h2 id="text-outline">Text outline conversion</h2>
+      <h2 id="text-outline">Text</h2>
       <p>
-        With a text shape selected, the properties area shows <strong>Edit text</strong> and <strong>Outline</strong>.
-        The same actions are available from the right-click menu.
+        With a text shape selected, the properties area shows <strong>Edit text</strong>.
+        The same action is available from the right-click menu.
       </p>
       <ul>
         <li><strong>Edit text</strong> — Edit string, font, size, line height, and color in a dialog</li>
-        <li><strong>Outline</strong> — Convert each character to a path shape and combine into one group</li>
       </ul>
-      <p>
-        After outlining, the original text is removed and path shapes in the group become 3D outlines.
-        Text color (stroke) carries over as path fill color.
-      </p>
       <figure class="docs-figure docs-figure-sidebar">
-        <img src="../images/en/design-panel-text.png" alt="Properties area with text selected and Outline button">
-        <figcaption>Properties area with text selected. Edit text and Outline buttons are shown.</figcaption>
+        <img src="../images/en/design-panel-text.png" alt="Properties area with text selected">
+        <figcaption>Properties area with text selected. The Edit text button is shown.</figcaption>
       </figure>
-      <div class="docs-callout docs-callout-warn">
-        <strong>Desktop only</strong>
-        <p>Available only in the Electron app. Core Text on macOS; fontkit on other OSes for outline generation.</p>
-      </div>
 
       <h2 id="boolean">Union and subtract (Boolean)</h2>
       <p>With two or more <strong>closed outlines</strong> selected (rectangle, circle, closed bezier, path, etc.), boolean operations are available. Right-click → Boolean, or use the properties-area buttons.</p>

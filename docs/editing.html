@@ -172,27 +172,18 @@
         <p>グループ自体は 3D 輪郭には使えません。グループ内の各図形が個別に Profile 化されます。</p>
       </div>
 
-      <h2 id="text-outline">テキストのアウトライン化</h2>
+      <h2 id="text-outline">テキスト</h2>
       <p>
-        テキスト図形を選択すると、プロパティ領域に <strong>テキスト編集</strong> と <strong>アウトライン化</strong> ボタンが表示されます。
+        テキスト図形を選択すると、プロパティ領域に <strong>テキスト編集</strong> ボタンが表示されます。
         右クリックメニューからも同じ操作ができます。
       </p>
       <ul>
         <li><strong>テキスト編集</strong> — 文字列・フォント・サイズ・行間・色をダイアログで編集</li>
-        <li><strong>アウトライン化</strong> — 各文字を path 図形に変換し、1 つのグループにまとめる</li>
       </ul>
-      <p>
-        アウトライン化後は元のテキストは削除され、グループ内の path 図形が 3D 生成の輪郭として使えます。
-        文字色（線色）は path の塗り色として引き継がれます。
-      </p>
       <figure class="docs-figure docs-figure-sidebar">
-        <img src="images/design-panel-text.png" alt="テキスト選択時のプロパティ領域。アウトライン化ボタン">
-        <figcaption>テキスト選択時のプロパティ領域。「テキスト編集」「アウトライン化」ボタンが表示されます。</figcaption>
+        <img src="images/design-panel-text.png" alt="テキスト選択時のプロパティ領域">
+        <figcaption>テキスト選択時のプロパティ領域。「テキスト編集」ボタンが表示されます。</figcaption>
       </figure>
-      <div class="docs-callout docs-callout-warn">
-        <strong>デスクトップ版のみ</strong>
-        <p>Electron 版でのみ利用可能です。macOS では Core Text、それ以外の OS では fontkit で輪郭を生成します。</p>
-      </div>
 
       <h2 id="boolean">合成・くり抜き（Boolean）</h2>
       <p>2 つ以上の<strong>閉じた輪郭</strong>（矩形・円・閉じたベジェ・path など）を選択すると、輪郭演算が使えます。右クリック →「ブール演算」、またはプロパティ領域のボタンから実行できます。</p>

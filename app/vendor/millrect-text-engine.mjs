@@ -40,14 +40,14 @@ var __toESM = (mod, isNodeMode, target) => (target = mod != null ? __create(__ge
   mod
 ));
 
-// electron/stubs/empty-module.js
+// text-engine-src/stubs/empty-module.js
 var empty_module_exports = {};
 __export(empty_module_exports, {
   default: () => empty_module_default
 });
 var empty_module_default;
 var init_empty_module = __esm({
-  "electron/stubs/empty-module.js"() {
+  "text-engine-src/stubs/empty-module.js"() {
     empty_module_default = {};
   }
 });
@@ -461,9 +461,9 @@ var require_text_engine_utils = __commonJS({
   }
 });
 
-// electron/text-engine-harfbuzz-core.js
+// text-engine-src/text-engine-harfbuzz-core.js
 var require_text_engine_harfbuzz_core = __commonJS({
-  "electron/text-engine-harfbuzz-core.js"(exports2, module) {
+  "text-engine-src/text-engine-harfbuzz-core.js"(exports2, module) {
     "use strict";
     var {
       textEngineExpandFontCandidates,
@@ -2810,7 +2810,7 @@ function otTagToLanguage(tag) {
 }
 init(await harfbuzz_default());
 
-// electron/millrect-text-engine-browser.js
+// text-engine-src/millrect-text-engine-browser.js
 var import_text_engine_harfbuzz_core = __toESM(require_text_engine_harfbuzz_core());
 var import_builtin_fonts = __toESM(require_builtin_fonts());
 var WEB_FONT_CATALOG = [
