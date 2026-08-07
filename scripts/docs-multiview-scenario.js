@@ -565,7 +565,7 @@ async function waitFor3DMesh(page, timeout = 15000) {
       } else {
         resize3DView?.();
       }
-      update3DScene();
+      update3DScene({ forceSync: true });
       return get3DSceneStatus().meshCount > 0;
     },
     undefined,
@@ -574,7 +574,7 @@ async function waitFor3DMesh(page, timeout = 15000) {
   await page.evaluate(() => {
     if (!_3meshes.length || !_3camera || !_3controls || !_3renderer) return;
     resize3DView?.();
-    update3DScene();
+    update3DScene({ forceSync: true });
     const box = new THREE.Box3();
     for (const mesh of _3meshes) {
       mesh.updateMatrixWorld(true);

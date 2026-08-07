@@ -53,6 +53,7 @@
         <li>Drag inside the frame to move; corner handles to resize</li>
         <li>Arrow keys move 1 mm (Shift+arrow for 10 mm)</li>
         <li>Ctrl+A (Mac: Cmd+A) selects all shapes and dimensions</li>
+        <li>In the Layers shape list, use <strong>Cmd+click</strong> on Mac or <strong>Ctrl+click</strong> on Windows/Linux to add or remove shapes from the selection</li>
       </ul>
 
       <figure class="docs-figure docs-figure-wide">
@@ -132,6 +133,30 @@
         </tbody>
       </table>
       <p>With a single selection, you can also align to page (paper) edges or center.</p>
+
+      <h2 id="offset">Inside and outside offset</h2>
+      <p>
+        Select a closed shape to show <strong>Offset</strong> in the properties area.
+        Enter a distance in millimeters, then choose <strong>Create inside</strong> or <strong>Create outside</strong>.
+        The original remains in place and the generated shape becomes selected.
+      </p>
+      <ul>
+        <li>Supports rectangles, circles, ellipses, closed beziers, and paths</li>
+        <li>Rectangle results remain rect elements and preserve rotation, flips, corner radii, and appearance</li>
+        <li>Outside polygon offsets use miter joins, preserving right and sharp corners</li>
+        <li>For paths with holes, inside offset enlarges holes and outside offset shrinks them</li>
+        <li>An inside distance large enough to erase the shape is not applied</li>
+      </ul>
+
+      <h2 id="z-order">Stacking order</h2>
+      <p>
+        Right-click a shape and use <strong>Stacking order</strong> to bring it to front, bring it forward,
+        send it backward, or send it to back. The arrow buttons on shape rows in the Layers tab move it one step at a time.
+      </p>
+      <div class="docs-callout docs-callout-tip">
+        <strong>Overlapping shapes with no fill</strong>
+        <p>When a back shape is selected, right-clicking its outline keeps the current selection instead of switching to the front shape, so you can change stacking order directly.</p>
+      </div>
 
       <h2 id="copy">Copy, duplicate, delete</h2>
       <ul>

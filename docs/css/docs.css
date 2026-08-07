@@ -51,9 +51,10 @@
   --docs-radius: 10px;
   --docs-radius-sm: 6px;
 
-  --docs-font: "Gen Interface JP", -apple-system, BlinkMacSystemFont, sans-serif;
-  --docs-mono: "SF Mono", "Fira Code", "Cascadia Code", "Hiragino Sans Mono",
-    monospace;
+  --docs-font:
+    "Gen Interface JP", -apple-system, BlinkMacSystemFont, sans-serif;
+  --docs-mono:
+    "SF Mono", "Fira Code", "Cascadia Code", "Hiragino Sans Mono", monospace;
 
   font-family: var(--docs-font);
   font-size: 15px;
@@ -149,8 +150,8 @@ pre code {
 
 .docs-logo-img {
   display: block;
+  width: 200px;
   height: 20px;
-  width: auto;
 }
 
 .docs-header-actions {
@@ -267,7 +268,9 @@ pre code {
   border: 1px solid var(--docs-border);
   border-radius: var(--docs-radius-sm);
   background: var(--docs-surface);
-  transition: border-color 0.15s, box-shadow 0.15s;
+  transition:
+    border-color 0.15s,
+    box-shadow 0.15s;
 }
 
 .docs-search:focus-within {
@@ -382,7 +385,10 @@ pre code {
   text-decoration: none;
   border: 1px solid transparent;
   cursor: pointer;
-  transition: background 0.15s, border-color 0.15s, color 0.15s;
+  transition:
+    background 0.15s,
+    border-color 0.15s,
+    color 0.15s;
 }
 
 .docs-btn:hover {
@@ -539,7 +545,10 @@ pre code {
   padding: 1.35rem 1.4rem;
   text-decoration: none;
   color: inherit;
-  transition: border-color 0.15s, box-shadow 0.15s, transform 0.15s;
+  transition:
+    border-color 0.15s,
+    box-shadow 0.15s,
+    transform 0.15s;
   display: flex;
   flex-direction: column;
   gap: 0.5rem;
@@ -1516,7 +1525,9 @@ pre code {
     padding: 1rem;
     opacity: 0;
     visibility: hidden;
-    transition: opacity 0.2s, visibility 0.2s;
+    transition:
+      opacity 0.2s,
+      visibility 0.2s;
   }
 
   .docs-sidebar.is-open {

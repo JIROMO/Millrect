@@ -251,7 +251,7 @@ img {
 
 .feature-grid {
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
+  grid-template-columns: repeat(4, 1fr);
   gap: 18px;
 }
 
@@ -270,6 +270,17 @@ img {
 .feature-card p {
   color: var(--text-2);
   font-size: 0.94rem;
+}
+
+.feature-card a {
+  display: inline-block;
+  margin-top: 12px;
+  color: #c7cbff;
+  font-size: 0.9rem;
+}
+
+.feature-card a:hover {
+  color: #fff;
 }
 
 .cta-band {
