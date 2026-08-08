@@ -61,6 +61,10 @@ class MillrectToolbar extends HTMLElement {
 
       <div class="toolbar-spacer"></div>
 
+      <button id="btn-toolbar-more" class="toolbar-icon-btn" data-i18n-title="toolbar.more.title" aria-haspopup="dialog">
+        <i data-lucide="more-horizontal"></i>
+      </button>
+
       <button class="custom-select toolbar-locale-select" id="toolbar-locale" data-value="ja" data-i18n-title="page.language">
         <i data-lucide="languages"></i>
         <span class="custom-select-label">日本語</span>

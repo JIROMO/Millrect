@@ -288,6 +288,18 @@ millrect-3d-panel {
   flex: 1;
 }
 
+/* 幅不足時: 言語切替・プロジェクト名を退避し「⋯」ボタンに集約（toolbar-responsive.js が toolbar-compact を付与） */
+#toolbar.toolbar-compact .toolbar-locale-select,
+#toolbar.toolbar-compact #project-name {
+  display: none;
+}
+#btn-toolbar-more {
+  display: none;
+}
+#toolbar.toolbar-compact #btn-toolbar-more {
+  display: flex;
+}
+
 /* ════════════════════════════════════════════════════
    PROJECT TABS（複数プロジェクトのブラウザ風タブ）
    ════════════════════════════════════════════════════ */
@@ -3165,6 +3177,18 @@ button.ctx-item {
   font-weight: 650;
   letter-spacing: 0.06em;
   text-transform: uppercase;
+}
+.project-menu-settings-slot {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 4px 10px 6px;
+}
+.project-menu-settings-slot .toolbar-locale-select,
+.project-menu-settings-slot #project-name {
+  width: 100%;
+  height: 34px;
+  border-color: var(--border);
 }
 .project-menu-item {
   width: 100%;

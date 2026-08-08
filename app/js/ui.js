@@ -237,7 +237,28 @@ function updateAll() {
   if (ez) ez.textContent = `${(getState().zoom * 100).toFixed(0)}%`;
 }
 
+// 幅不足時、言語切替・プロジェクト名をトップバーから隠し「⋯」ボタンに退避する。
+// showProjectActionsMenu() がダイアログを開く際、実DOMノード（#toolbar-locale/#project-name）
+// をダイアログ側へ一時的に付け替える（複製すると id 重複でイベントが二重発火するため）。
+function _initToolbarResponsive() {
+  const toolbar = document.getElementById("toolbar");
+  if (!toolbar || typeof ResizeObserver === "undefined") return;
+  const check = () => {
+    // compact 解除中の自然幅で判定してから、必要ならクラスを付ける
+    toolbar.classList.remove("toolbar-compact");
+    if (toolbar.scrollWidth > toolbar.clientWidth + 1) {
+      toolbar.classList.add("toolbar-compact");
+    }
+  };
+  new ResizeObserver(check).observe(toolbar);
+  check();
+  document.getElementById("btn-toolbar-more")?.addEventListener("click", () => {
+    showProjectActionsMenu();
+  });
+}
+
 function bindToolbar() {
+  _initToolbarResponsive();
   document.getElementById("btn-project-menu").addEventListener("click", () => {
     showProjectActionsMenu();
   });
@@ -2854,13 +2875,45 @@ function showProjectActionsMenu() {
           ${menuItem({ id: "pl-btn-import-all", icon: "archive-restore", label: t("startup.importAll") })}
           ${menuItem({ id: "pl-btn-clear-all", icon: "trash-2", label: t("startup.clearAll"), danger: true })}
         </section>
+        <section class="project-menu-section project-menu-section-settings" id="pma-settings-section" hidden>
+          <h3>${t("projectMenu.section.settings")}</h3>
+          <div class="project-menu-settings-slot" id="pma-settings-slot"></div>
+        </section>
       </div>
     </div>
   `;
   document.body.appendChild(overlay);
   if (window.lucide) window.lucide.createIcons();
 
-  const close = () => overlay.remove();
+  // トップバーが幅不足で折りたたまれている間は、言語切替/プロジェクト名の実ノードを
+  // このダイアログへ一時的に移動する（複製ではなく付け替え。閉じたら元に戻す）。
+  const toolbar = document.getElementById("toolbar");
+  const isCompact = toolbar?.classList.contains("toolbar-compact");
+  let movedSettingsNodes = null;
+  if (isCompact) {
+    const slot = overlay.querySelector("#pma-settings-slot");
+    const localeEl = document.getElementById("toolbar-locale");
+    const nameEl = document.getElementById("project-name");
+    if (slot && localeEl && nameEl) {
+      const localeAnchor = document.createComment("toolbar-locale-anchor");
+      const nameAnchor = document.createComment("project-name-anchor");
+      localeEl.after(localeAnchor);
+      nameEl.after(nameAnchor);
+      slot.append(localeEl, nameEl);
+      overlay.querySelector("#pma-settings-section").hidden = false;
+      movedSettingsNodes = { localeEl, nameEl, localeAnchor, nameAnchor };
+    }
+  }
+
+  const close = () => {
+    if (movedSettingsNodes) {
+      const { localeEl, nameEl, localeAnchor, nameAnchor } = movedSettingsNodes;
+      localeAnchor.replaceWith(localeEl);
+      nameAnchor.replaceWith(nameEl);
+      movedSettingsNodes = null;
+    }
+    overlay.remove();
+  };
   overlay.querySelector(".pl-btn-close").addEventListener("click", close);
   overlay.addEventListener("click", (event) => {
     if (event.target === overlay) close();
