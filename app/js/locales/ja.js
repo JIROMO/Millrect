@@ -39,7 +39,6 @@
     "toolbar.helpDocs.title": "ドキュメント",
     "toolbar.projectName": "プロジェクト名",
     "toolbar.projectName.placeholder": "Untitled",
-    "toolbar.more.title": "その他",
 
     "tools.select": "SELECT",
     "tools.select.title": "選択 (V)",
@@ -170,6 +169,7 @@
     "projectMenu.section.importExport": "読み込み・出力",
     "projectMenu.section.viewEdit": "表示・編集",
     "projectMenu.section.data": "プロジェクトデータ",
+    "projectMenu.section.tools": "ツール",
     "projectMenu.section.settings": "設定",
     "projectMenu.addFrame": "テンプレート枠を追加",
     "projectMenu.shortcut.new": "Ctrl+N",

@@ -61,18 +61,9 @@ class MillrectToolbar extends HTMLElement {
 
       <div class="toolbar-spacer"></div>
 
-      <button id="btn-toolbar-more" class="toolbar-icon-btn" data-i18n-title="toolbar.more.title" aria-haspopup="dialog">
-        <i data-lucide="more-horizontal"></i>
-      </button>
-
-      <button class="custom-select toolbar-locale-select" id="toolbar-locale" data-value="ja" data-i18n-title="page.language">
+      <button class="toolbar-locale-select" id="toolbar-locale" data-value="ja" data-i18n-title="page.language">
         <i data-lucide="languages"></i>
         <span class="custom-select-label">日本語</span>
-        <svg class="custom-select-chevron" width="10" height="6" viewBox="0 0 10 6" fill="none"><path d="M1 1l4 4 4-4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
-        <div class="custom-select-popover">
-          <div class="custom-select-option selected" data-value="ja" data-i18n="page.language.ja">日本語</div>
-          <div class="custom-select-option" data-value="en" data-i18n="page.language.en">English</div>
-        </div>
       </button>
 
       <input type="text" id="project-name" data-i18n-placeholder="toolbar.projectName.placeholder" data-i18n-title="toolbar.projectName" placeholder="Untitled">

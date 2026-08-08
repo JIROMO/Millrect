@@ -237,24 +237,22 @@ function updateAll() {
   if (ez) ez.textContent = `${(getState().zoom * 100).toFixed(0)}%`;
 }
 
-// 幅不足時、言語切替・プロジェクト名をトップバーから隠し「⋯」ボタンに退避する。
-// showProjectActionsMenu() がダイアログを開く際、実DOMノード（#toolbar-locale/#project-name）
-// をダイアログ側へ一時的に付け替える（複製すると id 重複でイベントが二重発火するため）。
+// 幅不足時、ロゴ以外（2D/3D・ツールアイコン・言語切替・プロジェクト名）をトップバーから
+// 隠し、ハンバーガーメニュー（既存の #btn-project-menu → showProjectActionsMenu）に集約する。
+// 専用の「もっと見る」ボタンは置かない（ハンバーガーと役割が重複するため）。
+// ダイアログを開く際は実DOMノードを一時的に付け替える（複製すると id 重複でイベントが二重発火するため）。
+// 判定は右パネル幅などに左右される内容量ベースの overflow 検出ではなく、
+// window 幅の固定ブレークポイント（1024px）にする（挙動を予測可能にするため）。
+const TOOLBAR_COMPACT_BREAKPOINT = 1024;
 function _initToolbarResponsive() {
   const toolbar = document.getElementById("toolbar");
-  if (!toolbar || typeof ResizeObserver === "undefined") return;
+  if (!toolbar) return;
+  const mq = window.matchMedia(`(max-width: ${TOOLBAR_COMPACT_BREAKPOINT}px)`);
   const check = () => {
-    // compact 解除中の自然幅で判定してから、必要ならクラスを付ける
-    toolbar.classList.remove("toolbar-compact");
-    if (toolbar.scrollWidth > toolbar.clientWidth + 1) {
-      toolbar.classList.add("toolbar-compact");
-    }
+    toolbar.classList.toggle("toolbar-compact", mq.matches);
   };
-  new ResizeObserver(check).observe(toolbar);
+  mq.addEventListener("change", check);
   check();
-  document.getElementById("btn-toolbar-more")?.addEventListener("click", () => {
-    showProjectActionsMenu();
-  });
 }
 
 function bindToolbar() {
@@ -2652,8 +2650,11 @@ function bindLocaleSettings() {
   bindCustomSelect("app-locale", (v) => {
     setLocale(v);
   });
-  bindCustomSelect("toolbar-locale", (v) => {
-    setLocale(v);
+  // ツールバーの言語ボタンは日本語/英語の2択のみなので、ドロップダウンではなく
+  // クリックのたびに切り替えるトグルにする（#toolbar の overflow:hidden で
+  // ポップオーバーが見切れてしまう問題も回避できる）
+  document.getElementById("toolbar-locale")?.addEventListener("click", () => {
+    setLocale(getLocale() === "ja" ? "en" : "ja");
   });
 }
 
@@ -2718,13 +2719,17 @@ function resetAddViewSelect() {
 }
 
 function syncLocaleSelectLabels() {
-  ["app-locale", "toolbar-locale"].forEach((id) => {
-    const btn = document.getElementById(id);
-    if (!btn) return;
-    setCustomSelect(id, getLocale());
-    const label = btn.querySelector(".custom-select-label");
+  setCustomSelect("app-locale", getLocale());
+  const appLabel = document.getElementById("app-locale")?.querySelector(".custom-select-label");
+  if (appLabel) appLabel.textContent = t("page.language." + getLocale());
+
+  // toolbar-locale はドロップダウンではないトグルボタンなので dataset とラベルだけ更新する
+  const toolbarBtn = document.getElementById("toolbar-locale");
+  if (toolbarBtn) {
+    toolbarBtn.dataset.value = getLocale();
+    const label = toolbarBtn.querySelector(".custom-select-label");
     if (label) label.textContent = t("page.language." + getLocale());
-  });
+  }
 }
 
 function updateAddViewOptionLabels() {
@@ -2842,6 +2847,10 @@ function showProjectActionsMenu() {
         <button type="button" class="pl-btn-close" aria-label="${t("startup.cancel")}">✕</button>
       </div>
       <div class="project-menu-sections">
+        <section class="project-menu-section project-menu-section-settings" id="pma-tools-section" hidden>
+          <h3>${t("projectMenu.section.tools")}</h3>
+          <div class="project-menu-settings-slot" id="pma-tools-slot"></div>
+        </section>
         <section class="project-menu-section">
           <h3>${t("projectMenu.section.file")}</h3>
           ${menuItem({ trigger: "btn-new", icon: "file-plus", label: t("toolbar.new"), shortcut: t("projectMenu.shortcut.new") })}
@@ -2885,32 +2894,38 @@ function showProjectActionsMenu() {
   document.body.appendChild(overlay);
   if (window.lucide) window.lucide.createIcons();
 
-  // トップバーが幅不足で折りたたまれている間は、言語切替/プロジェクト名の実ノードを
-  // このダイアログへ一時的に移動する（複製ではなく付け替え。閉じたら元に戻す）。
+  // トップバーが幅不足で折りたたまれている間（ロゴ以外を隠している間）は、
+  // 2D/3D切替・ツールアイコン・言語切替・プロジェクト名の実ノードをこのダイアログへ
+  // 一時的に移動する（複製ではなく付け替えなので、既存のイベントリスナーがそのまま効く）。
+  // 閉じたら元の位置に戻す。
   const toolbar = document.getElementById("toolbar");
   const isCompact = toolbar?.classList.contains("toolbar-compact");
-  let movedSettingsNodes = null;
+  let movedNodes = null;
   if (isCompact) {
-    const slot = overlay.querySelector("#pma-settings-slot");
-    const localeEl = document.getElementById("toolbar-locale");
-    const nameEl = document.getElementById("project-name");
-    if (slot && localeEl && nameEl) {
-      const localeAnchor = document.createComment("toolbar-locale-anchor");
-      const nameAnchor = document.createComment("project-name-anchor");
-      localeEl.after(localeAnchor);
-      nameEl.after(nameAnchor);
-      slot.append(localeEl, nameEl);
-      overlay.querySelector("#pma-settings-section").hidden = false;
-      movedSettingsNodes = { localeEl, nameEl, localeAnchor, nameAnchor };
+    const toolsSlot = overlay.querySelector("#pma-tools-slot");
+    const settingsSlot = overlay.querySelector("#pma-settings-slot");
+    const moves = [
+      { el: document.getElementById("toolbar").querySelector(".toolbar-mode-switch"), slot: toolsSlot },
+      { el: document.getElementById("tools-float"), slot: toolsSlot },
+      { el: document.getElementById("toolbar-locale"), slot: settingsSlot },
+      { el: document.getElementById("project-name"), slot: settingsSlot },
+    ].filter((m) => m.el && m.slot);
+    if (moves.length) {
+      movedNodes = moves.map(({ el, slot }) => {
+        const anchor = document.createComment("toolbar-node-anchor");
+        el.after(anchor);
+        slot.append(el);
+        return { el, anchor };
+      });
+      if (toolsSlot.childElementCount) overlay.querySelector("#pma-tools-section").hidden = false;
+      if (settingsSlot.childElementCount) overlay.querySelector("#pma-settings-section").hidden = false;
     }
   }
 
   const close = () => {
-    if (movedSettingsNodes) {
-      const { localeEl, nameEl, localeAnchor, nameAnchor } = movedSettingsNodes;
-      localeAnchor.replaceWith(localeEl);
-      nameAnchor.replaceWith(nameEl);
-      movedSettingsNodes = null;
+    if (movedNodes) {
+      movedNodes.forEach(({ el, anchor }) => anchor.replaceWith(el));
+      movedNodes = null;
     }
     overlay.remove();
   };

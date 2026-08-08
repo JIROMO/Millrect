@@ -126,6 +126,10 @@ millrect-3d-panel {
   flex-shrink: 0;
   user-select: none;
   z-index: 100;
+  /* 中身が収まらない時に右サイドバーへ視覚的にはみ出さないための安全網。
+     実際の折りたたみは toolbar-compact（右側の言語/プロジェクト名を隠す）と
+     #tools-float の横スクロール（下記）で吸収する */
+  overflow: hidden;
 }
 
 .toolbar-logo {
@@ -224,12 +228,13 @@ millrect-3d-panel {
   background: var(--accent-2);
 }
 
+/* 入力欄だとひと目でわかるよう、hover時だけでなく常時うっすら枠・背景を出す */
 #project-name {
   height: 26px;
   padding: 0 8px;
-  border: 1px solid transparent;
+  border: 1px solid var(--border);
   border-radius: 5px;
-  background: transparent;
+  background: var(--surface-2);
   color: var(--text);
   font-size: 11px;
   width: 130px;
@@ -238,8 +243,8 @@ millrect-3d-panel {
     background 0.15s;
 }
 #project-name:hover {
-  border-color: var(--border);
-  background: var(--surface-2);
+  border-color: var(--border-2);
+  background: var(--surface-3);
 }
 #project-name:focus {
   border-color: var(--accent);
@@ -247,27 +252,32 @@ millrect-3d-panel {
   background: var(--surface-2);
 }
 
+/* 言語切替（日本語/英語の2択のみ）: ドロップダウンではなくクリックのたびに切り替わる
+   トグルボタン。以前 .custom-select 共通クラスに乗せていたベーススタイルを持たせる */
 .toolbar-locale-select,
 #toolbar button.toolbar-locale-select {
   flex: 0 0 auto;
   width: 94px;
   height: 28px;
   padding: 0 8px;
+  display: flex;
+  align-items: center;
+  gap: 4px;
   border: 1px solid transparent;
   border-radius: 5px;
   background: transparent;
   color: var(--text-2);
   font-size: 11px;
   letter-spacing: 0;
+  cursor: pointer;
+  user-select: none;
+  transition:
+    border-color 0.12s,
+    background 0.12s,
+    color 0.12s;
 }
 .toolbar-locale-select:hover,
 #toolbar button.toolbar-locale-select:hover {
-  background: var(--surface-3);
-  color: var(--text);
-}
-.toolbar-locale-select.open,
-#toolbar button.toolbar-locale-select.open {
-  border-color: var(--border-2);
   background: var(--surface-3);
   color: var(--text);
 }
@@ -278,26 +288,21 @@ millrect-3d-panel {
   width: 14px;
   height: 14px;
 }
-.toolbar-locale-select .custom-select-popover {
-  left: auto;
-  right: 0;
-  width: 120px;
-}
 
 .toolbar-spacer {
   flex: 1;
 }
 
-/* 幅不足時: 言語切替・プロジェクト名を退避し「⋯」ボタンに集約（toolbar-responsive.js が toolbar-compact を付与） */
+/* 幅不足時: ロゴ以外（2D/3D切替・ツールアイコン・言語切替・プロジェクト名）を退避し、
+   既存のハンバーガーメニュー（#btn-project-menu → showProjectActionsMenu）に集約する
+   （_initToolbarResponsive() が toolbar-compact を付与）。
+   ロゴは常時表示のまま維持する。実際の退避（実DOMノードの付け替え）は showProjectActionsMenu() 側 */
+#toolbar.toolbar-compact .toolbar-mode-switch,
+#toolbar.toolbar-compact .toolbar-mode-switch + .toolbar-sep,
+#toolbar.toolbar-compact #tools-float,
 #toolbar.toolbar-compact .toolbar-locale-select,
 #toolbar.toolbar-compact #project-name {
   display: none;
-}
-#btn-toolbar-more {
-  display: none;
-}
-#toolbar.toolbar-compact #btn-toolbar-more {
-  display: flex;
 }
 
 /* ════════════════════════════════════════════════════
@@ -658,6 +663,15 @@ html.is-desktop #boot-loading {
   border-radius: 0;
   box-shadow: none;
   user-select: none;
+  /* 幅が足りない時は #toolbar の overflow:hidden で隠れてしまう代わりに、
+     ここだけ横スクロールで全ツールへ到達できるようにする（見た目の破綻を防ぐ） */
+  min-width: 0;
+  overflow-x: auto;
+  overflow-y: hidden;
+  scrollbar-width: none;
+}
+#tools-float::-webkit-scrollbar {
+  display: none;
 }
 
 #tools-float.panel-hidden {
@@ -690,7 +704,9 @@ html.is-desktop #boot-loading {
   background: var(--surface-2);
   color: var(--text-2);
 }
-#toolbar .tool-btn.active {
+/* #toolbar 配下限定にしない: 幅不足時はメニューダイアログへ実ノードごと
+   付け替わる（ui.js showProjectActionsMenu）ため、そちらでも同じ見た目にする */
+.tool-btn.active {
   background: rgba(89, 101, 249, 0.22);
   border-color: rgba(133, 141, 255, 0.68);
   color: var(--accent-2);
@@ -698,7 +714,7 @@ html.is-desktop #boot-loading {
     inset 0 0 0 1px rgba(190, 194, 255, 0.12),
     0 0 8px rgba(89, 101, 249, 0.18);
 }
-#toolbar .tool-btn.active:hover:not(:disabled) {
+.tool-btn.active:hover:not(:disabled) {
   background: rgba(89, 101, 249, 0.28);
   color: #d9dcff;
 }
@@ -3181,14 +3197,24 @@ button.ctx-item {
 .project-menu-settings-slot {
   display: flex;
   flex-direction: column;
-  gap: 6px;
-  padding: 4px 10px 6px;
+  gap: 8px;
+  padding: 4px 10px 10px;
 }
 .project-menu-settings-slot .toolbar-locale-select,
 .project-menu-settings-slot #project-name {
   width: 100%;
   height: 34px;
   border-color: var(--border);
+}
+/* ツール系スロット: 2D/3D切替・ツールアイコン列は横幅いっぱいに折り返して表示 */
+.project-menu-settings-slot #tools-float {
+  flex-wrap: wrap;
+  overflow: visible;
+}
+/* 2D/3D切替の背景ピルは列コンテナの stretch で 100% 幅に伸びてしまうので、
+   中身の幅に留める（トップバー上と同じ見た目にする） */
+.project-menu-settings-slot .toolbar-mode-switch {
+  align-self: flex-start;
 }
 .project-menu-item {
   width: 100%;
@@ -4151,8 +4177,9 @@ button.ctx-item {
    2D / 3D モード切替 + 図面由来 3D プレビュー
    ════════════════════════════════════════════════════ */
 
-/* ツールバーのモード切替トグル */
-#toolbar .toolbar-mode-switch {
+/* ツールバーのモード切替トグル（#toolbar 配下限定にしない: 幅不足時はメニュー
+   ダイアログへ実ノードごと付け替わるため、そちらでも同じ見た目にする） */
+.toolbar-mode-switch {
   display: inline-flex;
   gap: 3px;
   padding: 3px;
@@ -4161,7 +4188,7 @@ button.ctx-item {
   background: rgba(255, 255, 255, 0.035);
   overflow: hidden;
 }
-#toolbar button.toolbar-mode-btn {
+button.toolbar-mode-btn {
   min-width: 44px;
   padding: 5px 12px;
   font-size: 12px;
@@ -4174,14 +4201,14 @@ button.ctx-item {
   cursor: pointer;
   transition: background 0.14s ease, color 0.14s ease, box-shadow 0.14s ease;
 }
-#toolbar button.toolbar-mode-btn:hover {
+button.toolbar-mode-btn:hover {
   color: var(--text, #e8ecf3);
   background: rgba(255, 255, 255, 0.06);
 }
-#toolbar button.toolbar-mode-btn.active,
-#toolbar button.toolbar-mode-btn.active:hover,
-#toolbar button.toolbar-mode-btn[aria-pressed="true"],
-#toolbar button.toolbar-mode-btn[aria-pressed="true"]:hover {
+button.toolbar-mode-btn.active,
+button.toolbar-mode-btn.active:hover,
+button.toolbar-mode-btn[aria-pressed="true"],
+button.toolbar-mode-btn[aria-pressed="true"]:hover {
   background: #2563eb;
   color: #fff;
   box-shadow:

@@ -39,7 +39,6 @@
     "toolbar.helpDocs.title": "Documentation",
     "toolbar.projectName": "Project name",
     "toolbar.projectName.placeholder": "Untitled",
-    "toolbar.more.title": "More",
 
     "tools.select": "SELECT",
     "tools.select.title": "Select (V)",
@@ -173,6 +172,7 @@
     "projectMenu.section.importExport": "Import & export",
     "projectMenu.section.viewEdit": "View & edit",
     "projectMenu.section.data": "Project data",
+    "projectMenu.section.tools": "Tools",
     "projectMenu.section.settings": "Settings",
     "projectMenu.addFrame": "Add template frame",
     "projectMenu.shortcut.new": "Ctrl+N",
