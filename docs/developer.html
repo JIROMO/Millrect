@@ -228,17 +228,6 @@ realUnit  = paperUnit × denominator / numerator</code></pre>
       <h3 id="schema-state">State</h3>
       <p>上記 <a href="#architecture">アーキテクチャ</a> の <code>_state</code> を参照。<code>pages[]</code> がドキュメントの中心です。</p>
 
-      <h3 id="schema-project-font">ProjectFont（<code>state.fonts[]</code>）</h3>
-      <pre><code>{
-  id: string,
-  family: string,           // 例: "Roboto"
-  cssUrl: string,           // Google Fonts CSS（表示用）
-  fileUrl: string,          // TTF URL（400 / Regular）
-  fileUrlBold?: string,     // TTF URL（700 / Bold）
-  source: "google",
-  libraryId?: string        // ユーザーライブラリとの対応（任意）
-}</code></pre>
-
       <h3 id="schema-page">Page</h3>
       <pre><code>{
   id, name,

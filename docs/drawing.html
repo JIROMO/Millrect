@@ -39,7 +39,6 @@
         <a href="#line">線</a>
         <a href="#bezier">ペン（ベジェ）</a>
         <a href="#text">テキスト</a>
-        <a href="#project-fonts">プロジェクトフォント</a>
         <a href="#dimensions">寸法線</a>
         <a href="#canvas-images">キャンバス画像</a>
         <a href="#sketch-import">スケッチ取り込み</a>
@@ -153,15 +152,15 @@
           <tr><td>文字列</td><td>複数行入力可</td></tr>
           <tr><td>文字サイズ</td><td>px 単位（デフォルト 3.5）</td></tr>
           <tr><td>行間</td><td>倍率（0.5〜4、デフォルト 1）</td></tr>
-          <tr><td>フォント</td><td>同梱 <strong><a href="https://gen.typesetting.jp/" target="_blank" rel="noopener">Gen Interface JP</a></strong>（和欧混植 UI 書体）、および<a href="#project-fonts">プロジェクトに登録した Google Fonts</a></td></tr>
-          <tr><td>ウェイト</td><td>Regular / Bold（登録フォントは 400 / 700 の TTF を使用。700 が無い場合は Regular にフォールバック）</td></tr>
+          <tr><td>フォント</td><td>同梱 <strong><a href="https://gen.typesetting.jp/" target="_blank" rel="noopener">Gen Interface JP</a></strong>（和欧混植 UI 書体）</td></tr>
+          <tr><td>ウェイト</td><td>Regular / Bold</td></tr>
           <tr><td>揃え</td><td>左 / 中央 / 右</td></tr>
           <tr><td>幅</td><td>折り返し幅（mm）。未指定なら 1 行表示</td></tr>
           <tr><td>線色</td><td>文字色として使われます</td></tr>
         </tbody>
       </table>
       <p>
-        表示プレビューでは HarfBuzz テキストエンジンを使い、登録済みフォントの TTF バイト列からグリフ輪郭を描画します。
+        表示プレビューでは HarfBuzz テキストエンジンを使い、フォントの TTF バイト列からグリフ輪郭を描画します。
         ブラウザ単体でも HTTP サーバー経由（<code>npm run serve</code>）で同じエンジンが動作します。
       </p>
       <div class="docs-callout docs-callout-tip">
@@ -169,70 +168,6 @@
         <p>
           テキスト図形そのものは 3D 輪郭になりません。
           Boolean 演算（合成・くり抜き）で path 図形に変換すると、3D 生成の対象にできます。
-        </p>
-      </div>
-
-      <h2 id="project-fonts">プロジェクトフォント（Google Fonts）</h2>
-      <p>
-        右パネル <strong>Pages</strong> タブ内の <strong>プロジェクトフォント（任意）</strong> から、
-        Google Fonts をプロジェクトに追加できます。
-        同梱の Gen Interface JP に加え、ロゴ用・注記用の書体を選べます。
-      </p>
-      <div class="docs-callout docs-callout-note">
-        <strong>PC にインストールされたフォントではありません</strong>
-        <p>
-          「フォントを探す…」モーダルの一覧は、<strong>Fontsource API 経由の Google Fonts カタログ</strong>（オンライン）です。
-          OS のフォントフォルダや <code>queryLocalFonts</code> とは無関係です。
-          初回は Fontsource から一覧を取得し、キャッシュします（Electron: ユーザーデータフォルダ / ブラウザ: localStorage）。
-        </p>
-      </div>
-
-      <h3>登録のしかた</h3>
-      <ol>
-        <li><strong>フォントを探す…</strong> — モーダルで検索・フィルタ（日本語 / カテゴリ）→ 選択 → ライブラリに追加（デフォルトで現在のプロジェクトにも追加）</li>
-        <li><strong>Google Fonts URL</strong> — <code>https://fonts.googleapis.com/css2?family=...</code> を直接貼り付け（1 URL に複数 family があればまとめて登録）</li>
-        <li><strong>ライブラリから ＋</strong> — 過去に登録したフォントを別プロジェクトへ追加</li>
-      </ol>
-
-      <h3>2 層の保存先</h3>
-      <table>
-        <thead><tr><th>層</th><th>保存先</th><th>スコープ</th></tr></thead>
-        <tbody>
-          <tr>
-            <td><strong>ライブラリ</strong></td>
-            <td>Electron: <code>userData/fonts-library.json</code> / ブラウザ: localStorage</td>
-            <td>アプリ全体（プロジェクトをまたいで再利用）</td>
-          </tr>
-          <tr>
-            <td><strong>プロジェクト <code>fonts[]</code></strong></td>
-            <td>プロジェクト JSON に含まれる</td>
-            <td>そのプロジェクトだけ（Undo 対象・エクスポート対象）</td>
-          </tr>
-        </tbody>
-      </table>
-      <p>
-        URL 登録時も、自動的にライブラリへ保存されます。
-        ライブラリの <strong>×</strong> はライブラリから削除するだけで、既にプロジェクトに入っているフォントは残ります。
-      </p>
-
-      <h3>ウェイト（Regular / Bold）</h3>
-      <p>
-        登録時に Fontsource から <strong>400（Regular）</strong> と <strong>700（Bold）</strong> の TTF URL を解決します（700 が無いフォントは Regular のみ）。
-        テキストのウェイトを Bold にすると、ネイティブプレビューでも Bold 用 TTF が使われます。
-      </p>
-      <p>各登録エントリの主なフィールド:</p>
-      <ul>
-        <li><code>family</code> — フォント名（例: <code>Roboto</code>）</li>
-        <li><code>cssUrl</code> — 表示用 Google Fonts CSS（Bold 対応時は <code>wght@400;700</code> 形式）</li>
-        <li><code>fileUrl</code> — アウトライン用 TTF（400）</li>
-        <li><code>fileUrlBold</code> — アウトライン用 TTF（700、省略可）</li>
-      </ul>
-
-      <div class="docs-callout docs-callout-tip">
-        <strong>使い分けの例</strong>
-        <p>
-          一度モーダルで <strong>Roboto</strong> をライブラリに入れておけば、次のプロジェクトではライブラリの <strong>＋</strong> だけで追加できます。
-          チームで共有する場合は、プロジェクト JSON の <code>fonts[]</code> をそのまま渡せば同じ書体構成を再現できます。
         </p>
       </div>
 
