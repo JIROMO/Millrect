@@ -499,9 +499,13 @@ function createRevolvedShapeFromSelectedCircle(options = {}) {
   const paper = getPaperDimensions(frontPage);
   const width = mmToReal(baseDiameterMm);
   const height = mmToReal(heightMm);
-  const widthPaper = realToPaperDist(width, scale);
   const heightPaper = realToPaperDist(height, scale);
-  const x = paperToRealDist((paper.width - widthPaper) / 2, scale);
+  // 3D の多ビュー整合は「ページごとの図形バウンディングボックスからの相対位置」で
+  // 決まる（紙面上の絶対位置は無関係）。母線となるこの輪郭は、上面図の円と同じ
+  // real 座標 cx を中心に置かないと、正面図ページに他の部品の図形が同居している
+  // 場合に世界座標がずれ、回転体/CSG交差のサンプリングが失敗する（先端が糸状に
+  // なる・帯近似の円柱にフォールバックする、といった不具合の原因）。
+  const x = circle.cx - width / 2;
   const y = paperToRealDist((paper.height - heightPaper) / 2, scale);
   const topWidth = mmToReal(topDiameterMm);
   const topLeft = x + (width - topWidth) / 2;

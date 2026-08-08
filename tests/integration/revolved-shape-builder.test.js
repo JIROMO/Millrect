@@ -70,6 +70,39 @@ test("top diameter must be smaller than the selected circle", () => {
   assert.equal(app.getState().pages.length, 1);
 });
 
+test("cone profile is centered on the circle's real x, not the front page's paper", () => {
+  const app = bootApp();
+  const top = app.getCurrentPage();
+  // circle は用紙中央から離れた位置にある（例: 同じ上面図に他部品がある想定）
+  app.addShape({
+    id: "off-center-circle",
+    type: "circle",
+    cx: 9000,
+    cy: 500,
+    r: 100,
+    stroke: "#123456",
+    fill: "#abcdef",
+    strokeWidth: "medium",
+  });
+  app.getState().selectedShapeIds = ["off-center-circle"];
+
+  assert.equal(
+    app.createRevolvedShapeFromSelectedCircle({ heightMm: 20, topDiameterMm: 0 }),
+    true,
+  );
+  const state = app.getState();
+  const circle = app.findShapeById("off-center-circle").shape;
+  const front = state.pages.find((page) => page.viewDefinition?.type === "front");
+  const profile = front.layers.flatMap((layer) => layer.shapes)[0];
+  const apex = profile.contours[0][0][2];
+  const [baseLeft, baseRight] = profile.contours[0][0];
+  // 母線（正面図の三角形）は円と同じ real 座標 cx を中心に置かれる。
+  // ページ紙面中央基準だと、上面図ページに他図形がある場合に世界座標がずれる。
+  assert.equal((baseLeft[0] + baseRight[0]) / 2, circle.cx);
+  assert.equal(apex[0], circle.cx);
+  assert.equal(state.pages[0], top);
+});
+
 test("dome builder creates a sampled half-ellipse front profile", () => {
   const app = bootApp();
   addTopCircle(app);

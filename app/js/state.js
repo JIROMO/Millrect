@@ -758,11 +758,18 @@ function _collectSnapGeometry(
       for (const contour of s.contours) {
         for (const ring of contour) {
           const paperRing = _simplifySnapRing(ring.map(([x, y]) => xf(x, y)));
+          // 頂点数の少ない単純な輪郭（円錐・円錐台などのビルダー生成形状）は
+          // rect と同様に辺の中点もスナップ候補にする。boolean 結果の密な輪郭
+          // まで対象にすると候補が爆発するため、小頂点数のときだけ有効にする。
+          const withMidpoints = paperRing.length <= 8;
           for (let i = 0; i < paperRing.length; i++) {
             const [x, y] = paperRing[i];
             onPoint(x, y, "endpoint", 1);
             const [nx, ny] = paperRing[(i + 1) % paperRing.length];
             onSegment({ x1: x, y1: y, x2: nx, y2: ny, shapeId: s.id });
+            if (withMidpoints) {
+              onPoint((x + nx) / 2, (y + ny) / 2, "midpoint", 3);
+            }
           }
         }
       }
