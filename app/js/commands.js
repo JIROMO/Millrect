@@ -535,6 +535,11 @@ function createRevolvedShapeFromSelectedCircle(options = {}) {
       [topLeft, y],
     ];
   }
+  // polygon-clipping 形式（3d-view.js の buildPath / _ringTopAtX が前提とする
+  // 「最初と最後の点が同一で閉じている」）に合わせ、末尾に始点を複製する。
+  const [rx0, ry0] = ring[0];
+  const [rxLast, ryLast] = ring[ring.length - 1];
+  if (rx0 !== rxLast || ry0 !== ryLast) ring.push([rx0, ry0]);
   const profile = {
     id: genId(kind),
     type: "path",

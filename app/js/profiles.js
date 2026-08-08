@@ -259,27 +259,33 @@ function canBeProfile(shape) {
 
 const _profileEntriesCache = new Map();
 
+// getShapeRenderVersion / getDocumentRenderVersion は js/state.js が定義する。
+// 3D シーンの Web Worker（3d-scene-worker.js）は state.js を importScripts せず
+// メッセージごとに独立した state スナップショットを受け取るため、これらは未定義
+// になる。未定義時に固定値 0 へフォールバックすると、shape の中身（例: path の
+// contours）が変わってもシグネチャが変化せず、キャッシュが古いままの輪郭を
+// 返し続けてしまう（3D 再生成しても図形編集が反映されない不具合の原因になる）。
+// render-version トラッキングが無い環境ではキャッシュ自体を無効化する
+// （呼び出しごとに一意な値を返して必ず miss させる）。
+let _profileSigFallbackCounter = 0;
 function _profilePageSignature(page) {
-  const docv =
-    typeof getDocumentRenderVersion === "function"
-      ? getDocumentRenderVersion()
-      : 0;
+  const hasRenderVersionTracking =
+    typeof getDocumentRenderVersion === "function" &&
+    typeof getShapeRenderVersion === "function";
+  if (!hasRenderVersionTracking) {
+    return `${page.id}|nocache|${++_profileSigFallbackCounter}`;
+  }
+  const docv = getDocumentRenderVersion();
   const layers = (page.layers || [])
     .map((layer) => {
       const shapes = (layer.shapes || [])
         .map((shape) => {
-          const rv =
-            typeof getShapeRenderVersion === "function"
-              ? getShapeRenderVersion(shape.id)
-              : 0;
+          const rv = getShapeRenderVersion(shape.id);
           const childSig =
             shape.type === "group"
               ? `:${(shape.children || [])
                   .map((child) => {
-                    const crv =
-                      typeof getShapeRenderVersion === "function"
-                        ? getShapeRenderVersion(child.id)
-                        : 0;
+                    const crv = getShapeRenderVersion(child.id);
                     return `${child.id}@${crv}`;
                   })
                   .join(",")}`

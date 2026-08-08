@@ -1458,12 +1458,17 @@ function _cloneMeshForCsg(mesh, material) {
 }
 
 // 垂直線 x=rx と輪郭リング群の交点のうち最小の drawing y（=最上面）を返す。
+// リングは polygon-clipping 形式（最初と最後の点が同一で明示的に閉じている）を
+// 想定するが、そうでない（最後の点から最初の点へ戻る辺が省略された）リングでも
+// 正しく判定できるよう、常に最後→最初の閉じる辺も走査する（重複していれば
+// 長さ0の辺になるだけで無害）。
 function _ringTopAtX(rings, rx) {
   let minY = Infinity;
   for (const ring of rings || []) {
-    for (let i = 0; i < ring.length - 1; i++) {
+    if (ring.length < 2) continue;
+    for (let i = 0; i < ring.length; i++) {
       const [x1, y1] = ring[i];
-      const [x2, y2] = ring[i + 1];
+      const [x2, y2] = ring[(i + 1) % ring.length];
       if (rx < Math.min(x1, x2) || rx > Math.max(x1, x2)) continue;
       if (x1 === x2) {
         minY = Math.min(minY, y1, y2);

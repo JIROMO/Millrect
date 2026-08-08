@@ -602,6 +602,18 @@ function onMouseUp(e, svgEl) {
     uiUpdate();
     return;
   }
+  // リサイズ確定後、3D パネルが開いていれば再生成する。solidIntersect の
+  // 母線（円錐/円錐台/ドーム等）は正面図側の高さ変更がそのまま3D形状に効くため、
+  // 他の scheduleUpdate3DScene 呼び出し箇所と同じデバウンス経由で反映する。
+  const _schedule3DAfterResize = () => {
+    if (
+      typeof is3DMode === "function" &&
+      is3DMode() &&
+      typeof scheduleUpdate3DScene === "function"
+    ) {
+      scheduleUpdate3DScene(0);
+    }
+  };
   if (_ds?.action === "multi-resize") {
     if (typeof markShapeDirty === "function") {
       for (const id of getState().selectedShapeIds) markShapeDirty(id);
@@ -610,6 +622,7 @@ function onMouseUp(e, svgEl) {
     _ds = null;
     svgEl.style.cursor = "default";
     document.body.classList.remove("dragging");
+    _schedule3DAfterResize();
     return;
   }
   if (_ds?.action === "resize") {
@@ -636,6 +649,7 @@ function onMouseUp(e, svgEl) {
       _ds = null;
       svgEl.style.cursor = "default";
       document.body.classList.remove("dragging");
+      _schedule3DAfterResize();
       return;
     }
     if (typeof setTextNativeLiveTransform === "function") {
@@ -649,6 +663,7 @@ function onMouseUp(e, svgEl) {
     _ds = null;
     svgEl.style.cursor = "default";
     document.body.classList.remove("dragging");
+    _schedule3DAfterResize();
     return;
   }
   if (tool === "select" && _ds?.action === "move") {
