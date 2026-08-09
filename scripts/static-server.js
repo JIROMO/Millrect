@@ -25,10 +25,14 @@ const MIME = {
 };
 
 function send(res, status, body, type) {
-  res.writeHead(status, {
+  const headers = {
     "Content-Type": type || "text/plain; charset=utf-8",
     "Cache-Control": "no-store",
-  });
+  };
+  if (type?.startsWith("text/html")) {
+    headers["Origin-Agent-Cluster"] = "?1";
+  }
+  res.writeHead(status, headers);
   res.end(body);
 }
 

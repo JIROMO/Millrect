@@ -127,6 +127,10 @@ describe("static deploy assets", () => {
 
     assert.match(workerSource, /contentType\.startsWith\("text\/html"\)/);
     assert.match(workerSource, /headers\.set\("cache-control", "no-transform"\)/);
+    assert.match(
+      workerSource,
+      /headers\.set\("Origin-Agent-Cluster", "\?1"\)/,
+    );
     assert.match(workerSource, /app\.all\("\/app\/\*", serveStatic\)/);
     assert.doesNotMatch(workerSource, /script-src[^\n]*unsafe-inline/);
   });

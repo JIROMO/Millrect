@@ -2191,25 +2191,6 @@ function _textEditStrokeValue(shapeOrStroke) {
   return "#1a1a2e";
 }
 
-function _textEditFontOptions(currentValue) {
-  const current = normalizeTextFontFamily(currentValue);
-  const fonts =
-    typeof getFontFamilyOptions === "function"
-      ? getFontFamilyOptions()
-      : BUILTIN_FONT_FAMILIES;
-  const hasCurrent = fonts.some((f) => f === current);
-  let html = fonts
-    .map((f) => {
-      const sel = f === current ? " selected" : "";
-      return `<option value="${f}"${sel}>${f}</option>`;
-    })
-    .join("");
-  if (!hasCurrent && current) {
-    html = `<option value="${current}" selected>${current}</option>` + html;
-  }
-  return html;
-}
-
 function _readTextEditModalValues(overlay) {
   const fontSize = parseFloat(
     overlay.querySelector("#text-edit-fontSize")?.value,
@@ -2623,8 +2604,6 @@ function openTextEditModal(shape, onCommit) {
     `<input type="number" id="text-edit-lineHeight" min="0.5" max="4" step="0.05" value="${lh}"></div>` +
     `<div class="text-edit-row"><label for="text-edit-stroke">${t("textEdit.color")}</label>` +
     `<input type="color" id="text-edit-stroke" value="${strokeVal}"></div>` +
-    `<div class="text-edit-row text-edit-row-wide"><label for="text-edit-fontFamily">${t("textEdit.font")}</label>` +
-    `<select id="text-edit-fontFamily" class="font-family-select">${_textEditFontOptions(shape.fontFamily)}</select></div>` +
     `<div class="text-edit-row"><label for="text-edit-fontWeight">${t("textEdit.weight")}</label>` +
     `<select id="text-edit-fontWeight">` +
     `<option value="normal"${(shape.fontWeight || "normal") === "normal" ? " selected" : ""}>Regular</option>` +
@@ -2649,7 +2628,7 @@ function openTextEditModal(shape, onCommit) {
   const btnOk = overlay.querySelector("#text-edit-ok");
   const btnCancel = overlay.querySelector("#text-edit-cancel");
   const previewInputs = overlay.querySelectorAll(
-    "#text-edit-fontFamily, #text-edit-fontWeight, #text-edit-textAlign",
+    "#text-edit-fontWeight, #text-edit-textAlign",
   );
 
   textarea.value = shape.text || "";

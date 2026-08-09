@@ -135,6 +135,11 @@ img {
   color: var(--text);
 }
 
+/* ヘッダー内の「アプリを起動」ボタンは、左の言語切替（.lang-switch）と高さを揃える */
+.site-nav .btn-primary {
+  padding: 6px 20px;
+}
+
 .btn {
   display: inline-flex;
   align-items: center;

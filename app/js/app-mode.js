@@ -245,6 +245,16 @@
     }
   }
 
+  // タブ切替・別プロジェクトを開いた直後に呼ぶ。3D モードで開いたままタブを
+  // 切り替えると、update3DScene() は「3D ボタンで表示/再選択した時だけ」しか
+  // 走らない設計のため、切替前のプロジェクトのメッシュが画面に残ってしまう
+  // （このバグの直接原因）。再生成を待たせるより、単純に 2D へ戻して
+  // 古いプレビューが表示されたままにならないようにする。
+  function notifyProjectSwitched() {
+    if (!is3DMode()) return;
+    setAppMode("2d");
+  }
+
   function wire() {
     for (const btn of document.querySelectorAll(".toolbar-mode-btn")) {
       btn.addEventListener("click", () => setAppMode(btn.dataset.mode));
@@ -326,6 +336,7 @@
     getMode: () => (is3DMode() ? "3d" : "2d"),
     isPrintMode,
     refresh3DNow,
+    notifyProjectSwitched,
   };
 
   if (document.readyState === "loading") {

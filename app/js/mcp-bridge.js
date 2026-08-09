@@ -359,6 +359,11 @@
     return await fn(params || {});
   }
 
+  // Progressive enhancement for browsers that implement WebMCP. This uses the
+  // same dispatcher as the remote MCP/WebSocket path, so both integrations stay
+  // on one implementation of the actual Millrect operations.
+  void globalThis.MillrectWebMcp?.register(dispatch);
+
   // ── UI状態 ────────────────────────────────────────────────────
   function setStatus(state) {
     const el = document.getElementById("agent-panel-status");

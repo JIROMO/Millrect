@@ -1,27 +1,5 @@
 "use strict";
 
-// ── System fonts → 同梱 Gen Interface JP + プロジェクト Google Fonts ──
-async function loadSystemFonts() {
-  return typeof getFontFamilyOptions === "function"
-    ? getFontFamilyOptions()
-    : BUILTIN_FONT_FAMILIES;
-}
-
-function buildFontFamilySelect(key, currentValue) {
-  const fonts =
-    typeof getFontFamilyOptions === "function"
-      ? getFontFamilyOptions()
-      : BUILTIN_FONT_FAMILIES;
-  const current = normalizeTextFontFamily(currentValue);
-  const opts = fonts
-    .map((f) => {
-      const sel = f === current ? " selected" : "";
-      return `<option value="${f}"${sel}>${f}</option>`;
-    })
-    .join("");
-  return `<div class="prop-row"><label>${t("props.font")}</label><select data-key="${key}" class="font-family-select">${opts}</select></div>`;
-}
-
 function _updateMeasureStatusVisibility(tool) {
   const wrap = document.getElementById("status-measure-wrap");
   if (!wrap) return;
@@ -204,6 +182,11 @@ async function applyOpenedProject({
   }
   if (typeof hydrateProjectFontsFromState === "function") {
     hydrateProjectFontsFromState();
+  }
+  // 3D モードのままタブ切替/別プロジェクトを開いた場合、前のプロジェクトの
+  // メッシュが残ってしまうのを防ぐため、新しい図面から明示的に再生成する。
+  if (typeof window !== "undefined" && window.__millrectAppMode?.notifyProjectSwitched) {
+    window.__millrectAppMode.notifyProjectSwitched();
   }
 }
 
@@ -1866,10 +1849,6 @@ function buildPropsHTML(s) {
       pRow(t("props.text"), "text", s.text || "", "textarea"),
       pRowUnit(t("props.fontSizePx"), "fontSize", s.fontSize ?? 3.5, "px"),
       pRow(t("props.lineHeight"), "lineHeight", s.lineHeight ?? 1, "number"),
-      buildFontFamilySelect(
-        "fontFamily",
-        s.fontFamily || DEFAULT_TEXT_FONT_FAMILY,
-      ),
       pSel(
         t("props.fontWeight"),
         "fontWeight",
@@ -3217,10 +3196,6 @@ function showProjectList() {
 document.addEventListener("DOMContentLoaded", () => {
   initMillrectI18n();
   if (window.lucide) window.lucide.createIcons();
-  loadSystemFonts().then(() => {
-    const state = getState();
-    if (state.selectedShapeIds.length) updatePropertiesPanel();
-  });
   initState();
   const svgEl = document.getElementById("main-svg");
   initRenderer(svgEl);

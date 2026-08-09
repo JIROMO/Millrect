@@ -184,6 +184,12 @@ async function _hydrateAndActivate(tabId) {
     hydrateProjectFontsFromState();
   }
   renderProjectTabs();
+  // 3D モードのままタブを切り替えた場合、前のプロジェクトの3Dプレビューが
+  // 残ってしまわないよう2Dへ戻す（applyOpenedProject() 経由の別プロジェクトを
+  // 開く操作と違い、既存タブ間の切替はこの関数を通るのでここでも呼ぶ）。
+  if (typeof window !== "undefined" && window.__millrectAppMode?.notifyProjectSwitched) {
+    window.__millrectAppMode.notifyProjectSwitched();
+  }
 }
 
 // プロジェクトを新しいタブで開く。result は showProjectList() の戻り値、

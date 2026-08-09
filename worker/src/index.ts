@@ -42,6 +42,10 @@ async function serveStatic(c: Context<{ Bindings: Env }>) {
   if (!contentType.startsWith("text/html")) return response;
 
   const headers = new Headers(response.headers);
+  // WebMCP requires a stable, origin-isolated document. Opt into an
+  // origin-keyed agent cluster explicitly instead of relying on browser
+  // defaults that may vary during the origin-trial period.
+  headers.set("Origin-Agent-Cluster", "?1");
   const cacheControl = headers.get("cache-control");
   if (!cacheControl) {
     headers.set("cache-control", "no-transform");

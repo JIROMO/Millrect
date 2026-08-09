@@ -163,11 +163,12 @@
         表示プレビューでは HarfBuzz テキストエンジンを使い、フォントの TTF バイト列からグリフ輪郭を描画します。
         ブラウザ単体でも HTTP サーバー経由（<code>npm run serve</code>）で同じエンジンが動作します。
       </p>
-      <div class="docs-callout docs-callout-tip">
-        <strong>3D に文字を使いたい場合</strong>
+      <div class="docs-callout docs-callout-warn">
+        <strong>テキストは 3D に使えません</strong>
         <p>
-          テキスト図形そのものは 3D 輪郭になりません。
-          Boolean 演算（合成・くり抜き）で path 図形に変換すると、3D 生成の対象にできます。
+          テキスト図形は Profile 抽出の対象外のため、3D 輪郭になりません（<a href="#dimensions">寸法線</a>や補助線と同様）。
+          Boolean 演算（合成・くり抜き）を選択に含めても、テキストは無視され path 化されません。
+          3D に文字を出したい場合は、矩形・円・ベジェなどで手動で輪郭を作図してください。
         </p>
       </div>
 

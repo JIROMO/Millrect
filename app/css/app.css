@@ -4055,6 +4055,10 @@ button.ctx-item {
   color: var(--text);
   cursor: pointer;
 }
+.agent-panel-url-row button svg {
+  width: 14px;
+  height: 14px;
+}
 .agent-panel-actions {
   display: flex;
   gap: 6px;
