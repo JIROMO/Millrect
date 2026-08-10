@@ -3264,6 +3264,12 @@ function _buildCanvasContextItems() {
       disabled: !hasClipboard() || getCurrentLayer().locked,
       action: () => pasteShapes(),
     },
+    {
+      label: t("context.pasteInPlace"),
+      shortcut: `${mod}⇧V`,
+      disabled: !hasClipboard() || getCurrentLayer().locked,
+      action: () => pasteShapes({ inPlace: true }),
+    },
     { type: "sep" },
     {
       label: t("context.selectAll"),
@@ -3308,6 +3314,12 @@ function _buildShapeContextItems(ids) {
       shortcut: `${mod}V`,
       disabled: !hasClipboard() || getCurrentLayer().locked,
       action: () => pasteShapes(),
+    },
+    {
+      label: t("context.pasteInPlace"),
+      shortcut: `${mod}⇧V`,
+      disabled: !hasClipboard() || getCurrentLayer().locked,
+      action: () => pasteShapes({ inPlace: true }),
     },
     {
       label: t("context.duplicate"),

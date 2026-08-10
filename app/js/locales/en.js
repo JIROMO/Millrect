@@ -472,6 +472,7 @@
 
 
     "context.paste": "Paste",
+    "context.pasteInPlace": "Paste in Place",
     "context.selectAll": "Select all",
     "context.copy": "Copy",
     "context.cut": "Cut",

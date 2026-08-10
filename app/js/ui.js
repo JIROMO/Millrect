@@ -2478,9 +2478,9 @@ function bindKeyShortcuts() {
       e.preventDefault();
       copyShapes();
     }
-    if ((e.ctrlKey || e.metaKey) && e.key === "v") {
+    if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "v") {
       e.preventDefault();
-      pasteShapes();
+      pasteShapes({ inPlace: e.shiftKey });
       render();
       uiUpdate();
     }

@@ -469,6 +469,7 @@
 
 
     "context.paste": "貼り付け",
+    "context.pasteInPlace": "同じ位置に貼り付け",
     "context.selectAll": "すべて選択",
     "context.copy": "コピー",
     "context.cut": "切り取り",

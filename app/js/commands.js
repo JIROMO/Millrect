@@ -855,15 +855,15 @@ function copyShapes() {
   }
 }
 
-function pasteShapes() {
+function pasteShapes(opts = {}) {
   if (!_clipboard.length) return;
   const layer = getCurrentLayer();
-  const offset = mmToReal(10);
+  const offset = opts.inPlace ? 0 : mmToReal(10);
   const newIds = [];
   for (const shape of _clipboard) {
     const clone = JSON.parse(JSON.stringify(shape));
     regenerateShapeIds(clone);
-    shiftShape(clone, offset, offset);
+    if (offset) shiftShape(clone, offset, offset);
     layer.shapes.push(clone);
     newIds.push(clone.id);
   }

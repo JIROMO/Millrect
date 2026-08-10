@@ -543,31 +543,30 @@ async function captureModuleJoint1Scenario(page, config) {
   await flushRender(page);
   await captureSidebarScreenshot(page, OUT, "layers-panel.png");
 
-  await page.locator('.panel-tab[data-tab="pages"]').click();
-  await flushRender(page);
-  await captureSidebarScreenshot(page, OUT, "pages-add-view.png");
-  await captureSidebarScreenshot(page, OUT, "pages-multiview.png");
-  await captureSidebarScreenshot(page, OUT, "reference-image-panel.png");
-
-  await page.evaluate(focusModuleJoint);
-  await flushRender(page);
-
-  const sectionPageId = await page.evaluate(
-    () => window.__moduleJoint1Pages?.sectionPageId,
-  );
-  await switchToPage(page, sectionPageId, "module-joint-1-section");
+  // Pages タブのスクリーンショットは選択中図形のプロパティ欄を巻き込むので、
+  // 直前の module-joint-1-note 選択を解除してから撮る（残留状態の混入防止）。
   await page.evaluate(() => {
-    const found = findShapeById("module-joint-1-section");
-    const bb = getShapeBBox(found.shape, getCurrentPage().scale);
-    const state = getState();
-    state.zoom = 7;
-    state.panX = 520 - bb.x * state.zoom;
-    state.panY = 430 - bb.y * state.zoom;
+    getState().selectedShapeIds = [];
     render();
     uiUpdate();
   });
   await page.locator('.panel-tab[data-tab="pages"]').click();
   await flushRender(page);
+  await captureSidebarScreenshot(page, OUT, "pages-add-view.png");
+
+  const sectionPageId = await page.evaluate(
+    () => window.__moduleJoint1Pages?.sectionPageId,
+  );
+  await switchToPage(page, sectionPageId, "module-joint-1-section");
+  await page.locator('.panel-tab[data-tab="pages"]').click();
+  await flushRender(page);
+  await captureSidebarScreenshot(page, OUT, "pages-multiview.png");
+  await captureSidebarScreenshot(page, OUT, "reference-image-panel.png");
+
+  // 板厚断面（24×2mm）はシェイプ自体が極小で、寸法線のオフセットに対して
+  // シェイプ単体へフィットすると重なって崩れる。ページ全体フィット
+  // （fitPageForCapture、他シナリオでも使う実績のあるヘルパー）に任せる。
+  await fitPageForCapture(page);
   await page.screenshot({
     path: path.join(OUT, "multiview-front-drawing.png"),
   });
