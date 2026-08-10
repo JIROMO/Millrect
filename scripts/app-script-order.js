@@ -69,4 +69,5 @@ module.exports = [
   "js/app-mode.js",
   "js/webmcp.js",
   "js/mcp-bridge.js",
+  "js/register-sw.js",
 ];

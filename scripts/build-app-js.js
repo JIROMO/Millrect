@@ -22,11 +22,30 @@ function updateBundleVersion(indexFile, buildDate) {
     throw new Error(`[build:app-js] bundle script not found in ${indexFile}`);
   }
   bundlePattern.lastIndex = 0;
-  const next = html.replace(
-    bundlePattern,
-    `js/app.bundle.js?${buildDate}`,
-  );
+  let next = html.replace(bundlePattern, `js/app.bundle.js?${buildDate}`);
+
+  const cssPattern = /css\/app\.css(?:\?[^"']*)?/g;
+  if (!cssPattern.test(next)) {
+    throw new Error(`[build:app-js] app.css link not found in ${indexFile}`);
+  }
+  cssPattern.lastIndex = 0;
+  next = next.replace(cssPattern, `css/app.css?${buildDate}`);
+
   if (next !== html) fs.writeFileSync(indexFile, next);
+}
+
+function updateServiceWorkerVersion(swFile, buildDate) {
+  if (!fs.existsSync(swFile)) return;
+  const src = fs.readFileSync(swFile, "utf8");
+  const versionPattern = /const CACHE_VERSION = "[^"]*";/;
+  if (!versionPattern.test(src)) {
+    throw new Error(`[build:app-js] CACHE_VERSION not found in ${swFile}`);
+  }
+  const next = src.replace(
+    versionPattern,
+    `const CACHE_VERSION = "${buildDate}";`,
+  );
+  if (next !== src) fs.writeFileSync(swFile, next);
 }
 
 function buildAppBundle(outfile = DEFAULT_OUTFILE, options = {}) {
@@ -42,10 +61,11 @@ function buildAppBundle(outfile = DEFAULT_OUTFILE, options = {}) {
   // scripts, so ordered concatenation preserves their shared global scope.
   fs.writeFileSync(outfile, source);
   const buildDate = formatBuildDate(options.date);
-  const indexFile =
-    options.indexFile ||
-    path.join(path.dirname(path.dirname(outfile)), "index.html");
+  const appDir = path.dirname(path.dirname(outfile));
+  const indexFile = options.indexFile || path.join(appDir, "index.html");
   updateBundleVersion(indexFile, buildDate);
+  const swFile = options.swFile || path.join(appDir, "sw.js");
+  updateServiceWorkerVersion(swFile, buildDate);
   return {
     outfile,
     sourceCount: scriptOrder.length,
