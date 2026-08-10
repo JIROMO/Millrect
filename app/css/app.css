@@ -60,7 +60,8 @@
   --right-w: 260px;
   --panel-radius: 8px;
 
-  --font-sans: "Gen Interface JP", -apple-system, BlinkMacSystemFont, sans-serif;
+  --font-sans:
+    "Gen Interface JP", -apple-system, BlinkMacSystemFont, sans-serif;
   --font-mono: "SF Mono", "Fira Code", "Cascadia Code", monospace;
 
   font-family: var(--font-sans);
@@ -708,11 +709,9 @@ html.is-desktop #boot-loading {
    付け替わる（ui.js showProjectActionsMenu）ため、そちらでも同じ見た目にする */
 .tool-btn.active {
   background: rgba(89, 101, 249, 0.22);
-  border-color: rgba(133, 141, 255, 0.68);
+  border-color: transparent;
   color: var(--accent-2);
-  box-shadow:
-    inset 0 0 0 1px rgba(190, 194, 255, 0.12),
-    0 0 8px rgba(89, 101, 249, 0.18);
+  box-shadow: inset 0 0 0 1px var(--accent);
 }
 .tool-btn.active:hover:not(:disabled) {
   background: rgba(89, 101, 249, 0.28);
@@ -1266,7 +1265,6 @@ html.is-desktop #boot-loading {
   border-top: 1px solid var(--border);
   flex-shrink: 0;
 }
-
 
 /* ── Properties panel ── */
 #properties-panel,
@@ -3144,7 +3142,7 @@ button.ctx-item {
   max-height: min(calc(100vh - 96px), 720px);
   display: flex;
   flex-direction: column;
-  padding: 24px 0 16px;
+  padding: 16px 0;
   overflow: hidden;
   margin: 0;
 }
@@ -3296,12 +3294,12 @@ button.ctx-item {
   line-height: 1;
 }
 .pl-btn-close:hover {
-  background: var(--color-surface-hover, rgba(255,255,255,0.08));
+  background: var(--color-surface-hover, rgba(255, 255, 255, 0.08));
   color: var(--color-text, #fff);
 }
 .pl-header h2 {
   margin: 0;
-  font-size: 22px;
+  font-size: 16px;
   font-weight: 700;
   letter-spacing: 0.02em;
   text-align: left;
@@ -4185,12 +4183,7 @@ button.ctx-item {
    ダイアログへ実ノードごと付け替わるため、そちらでも同じ見た目にする） */
 .toolbar-mode-switch {
   display: inline-flex;
-  gap: 3px;
-  padding: 3px;
-  border: 1px solid var(--border);
-  border-radius: 9px;
-  background: rgba(255, 255, 255, 0.035);
-  overflow: hidden;
+  gap: 2px;
 }
 button.toolbar-mode-btn {
   min-width: 44px;
@@ -4198,26 +4191,32 @@ button.toolbar-mode-btn {
   font-size: 12px;
   font-weight: 600;
   letter-spacing: 0.04em;
-  color: var(--text-muted, #9aa4b6);
+  color: var(--text-3);
   background: transparent;
-  border: none;
-  border-radius: 6px;
+  border: 1px solid transparent;
+  border-radius: 5px;
   cursor: pointer;
-  transition: background 0.14s ease, color 0.14s ease, box-shadow 0.14s ease;
+  transition:
+    background 0.14s ease,
+    color 0.14s ease,
+    border-color 0.14s ease,
+    box-shadow 0.14s ease;
 }
 button.toolbar-mode-btn:hover {
-  color: var(--text, #e8ecf3);
+  color: var(--text-2);
   background: rgba(255, 255, 255, 0.06);
 }
 button.toolbar-mode-btn.active,
+button.toolbar-mode-btn[aria-pressed="true"] {
+  background: rgba(89, 101, 249, 0.22);
+  border-color: transparent;
+  color: var(--accent-2);
+  box-shadow: inset 0 0 0 1px var(--accent);
+}
 button.toolbar-mode-btn.active:hover,
-button.toolbar-mode-btn[aria-pressed="true"],
 button.toolbar-mode-btn[aria-pressed="true"]:hover {
-  background: #2563eb;
-  color: #fff;
-  box-shadow:
-    0 0 0 1px rgba(147, 197, 253, 0.32) inset,
-    0 6px 14px rgba(37, 99, 235, 0.28);
+  background: rgba(89, 101, 249, 0.28);
+  color: #d9dcff;
 }
 
 /* 3D モード時のレイアウト切替 */

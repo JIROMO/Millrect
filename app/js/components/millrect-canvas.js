@@ -91,22 +91,23 @@ class MillrectCanvas extends HTMLElement {
           <div class="help-row"><kbd>B</kbd><span data-i18n="help.tool.bezier">ペン</span></div>
           <div class="help-row"><kbd>P</kbd><span data-i18n="help.tool.pencil">鉛筆</span></div>
           <div class="help-section-title" data-i18n="help.section.edit">編集</div>
-          <div class="help-row"><kbd>⌘Z</kbd><span data-i18n="help.edit.undo">元に戻す</span></div>
-          <div class="help-row"><kbd>⌘⇧Z</kbd><span data-i18n="help.edit.redo">やり直し</span></div>
-          <div class="help-row"><kbd>⌘C</kbd><span data-i18n="help.edit.copy">コピー</span></div>
-          <div class="help-row"><kbd>⌘V</kbd><span data-i18n="help.edit.paste">貼り付け</span></div>
-          <div class="help-row"><kbd>⌘D</kbd><span data-i18n="help.edit.duplicate">複製</span></div>
+          <div class="help-row"><kbd data-i18n="help.kbd.undo">Ctrl+Z</kbd><span data-i18n="help.edit.undo">元に戻す</span></div>
+          <div class="help-row"><kbd data-i18n="help.kbd.redo">Ctrl+Shift+Z</kbd><span data-i18n="help.edit.redo">やり直し</span></div>
+          <div class="help-row"><kbd data-i18n="help.kbd.copy">Ctrl+C</kbd><span data-i18n="help.edit.copy">コピー</span></div>
+          <div class="help-row"><kbd data-i18n="help.kbd.paste">Ctrl+V</kbd><span data-i18n="help.edit.paste">貼り付け</span></div>
+          <div class="help-row"><kbd data-i18n="help.kbd.pasteInPlace">Ctrl+Shift+V</kbd><span data-i18n="help.edit.pasteInPlace">同じ位置に貼り付け</span></div>
+          <div class="help-row"><kbd data-i18n="help.kbd.duplicate">Ctrl+D</kbd><span data-i18n="help.edit.duplicate">複製</span></div>
           <div class="help-row"><kbd>Del / BS</kbd><span data-i18n="help.edit.delete">削除</span></div>
-          <div class="help-row"><kbd>⌘G</kbd><span data-i18n="help.edit.group">グループ化</span></div>
-          <div class="help-row"><kbd>⌘⇧G</kbd><span data-i18n="help.edit.ungroup">グループ解除</span></div>
+          <div class="help-row"><kbd data-i18n="help.kbd.group">Ctrl+G</kbd><span data-i18n="help.edit.group">グループ化</span></div>
+          <div class="help-row"><kbd data-i18n="help.kbd.ungroup">Ctrl+Shift+G</kbd><span data-i18n="help.edit.ungroup">グループ解除</span></div>
           <div class="help-row"><kbd>⌥⇧U</kbd><span data-i18n="help.edit.booleanUnion">パス結合</span></div>
           <div class="help-row"><kbd>⌥⇧S</kbd><span data-i18n="help.edit.booleanSubtract">パス減算</span></div>
           <div class="help-row"><kbd>⌥⇧I</kbd><span data-i18n="help.edit.booleanIntersect">パス交差</span></div>
           <div class="help-row"><kbd>⌥⇧E</kbd><span data-i18n="help.edit.booleanExclude">パス除外</span></div>
           <div class="help-row"><kbd>⌥⇧F</kbd><span data-i18n="help.edit.booleanFlatten">パス統合</span></div>
           <div class="help-section-title" data-i18n="help.section.view">表示</div>
-          <div class="help-row"><kbd>⌘S</kbd><span data-i18n="help.view.save">保存</span></div>
-          <div class="help-row"><kbd>⌘P</kbd><span data-i18n="help.view.print">印刷</span></div>
+          <div class="help-row"><kbd data-i18n="help.kbd.save">Ctrl+S</kbd><span data-i18n="help.view.save">保存</span></div>
+          <div class="help-row"><kbd data-i18n="help.kbd.print">Ctrl+P</kbd><span data-i18n="help.view.print">印刷</span></div>
           <div class="help-row"><kbd>Space + ドラッグ</kbd><span data-i18n="help.view.pan">パン</span></div>
           <div class="help-row"><kbd>スクロール</kbd><span data-i18n="help.view.zoom">ズーム</span></div>
           <div class="help-row"><kbd>Esc</kbd><span data-i18n="help.view.cancel">選択解除 / キャンセル</span></div>
