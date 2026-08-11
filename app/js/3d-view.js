@@ -1342,6 +1342,164 @@ function _maxFrameSizeMM(frames, axis) {
   return values.length ? Math.max(...values) : null;
 }
 
+// profile.rings をビュー内ローカル座標（tx 変換後）の生の polygon 配列へ変換する。
+// _profileToThreeShapesForView と _buildAxisAlignedExtrudeGeometry の両方から使う
+// 共通の座標変換ロジック（tx の中身は _profileToThreeShapesForView と同一に保つこと）。
+function _transformProfileRingsForView(profile, page, viewType, frame) {
+  const m = _realToThreeMM;
+  const bbox = frame?.bbox || profile.bbox;
+  if (!bbox) return null;
+  const frameW = m(bbox.w);
+  const frameH = m(bbox.h);
+  const rings = profile.rings;
+  if (!rings || rings.length === 0) return null;
+
+  function tx(rawX, rawY) {
+    const x = m(rawX - bbox.x);
+    const y = m(rawY - bbox.y);
+    switch (viewType) {
+      case "top":
+        return [x, frameH - y];
+      case "bottom":
+        return [x, frameH - y];
+      case "front":
+        return [x, frameH - y];
+      case "back":
+        return [frameW - x, frameH - y];
+      case "right":
+        return [x, frameH - y];
+      case "left":
+        return [frameW - x, frameH - y];
+      default:
+        return [x, y];
+    }
+  }
+
+  return rings.map((ring) => {
+    let n = ring.length;
+    if (
+      n > 1 &&
+      ring[0][0] === ring[n - 1][0] &&
+      ring[0][1] === ring[n - 1][1]
+    ) {
+      n -= 1;
+    }
+    const out = new Array(n);
+    for (let i = 0; i < n; i++) out[i] = tx(ring[i][0], ring[i][1]);
+    return out;
+  });
+}
+
+// ── 軸整列（矩形ベース）輪郭専用の押し出しジオメトリ ──────────────
+// THREE.ExtrudeGeometry のキャップ／側壁三角形分割（earcut ベース）は、穴同士や
+// 穴と外周の壁が数mm程度まで近接すると三角形（キャップだけでなく側壁も）を
+// 取りこぼすことがある（多数の同一直線上・薄壁を持つ穴グリッド形状で顕著）。
+// 輪郭が完全に軸整列（全辺が水平 or 垂直）な場合は、この問題を構造的に起こしえない
+// 矩形分割ベースの自前トライアングルに置き換える。
+// アルゴリズム: 全頂点の x を集めて縦ストリップに分割し、各ストリップの中点での
+// 水平エッジ交差（even-odd）から「内側」の y 区間を求める（トラペゾイド分割）。
+// 各区間を矩形として押し出し、隣接ストリップ間で完全に一致する内部境界だけ側壁を
+// 省略する（グリーディメッシュ）ことで、重複しない・穴の開かない多様体を作る。
+function _isAxisAlignedRings(rings) {
+  for (const ring of rings) {
+    const n = ring.length;
+    for (let i = 0; i < n; i++) {
+      const [x1, y1] = ring[i];
+      const [x2, y2] = ring[(i + 1) % n];
+      if (Math.abs(x1 - x2) > 1e-6 && Math.abs(y1 - y2) > 1e-6) return false;
+    }
+  }
+  return true;
+}
+
+// 点 (px,py) が rings（even-odd fill rule、外周+穴）の内側かを判定する。
+// 軸整列前提なので水平方向レイキャストで十分（垂直エッジとの交差数を数える）。
+function _pointInAxisAlignedRings(rings, px, py) {
+  let crossings = 0;
+  for (const ring of rings) {
+    const n = ring.length;
+    for (let i = 0; i < n; i++) {
+      const [x1, y1] = ring[i];
+      const [x2, y2] = ring[(i + 1) % n];
+      if (Math.abs(x1 - x2) > 1e-6) continue; // 垂直エッジのみ判定に使う
+      const yLo = Math.min(y1, y2),
+        yHi = Math.max(y1, y2);
+      if (py >= yLo - 1e-9 && py < yHi - 1e-9 && x1 > px) crossings++;
+    }
+  }
+  return crossings % 2 === 1;
+}
+
+// 行×列の完全な共通グリッドでセル単位に押し出す（greedy voxel meshing 相当）。
+// 全セルが同じ行・列境界を共有するため、隣接ストリップで分割位置がズレて生じる
+// T字継ぎ目（クラック／非多様体エッジの原因）が構造的に発生しない。
+function _buildAxisAlignedExtrudeGeometry(rings, depth) {
+  const xs = new Set();
+  const ys = new Set();
+  for (const ring of rings) {
+    for (const [x, y] of ring) {
+      xs.add(x);
+      ys.add(y);
+    }
+  }
+  const sortedXs = [...xs].sort((a, b) => a - b);
+  const sortedYs = [...ys].sort((a, b) => a - b);
+  if (sortedXs.length < 2 || sortedYs.length < 2) return null;
+
+  const nx = sortedXs.length - 1;
+  const ny = sortedYs.length - 1;
+  const inside = new Array(nx * ny);
+  for (let i = 0; i < nx; i++) {
+    const mx = (sortedXs[i] + sortedXs[i + 1]) / 2;
+    for (let j = 0; j < ny; j++) {
+      const my = (sortedYs[j] + sortedYs[j + 1]) / 2;
+      inside[i * ny + j] = _pointInAxisAlignedRings(rings, mx, my);
+    }
+  }
+  const isInside = (i, j) =>
+    i >= 0 && i < nx && j >= 0 && j < ny && inside[i * ny + j];
+
+  const positions = [];
+  const pushQuad = (p1, p2, p3, p4) => {
+    positions.push(...p1, ...p2, ...p3, ...p1, ...p3, ...p4);
+  };
+  const z0 = 0,
+    z1 = depth;
+  let any = false;
+
+  for (let i = 0; i < nx; i++) {
+    const x0 = sortedXs[i],
+      x1 = sortedXs[i + 1];
+    for (let j = 0; j < ny; j++) {
+      if (!isInside(i, j)) continue;
+      any = true;
+      const y0 = sortedYs[j],
+        y1 = sortedYs[j + 1];
+      // top / bottom キャップ（セルごとに敷き詰めるだけなので重複しない）
+      pushQuad([x0, y0, z1], [x1, y0, z1], [x1, y1, z1], [x0, y1, z1]);
+      pushQuad([x0, y0, z0], [x0, y1, z0], [x1, y1, z0], [x1, y0, z0]);
+      // 4方向: 隣が「外側」のときだけ壁を張る（内部の継ぎ目には張らない）
+      if (!isInside(i, j - 1)) {
+        pushQuad([x0, y0, z0], [x1, y0, z0], [x1, y0, z1], [x0, y0, z1]);
+      }
+      if (!isInside(i, j + 1)) {
+        pushQuad([x1, y1, z0], [x0, y1, z0], [x0, y1, z1], [x1, y1, z1]);
+      }
+      if (!isInside(i - 1, j)) {
+        pushQuad([x0, y1, z0], [x0, y0, z0], [x0, y0, z1], [x0, y1, z1]);
+      }
+      if (!isInside(i + 1, j)) {
+        pushQuad([x1, y0, z0], [x1, y1, z0], [x1, y1, z1], [x1, y0, z1]);
+      }
+    }
+  }
+  if (!any) return null;
+  const geo = new THREE.BufferGeometry();
+  geo.setAttribute("position", new THREE.Float32BufferAttribute(positions, 3));
+  geo.computeVertexNormals();
+  return geo;
+}
+
 function _profileToThreeShapesForView(profile, page, viewType, frame) {
   const m = _realToThreeMM;
   const bbox = frame?.bbox || profile.bbox;
@@ -1741,19 +1899,36 @@ function _buildMeshFromProfile(profile, page, viewType, dims, material, frame) {
     left: dims.W,
   };
   const sweepDepth = sweepDepthFor[viewType];
-  const threeShapes = _profileToThreeShapesForView(
+
+  // 軸整列（矩形ベース）の輪郭は、earcut 由来のキャップ／側壁欠落を構造的に避けられる
+  // 自前の矩形分割トライアングルを優先する。非対応形状（円・ベジェ等）や分割に失敗した
+  // 場合は既存の ExtrudeGeometry 経路にフォールバックする。
+  let geo = null;
+  const transformedRings = _transformProfileRingsForView(
     profile,
     page,
     viewType,
     frame,
   );
-  if (!threeShapes.length) return null;
+  if (transformedRings && _isAxisAlignedRings(transformedRings)) {
+    geo = _buildAxisAlignedExtrudeGeometry(transformedRings, sweepDepth);
+  }
 
-  const geo = new THREE.ExtrudeGeometry(threeShapes, {
-    depth: sweepDepth,
-    bevelEnabled: false,
-  });
-  geo.computeVertexNormals();
+  if (!geo) {
+    const threeShapes = _profileToThreeShapesForView(
+      profile,
+      page,
+      viewType,
+      frame,
+    );
+    if (!threeShapes.length) return null;
+    geo = new THREE.ExtrudeGeometry(threeShapes, {
+      depth: sweepDepth,
+      bevelEnabled: false,
+    });
+    geo.computeVertexNormals();
+  }
+
   const mesh = new THREE.Mesh(geo, material.clone());
   _applyViewTransform(mesh, viewType);
   if (dims) _applyViewPosition(mesh, viewType, dims);
