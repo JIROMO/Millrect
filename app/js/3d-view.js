@@ -9,6 +9,326 @@
 
 const _REAL_PER_MM = 10;
 
+// CSG（csg.js の BSP 分割）は多数の同一平面・軸整列面を持つ形状（穴の並ぶプレート等）で
+// 分割誤差を起こしやすく、本来同じ点であるはずの頂点がわずかに（サブミクロン〜数μm）
+// ズレて出力されることがある。これが後段の union/intersect の入力になると誤差が
+// 積み重なり、最終的に開いたエッジ／非多様体エッジとして STL に現れる。
+// 各 CSG 演算の出力直後にこの許容誤差で頂点を溶接し、次の演算に渡す前に「傷を塞ぐ」。
+const _CSG_WELD_TOL = 1e-3; // mm（three 空間 = mm）。FP 誤差レベルの重複だけ溶接する。
+
+// 三角形スープ position 配列 → 溶接＋退化三角形除去した indexed BufferGeometry。
+function _weldTriangleSoup(position, tol = _CSG_WELD_TOL) {
+  const inv = 1 / tol;
+  const map = new Map();
+  const verts = [];
+  const indices = [];
+  const vid = (x, y, z) => {
+    const key =
+      Math.round(x * inv) + "," + Math.round(y * inv) + "," + Math.round(z * inv);
+    let id = map.get(key);
+    if (id === undefined) {
+      id = verts.length / 3;
+      verts.push(x, y, z);
+      map.set(key, id);
+    }
+    return id;
+  };
+  const triCount = (position.length / 9) | 0;
+  const e1 = new THREE.Vector3();
+  const e2 = new THREE.Vector3();
+  const nrm = new THREE.Vector3();
+  for (let i = 0; i < triCount; i++) {
+    const o = i * 9;
+    const ia = vid(position[o], position[o + 1], position[o + 2]);
+    const ib = vid(position[o + 3], position[o + 4], position[o + 5]);
+    const ic = vid(position[o + 6], position[o + 7], position[o + 8]);
+    if (ia === ib || ib === ic || ia === ic) continue; // 溶接で潰れた=退化
+    e1.set(
+      verts[ib * 3] - verts[ia * 3],
+      verts[ib * 3 + 1] - verts[ia * 3 + 1],
+      verts[ib * 3 + 2] - verts[ia * 3 + 2],
+    );
+    e2.set(
+      verts[ic * 3] - verts[ia * 3],
+      verts[ic * 3 + 1] - verts[ia * 3 + 1],
+      verts[ic * 3 + 2] - verts[ia * 3 + 2],
+    );
+    nrm.crossVectors(e1, e2);
+    if (nrm.lengthSq() < 1e-12) continue; // 面積ゼロ（共線）=退化
+    indices.push(ia, ib, ic);
+  }
+  const geo = new THREE.BufferGeometry();
+  geo.setAttribute("position", new THREE.Float32BufferAttribute(verts, 3));
+  geo.setIndex(indices);
+  return geo;
+}
+
+// CSG 演算結果メッシュ（ワールド空間・非 indexed の三角形スープ）を、その場で溶接して
+// 返す。呼び出し側の union/intersect/subtract の直後に必ず通すことで、誤差の連鎖的な
+// 蓄積を断ち切る。
+function _weldCsgResultMesh(mesh) {
+  if (!mesh?.geometry?.attributes?.position) return mesh;
+  const welded = _weldTriangleSoup(mesh.geometry.attributes.position.array);
+  mesh.geometry.dispose();
+  welded.computeVertexNormals();
+  mesh.geometry = welded;
+  return mesh;
+}
+
+// ── 開いた境界ループの自動パッチ ─────────────────────────────
+// THREE.ExtrudeGeometry のキャップ三角形分割（穴付き輪郭の earcut）は、穴同士や
+// 穴と外周の間が数mm程度まで近接すると、その薄い壁の領域で三角形を取りこぼすことが
+// ある（union/CSG とは無関係に単体の押し出しだけでも発生しうる）。溶接では埋まらない
+// 「本当に三角形が欠けている」小さな穴を、境界エッジをループとして辿り、その平面上で
+// ear-clipping して塞ぐ。
+function _findBoundaryLoops(indices) {
+  // 各有向エッジ a→b の使用有無を記録し、逆向き b→a が存在しない a→b を境界とみなす。
+  const used = new Set();
+  const dirEdges = [];
+  for (let i = 0; i < indices.length; i += 3) {
+    const a = indices[i],
+      b = indices[i + 1],
+      c = indices[i + 2];
+    for (const [x, y] of [
+      [a, b],
+      [b, c],
+      [c, a],
+    ]) {
+      used.add(x + "," + y);
+      dirEdges.push([x, y]);
+    }
+  }
+  const boundary = dirEdges.filter(([x, y]) => !used.has(y + "," + x));
+  if (!boundary.length) return [];
+  const nextOf = new Map(boundary.map(([a, b]) => [a, b]));
+  const loops = [];
+  const visited = new Set();
+  for (const [start] of boundary) {
+    if (visited.has(start)) continue;
+    const loop = [];
+    let v = start;
+    let guard = 0;
+    while (!visited.has(v) && nextOf.has(v) && guard++ < boundary.length + 1) {
+      visited.add(v);
+      loop.push(v);
+      v = nextOf.get(v);
+    }
+    if (loop.length >= 3 && v === start) loops.push(loop);
+  }
+  return loops;
+}
+
+// 平面上の単純多角形ループを ear-clipping で三角形分割する（凹凸どちらも可）。
+function _earClipLoop(loopIndices, positions) {
+  const P = (i) => [
+    positions[i * 3],
+    positions[i * 3 + 1],
+    positions[i * 3 + 2],
+  ];
+  const pts = loopIndices.map(P);
+  // 最小分散の軸を落として 2D 投影する（ループはほぼ平面のはず）。
+  const spread = [0, 1, 2].map(
+    (ax) =>
+      Math.max(...pts.map((p) => p[ax])) - Math.min(...pts.map((p) => p[ax])),
+  );
+  const dropAxis = spread.indexOf(Math.min(...spread));
+  const axes = [0, 1, 2].filter((ax) => ax !== dropAxis);
+  const poly2d = pts.map((p) => [p[axes[0]], p[axes[1]]]);
+
+  const n = loopIndices.length;
+  const order = loopIndices.map((_, i) => i);
+  const cross = (o, a, b) =>
+    (a[0] - o[0]) * (b[1] - o[1]) - (a[1] - o[1]) * (b[0] - o[0]);
+  let area = 0;
+  for (let i = 0; i < n; i++) {
+    const [x1, y1] = poly2d[i];
+    const [x2, y2] = poly2d[(i + 1) % n];
+    area += x1 * y2 - x2 * y1;
+  }
+  const ccw = area > 0;
+
+  const tris = [];
+  let remaining = order.slice();
+  let guard = 0;
+  while (remaining.length > 3 && guard++ < n * n) {
+    const m = remaining.length;
+    let clipped = false;
+    for (let i = 0; i < m; i++) {
+      const i0 = remaining[(i + m - 1) % m];
+      const i1 = remaining[i];
+      const i2 = remaining[(i + 1) % m];
+      const a = poly2d[i0],
+        b = poly2d[i1],
+        c = poly2d[i2];
+      const cr = cross(a, b, c);
+      if (ccw ? cr <= 0 : cr >= 0) continue; // 凹角はスキップ
+      // 他の残頂点がこの三角形の内側に無いか確認
+      let ok = true;
+      for (const j of remaining) {
+        if (j === i0 || j === i1 || j === i2) continue;
+        const p = poly2d[j];
+        const c1 = cross(a, b, p);
+        const c2 = cross(b, c, p);
+        const c3 = cross(c, a, p);
+        const inside = ccw
+          ? c1 >= 0 && c2 >= 0 && c3 >= 0
+          : c1 <= 0 && c2 <= 0 && c3 <= 0;
+        if (inside) {
+          ok = false;
+          break;
+        }
+      }
+      if (!ok) continue;
+      tris.push([loopIndices[i0], loopIndices[i1], loopIndices[i2]]);
+      remaining.splice(i, 1);
+      clipped = true;
+      break;
+    }
+    if (!clipped) break; // 数値誤差等で耳が見つからない場合は打ち切り
+  }
+  if (remaining.length === 3) {
+    tris.push([
+      loopIndices[remaining[0]],
+      loopIndices[remaining[1]],
+      loopIndices[remaining[2]],
+    ]);
+  }
+  return tris;
+}
+
+// ExtrudeGeometry の側面（sidewall）が丸ごと欠けているケースでは、境界ループが
+// 「同じ点列を extrude 軸方向にだけ平行移動した」2 本の退化ループ（面積ゼロ＝1本の
+// 折れ線）として現れる。ear-clipping ではキャップできないため、対になるループを
+// 見つけて頂点を対応させ、帯状の四角形（側壁）として橋渡しする。
+function _bridgeParallelLoop(loopA, loopB, positions, tol = 1e-2) {
+  if (loopA.length !== loopB.length) return null;
+  const n = loopA.length;
+  const P = (i) => [positions[i * 3], positions[i * 3 + 1], positions[i * 3 + 2]];
+  const a0 = P(loopA[0]);
+  // 押し出しの表側／裏側キャップは巻き方向が逆になる（法線が反対を向くため）。
+  // 順方向・逆方向どちらの対応付けも試す。
+  for (const reversed of [false, true]) {
+    const idxOf = (k) =>
+      reversed ? loopB[(n - k) % n] : loopB[k % n];
+    for (let shift = 0; shift < n; shift++) {
+      const b0 = P(idxOf(shift));
+      const off = [b0[0] - a0[0], b0[1] - a0[1], b0[2] - a0[2]];
+      let ok = true;
+      for (let i = 0; i < n; i++) {
+        const pa = P(loopA[i]);
+        const pb = P(idxOf(shift + i));
+        const dx = pb[0] - pa[0] - off[0];
+        const dy = pb[1] - pa[1] - off[1];
+        const dz = pb[2] - pa[2] - off[2];
+        if (Math.hypot(dx, dy, dz) > tol) {
+          ok = false;
+          break;
+        }
+      }
+      if (!ok) continue;
+      // loopA は a→b→c... の向きに沿った境界（外向き法線を持つ側）。対応する loopB 側は
+      // 逆順に張るとねじれずに面が閉じる。
+      const tris = [];
+      for (let i = 0; i < n; i++) {
+        const a1 = loopA[i];
+        const a2 = loopA[(i + 1) % n];
+        const b1 = idxOf(shift + i);
+        const b2 = idxOf(shift + i + 1);
+        tris.push([a1, a2, b2], [a1, b2, b1]);
+      }
+      return { tris, offset: Math.hypot(off[0], off[1], off[2]) };
+    }
+  }
+  return null;
+}
+
+function _loopIsDegenerate(loop, positions) {
+  const P = (i) => [positions[i * 3], positions[i * 3 + 1], positions[i * 3 + 2]];
+  const pts = loop.map(P);
+  const spread = [0, 1, 2].map(
+    (ax) =>
+      Math.max(...pts.map((p) => p[ax])) - Math.min(...pts.map((p) => p[ax])),
+  );
+  const sorted = spread.slice().sort((a, b) => a - b);
+  return sorted[1] < 1e-6; // 2軸目もほぼ幅ゼロ＝1本の折れ線（面積ゼロ）
+}
+
+// 三角形リストの「異常エッジ数」（1枚だけ／3枚以上に共有されているエッジの数）。
+// 修復前後でこれが減っていない場合はパッチを採用しない安全弁に使う。
+function _badEdgeCount(indices) {
+  const map = new Map();
+  for (let i = 0; i < indices.length; i += 3) {
+    const a = indices[i],
+      b = indices[i + 1],
+      c = indices[i + 2];
+    for (const [x, y] of [
+      [a, b],
+      [b, c],
+      [c, a],
+    ]) {
+      const k = x < y ? x + "," + y : y + "," + x;
+      map.set(k, (map.get(k) || 0) + 1);
+    }
+  }
+  let bad = 0;
+  for (const c of map.values()) if (c !== 2) bad++;
+  return bad;
+}
+
+// indexed BufferGeometry の残存する開いた境界ループを検出し、その場でパッチする。
+// パッチ後に異常エッジ数が悪化していないか検証し、悪化する場合は元のジオメトリを返す
+// （偶然の幾何学的一致による誤ったペア接続などで、かえって非多様体を増やさないため）。
+function _patchOpenBoundaries(geometry) {
+  const index = geometry.index;
+  if (!index) return geometry;
+  const positions = geometry.attributes.position.array;
+  const indices = Array.from(index.array);
+  const badBefore = _badEdgeCount(indices);
+  const loops = _findBoundaryLoops(indices);
+  if (!loops.length) return geometry;
+
+  const degenerate = [];
+  const proper = [];
+  for (const loop of loops) {
+    (_loopIsDegenerate(loop, positions) ? degenerate : proper).push(loop);
+  }
+
+  // 退化ループ（欠けた側壁）はペアを探して帯状に橋渡しする。同じ「面積ゼロの折れ線」
+  // 形状は、押し出し軸方向のオフセット（真のペア＝欠けた側壁の厚み）だけでなく、無関係な
+  // 別の穴・別の行の輪郭とも「1軸だけの並行移動」として偶然一致してしまうことがある
+  // （例: 別の z 位置にある同じ幅の壁）。押し出し方向のオフセットは通常わずか（板厚）で、
+  // 無関係な一致は輪郭同士の距離（穴の行間隔など）ぶん大きいため、オフセットが小さい
+  // 候補から優先して確定させる（貪欲最小重みマッチング）。
+  const candidates = [];
+  for (let i = 0; i < degenerate.length; i++) {
+    for (let j = i + 1; j < degenerate.length; j++) {
+      const result = _bridgeParallelLoop(degenerate[i], degenerate[j], positions);
+      if (result) candidates.push({ i, j, ...result });
+    }
+  }
+  candidates.sort((a, b) => a.offset - b.offset);
+  const used = new Set();
+  for (const { i, j, tris } of candidates) {
+    if (used.has(i) || used.has(j)) continue;
+    for (const tri of tris) indices.push(...tri);
+    used.add(i);
+    used.add(j);
+  }
+
+  // 通常のキャップ穴（面積のあるループ）は ear-clipping で塞ぐ。
+  for (const loop of proper) {
+    for (const tri of _earClipLoop(loop, positions)) indices.push(...tri);
+  }
+
+  if (_badEdgeCount(indices) >= badBefore) return geometry; // 改善しなければ不採用
+
+  const geo = new THREE.BufferGeometry();
+  geo.setAttribute("position", geometry.attributes.position.clone());
+  geo.setIndex(indices);
+  geo.computeVertexNormals();
+  return geo;
+}
+
 /** real units → Three.js シーン mm（図面 scale は反映しない） */
 function _realToThreeMM(v) {
   return v / _REAL_PER_MM;
@@ -232,7 +552,7 @@ function _csgUnion(meshA, meshB, material) {
     );
     _disposeMesh(meshA);
     _disposeMesh(meshB);
-    return result;
+    return _weldCsgResultMesh(result);
   } catch (e) {
     console.warn("[3D] CSG union failed:", e);
     _disposeMesh(meshB);
@@ -260,7 +580,7 @@ function _csgIntersect(meshA, meshB, material) {
     );
     _disposeMesh(meshA);
     _disposeMesh(meshB);
-    return result;
+    return _weldCsgResultMesh(result);
   } catch (e) {
     console.warn("[3D] CSG intersect failed:", e);
     _disposeMesh(meshB);
@@ -2023,54 +2343,7 @@ function update3DScene(options = {}) {
 // わずかにズレた重複頂点を溶接して、できるだけ多様体（watertight）に近づける。
 // position はワールド空間の三角形スープ（9 floats/三角形）。indexed geometry を返す。
 function _cleanGeometryForExport(position) {
-  const WELD_TOL = 1e-3; // mm（three 空間 = mm）。FP 誤差レベルの重複だけ溶接する。
-  const inv = 1 / WELD_TOL;
-  const map = new Map();
-  const verts = [];
-  const indices = [];
-  const vid = (x, y, z) => {
-    const key =
-      Math.round(x * inv) +
-      "," +
-      Math.round(y * inv) +
-      "," +
-      Math.round(z * inv);
-    let id = map.get(key);
-    if (id === undefined) {
-      id = verts.length / 3;
-      verts.push(x, y, z);
-      map.set(key, id);
-    }
-    return id;
-  };
-  const triCount = (position.length / 9) | 0;
-  const e1 = new THREE.Vector3();
-  const e2 = new THREE.Vector3();
-  const nrm = new THREE.Vector3();
-  for (let i = 0; i < triCount; i++) {
-    const o = i * 9;
-    const ia = vid(position[o], position[o + 1], position[o + 2]);
-    const ib = vid(position[o + 3], position[o + 4], position[o + 5]);
-    const ic = vid(position[o + 6], position[o + 7], position[o + 8]);
-    if (ia === ib || ib === ic || ia === ic) continue; // 溶接で潰れた=退化
-    e1.set(
-      verts[ib * 3] - verts[ia * 3],
-      verts[ib * 3 + 1] - verts[ia * 3 + 1],
-      verts[ib * 3 + 2] - verts[ia * 3 + 2],
-    );
-    e2.set(
-      verts[ic * 3] - verts[ia * 3],
-      verts[ic * 3 + 1] - verts[ia * 3 + 1],
-      verts[ic * 3 + 2] - verts[ia * 3 + 2],
-    );
-    nrm.crossVectors(e1, e2);
-    if (nrm.lengthSq() < 1e-12) continue; // 面積ゼロ（共線）=退化
-    indices.push(ia, ib, ic);
-  }
-  const geo = new THREE.BufferGeometry();
-  geo.setAttribute("position", new THREE.Float32BufferAttribute(verts, 3));
-  geo.setIndex(indices);
-  return geo;
+  return _weldTriangleSoup(position);
 }
 
 // 1 メッシュをワールド空間の清掃済み（溶接＋退化除去）メッシュに変換する。
@@ -2081,8 +2354,10 @@ function _makeCleanExportMesh(mesh) {
     ? mesh.geometry.toNonIndexed()
     : mesh.geometry.clone();
   src.applyMatrix4(mesh.matrixWorld);
-  const cleaned = _cleanGeometryForExport(src.attributes.position.array);
+  const welded = _cleanGeometryForExport(src.attributes.position.array);
   src.dispose();
+  const cleaned = _patchOpenBoundaries(welded);
+  if (cleaned !== welded) welded.dispose();
   cleaned.computeVertexNormals();
   const mat = mesh.material?.clone?.() || mesh.material;
   return new THREE.Mesh(cleaned, mat);
