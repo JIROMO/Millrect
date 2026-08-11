@@ -132,6 +132,23 @@ function _worldBox(mesh) {
   return g.boundingBox.clone().applyMatrix4(mesh.matrixWorld);
 }
 
+// Box3.intersectsBox は「面だけ接触（オーバーラップ量ゼロ）」も交差と判定してしまう。
+// 積層バンド（同一ビュー内で色ごとに高さを分けた帯）が隙間なくぴったり接する図面は
+// 頻出パターンだが、これを実体積の交差として BSP に回すと境界面が完全同一平面になり、
+// 数値誤差で三角形が縮退＝STLの開いたエッジの原因になる。
+// ここでは「各軸で正のオーバーラップ幅があるか」を見て、面だけの接触は非交差として扱う
+// （＝安全な連結パスに回す）。real units 前提で 1e-3（サブミクロン）を許容誤差とする。
+const _VOLUME_OVERLAP_EPS = 1e-3;
+function _hasVolumeOverlap(boxA, boxB, eps = _VOLUME_OVERLAP_EPS) {
+  const ox = Math.min(boxA.max.x, boxB.max.x) - Math.max(boxA.min.x, boxB.min.x);
+  if (ox <= eps) return false;
+  const oy = Math.min(boxA.max.y, boxB.max.y) - Math.max(boxA.min.y, boxB.min.y);
+  if (oy <= eps) return false;
+  const oz = Math.min(boxA.max.z, boxB.max.z) - Math.max(boxA.min.z, boxB.min.z);
+  if (oz <= eps) return false;
+  return true;
+}
+
 // solidIntersect 部品が無いシーンでは volume の union を連結に置き換えてよい
 // （bbox 範囲・グルーピング用途では結果が同等で、多フィーチャーでも O(n)）。
 // _build3DSceneFromViews が各生成の冒頭で設定する。
@@ -198,9 +215,10 @@ function _csgUnion(meshA, meshB, material) {
     _disposeMesh(meshB);
     return meshA;
   }
-  // 体積を共有しない場合は BSP を使わず連結（同一結果・大幅に高速）
+  // 体積を共有しない場合（面だけの接触を含む）は BSP を使わず連結（同一結果・大幅に高速・
+  // かつ面だけ接触するケースでの縮退三角形＝開いたエッジを回避できる）
   try {
-    if (!_worldBox(meshA).intersectsBox(_worldBox(meshB))) {
+    if (!_hasVolumeOverlap(_worldBox(meshA), _worldBox(meshB))) {
       return _concatDisjointMeshes(meshA, meshB, material);
     }
   } catch (e) {
