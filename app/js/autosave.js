@@ -76,14 +76,14 @@ async function doAutosave() {
   }
 }
 
-// プロジェクト一覧のサムネイル用に、正面図（無ければ先頭ページ）の SVG を
+// プロジェクト一覧のサムネイル用に、平面図（無ければ先頭ページ）の SVG を
 // data URL 化して保存する。失敗してもオートセーブ自体は継続する。
 function _buildProjectThumbnail(state) {
   try {
     if (typeof buildPageSVG !== "function") return "";
     const pages = state.pages || [];
     const page =
-      pages.find((p) => p.viewDefinition?.type === "front") || pages[0];
+      pages.find((p) => p.viewDefinition?.type === "top") || pages[0];
     if (!page) return "";
     const svg = buildPageSVG(page);
     const svgStr = new XMLSerializer().serializeToString(svg);
