@@ -66,12 +66,31 @@ async function doAutosave() {
     const json = data
       ? JSON.stringify(data, null, 2)
       : exportProjectJsonString();
-    await dbSaveProject(_currentProjectId, state.projectName, json);
+    const thumbnail = _buildProjectThumbnail(state);
+    await dbSaveProject(_currentProjectId, state.projectName, json, thumbnail);
     _lastSavedAt = Date.now();
     setAutosaveStatus("saved");
   } catch (e) {
     setAutosaveStatus("error");
     console.warn("[autosave] failed:", e);
+  }
+}
+
+// プロジェクト一覧のサムネイル用に、正面図（無ければ先頭ページ）の SVG を
+// data URL 化して保存する。失敗してもオートセーブ自体は継続する。
+function _buildProjectThumbnail(state) {
+  try {
+    if (typeof buildPageSVG !== "function") return "";
+    const pages = state.pages || [];
+    const page =
+      pages.find((p) => p.viewDefinition?.type === "front") || pages[0];
+    if (!page) return "";
+    const svg = buildPageSVG(page);
+    const svgStr = new XMLSerializer().serializeToString(svg);
+    return `data:image/svg+xml;utf8,${encodeURIComponent(svgStr)}`;
+  } catch (e) {
+    console.warn("[autosave] thumbnail generation failed:", e);
+    return "";
   }
 }
 

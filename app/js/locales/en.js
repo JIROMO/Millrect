@@ -183,6 +183,9 @@
     "startup.clearAll.error": "Delete failed: {message}",
     "startup.recentProjects": "Project list",
     "startup.searchProjects": "Search projects",
+    "startup.viewList": "List view",
+    "startup.viewGrid": "Thumbnail view",
+    "startup.noThumbnail": "No preview",
     "startup.multiviewHint":
       "Sample with a 120×80×50 mm box on top and front views. Open 3D preview to inspect the solid.",
     "startup.projectName": "Project name",

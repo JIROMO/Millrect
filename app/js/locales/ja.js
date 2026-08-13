@@ -180,6 +180,9 @@
     "startup.clearAll.error": "削除に失敗しました: {message}",
     "startup.recentProjects": "プロジェクト一覧",
     "startup.searchProjects": "プロジェクトを検索",
+    "startup.viewList": "リスト表示",
+    "startup.viewGrid": "サムネイル表示",
+    "startup.noThumbnail": "プレビューなし",
     "startup.multiviewHint":
       "上面図と正面図に直方体（120×80×50 mm）の図形が入ったサンプルです。3D プレビューで立体を確認できます。",
     "startup.projectName": "プロジェクト名",

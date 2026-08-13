@@ -3039,7 +3039,13 @@ function showProjectList() {
           <button id="pl-btn-new" class="startup-primary pl-action-primary">${t("startup.newProject")}</button>
         </div>
         <div class="pl-section">
-          <div class="pl-section-label">${t("startup.recentProjects")}</div>
+          <div class="pl-section-label-row">
+            <div class="pl-section-label">${t("startup.recentProjects")}</div>
+            <div class="pl-view-toggle" role="group">
+              <button type="button" id="pl-view-list" class="pl-view-btn" aria-label="${t("startup.viewList")}" title="${t("startup.viewList")}">☰</button>
+              <button type="button" id="pl-view-grid" class="pl-view-btn" aria-label="${t("startup.viewGrid")}" title="${t("startup.viewGrid")}">▦</button>
+            </div>
+          </div>
           <input id="pl-search" class="pl-search" type="search" placeholder="${t("startup.searchProjects")}">
           <div id="pl-grid"></div>
         </div>
@@ -3113,6 +3119,55 @@ function showProjectList() {
       };
     }
 
+    const VIEW_MODE_KEY = "millrect-project-list-view-mode";
+    let viewMode = "list";
+    try {
+      viewMode = localStorage.getItem(VIEW_MODE_KEY) === "grid" ? "grid" : "list";
+    } catch {
+      // localStorage無効時は list を既定にする。
+    }
+    const viewListBtn = overlay.querySelector("#pl-view-list");
+    const viewGridBtn = overlay.querySelector("#pl-view-grid");
+
+    function setViewMode(mode) {
+      viewMode = mode === "grid" ? "grid" : "list";
+      try {
+        localStorage.setItem(VIEW_MODE_KEY, viewMode);
+      } catch {
+        // localStorage無効でも表示切替自体は継続する。
+      }
+      grid.classList.toggle("pl-grid-mode", viewMode === "grid");
+      grid.classList.toggle("pl-list-mode", viewMode === "list");
+      viewListBtn?.classList.toggle("active", viewMode === "list");
+      viewGridBtn?.classList.toggle("active", viewMode === "grid");
+      renderGrid();
+    }
+
+    function openProject(proj) {
+      overlay.remove();
+      resolve({
+        projectId: proj.id,
+        json: proj.data,
+        savedAt: proj.updatedAt,
+        paper: "A4",
+        orientation: "landscape",
+        scale: { numerator: 1, denominator: 10 },
+      });
+    }
+
+    async function deleteProject(proj) {
+      if (
+        confirm(
+          t("startup.deleteProjectConfirm", {
+            name: proj.name || t("default.unnamed"),
+          }),
+        )
+      ) {
+        await dbDeleteProject(proj.id);
+        await renderGrid();
+      }
+    }
+
     async function renderGrid() {
       const query = (search?.value || "").trim().toLowerCase();
       const allProjects = await dbListProjects();
@@ -3124,45 +3179,65 @@ function showProjectList() {
       });
       grid.innerHTML = "";
       if (projects.length === 0) return;
-      projects.forEach((proj) => {
-        const row = document.createElement("div");
-        row.className = "pl-row";
-        row.innerHTML = `
-          <span class="pl-row-name">${proj.name || t("default.unnamed")}</span>
-          <span class="pl-row-date">${_fmtDate(proj.updatedAt)}</span>
-          <button class="pl-row-btn pl-row-open">${t("startup.open")}</button>
-          <button class="pl-row-btn pl-row-del">${t("startup.delete")}</button>
-        `;
-        row.querySelector(".pl-row-open").addEventListener("click", (e) => {
-          e.stopPropagation();
-          overlay.remove();
-          resolve({
-            projectId: proj.id,
-            json: proj.data,
-            savedAt: proj.updatedAt,
-            paper: "A4",
-            orientation: "landscape",
-            scale: { numerator: 1, denominator: 10 },
-          });
-        });
-        row
-          .querySelector(".pl-row-del")
-          .addEventListener("click", async (e) => {
+
+      if (viewMode === "grid") {
+        projects.forEach((proj) => {
+          const card = document.createElement("div");
+          card.className = "pl-card";
+          const thumbInner = proj.thumbnail
+            ? `<img class="pl-card-thumb-img" src="${proj.thumbnail}" alt="">`
+            : `<span class="pl-card-thumb-empty">${t("startup.noThumbnail")}</span>`;
+          card.innerHTML = `
+            <div class="pl-card-thumb">${thumbInner}</div>
+            <div class="pl-card-body">
+              <span class="pl-card-name">${proj.name || t("default.unnamed")}</span>
+              <span class="pl-card-date">${_fmtDate(proj.updatedAt)}</span>
+            </div>
+            <div class="pl-card-actions">
+              <button class="pl-row-btn pl-row-open">${t("startup.open")}</button>
+              <button class="pl-row-btn pl-row-del">${t("startup.delete")}</button>
+            </div>
+          `;
+          card.addEventListener("click", () => openProject(proj));
+          card.querySelector(".pl-row-open").addEventListener("click", (e) => {
             e.stopPropagation();
-            if (
-              confirm(
-                t("startup.deleteProjectConfirm", {
-                  name: proj.name || t("default.unnamed"),
-                }),
-              )
-            ) {
-              await dbDeleteProject(proj.id);
-              await renderGrid();
-            }
+            openProject(proj);
           });
-        grid.appendChild(row);
-      });
+          card.querySelector(".pl-row-del").addEventListener("click", (e) => {
+            e.stopPropagation();
+            deleteProject(proj);
+          });
+          grid.appendChild(card);
+        });
+      } else {
+        projects.forEach((proj) => {
+          const row = document.createElement("div");
+          row.className = "pl-row";
+          row.innerHTML = `
+            <span class="pl-row-name">${proj.name || t("default.unnamed")}</span>
+            <span class="pl-row-date">${_fmtDate(proj.updatedAt)}</span>
+            <button class="pl-row-btn pl-row-open">${t("startup.open")}</button>
+            <button class="pl-row-btn pl-row-del">${t("startup.delete")}</button>
+          `;
+          row.querySelector(".pl-row-open").addEventListener("click", (e) => {
+            e.stopPropagation();
+            openProject(proj);
+          });
+          row.querySelector(".pl-row-del").addEventListener("click", (e) => {
+            e.stopPropagation();
+            deleteProject(proj);
+          });
+          grid.appendChild(row);
+        });
+      }
     }
+
+    grid.classList.toggle("pl-grid-mode", viewMode === "grid");
+    grid.classList.toggle("pl-list-mode", viewMode === "list");
+    viewListBtn?.classList.toggle("active", viewMode === "list");
+    viewGridBtn?.classList.toggle("active", viewMode === "grid");
+    viewListBtn?.addEventListener("click", () => setViewMode("list"));
+    viewGridBtn?.addEventListener("click", () => setViewMode("grid"));
 
     renderGrid();
     search?.addEventListener("input", renderGrid);

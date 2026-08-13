@@ -3383,8 +3383,45 @@ button.ctx-item {
   letter-spacing: 0.06em;
   text-transform: uppercase;
   color: var(--text-3, #888);
-  margin-bottom: 8px;
+  margin-bottom: 0;
   flex-shrink: 0;
+}
+.pl-section-label-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+.pl-view-toggle {
+  display: flex;
+  gap: 2px;
+  flex-shrink: 0;
+  border: 1px solid var(--border, #3a3a3a);
+  border-radius: 6px;
+  padding: 2px;
+}
+.pl-view-btn {
+  width: 24px;
+  height: 22px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: none;
+  border-radius: 4px;
+  background: transparent;
+  color: var(--text-3, #888);
+  font-size: 12px;
+  line-height: 1;
+  cursor: pointer;
+}
+.pl-view-btn:hover {
+  background: var(--surface-3, #3a3a3a);
+  color: var(--text, #e8e8e8);
+}
+.pl-view-btn.active {
+  background: var(--accent);
+  color: #fff;
 }
 .pl-search {
   width: 100%;
@@ -3498,6 +3535,71 @@ button.ctx-item {
   font-size: 13px;
   text-align: center;
   padding: 28px 0 0 0;
+}
+#pl-grid.pl-grid-mode {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+  gap: 12px;
+  max-height: 360px;
+  align-content: start;
+}
+.pl-card {
+  display: flex;
+  flex-direction: column;
+  border: 1px solid var(--border, #3a3a3a);
+  border-radius: 8px;
+  overflow: hidden;
+  cursor: pointer;
+  background: var(--surface-2, #2e2e2e);
+  transition: border-color 0.15s ease;
+}
+.pl-card:hover {
+  border-color: var(--accent);
+}
+.pl-card-thumb {
+  aspect-ratio: 4 / 3;
+  background: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+}
+.pl-card-thumb-img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+.pl-card-thumb-empty {
+  color: #999;
+  font-size: 11px;
+}
+.pl-card-body {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 8px 10px 4px;
+  min-width: 0;
+}
+.pl-card-name {
+  font-size: 13px;
+  font-weight: 500;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--text, #e8e8e8);
+}
+.pl-card-date {
+  font-size: 10px;
+  color: var(--text-3);
+}
+.pl-card-actions {
+  display: flex;
+  gap: 6px;
+  padding: 6px 10px 10px;
+}
+.pl-card-actions .pl-row-btn {
+  flex: 1;
+  text-align: center;
 }
 .pl-row {
   display: grid;
