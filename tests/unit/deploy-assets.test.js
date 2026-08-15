@@ -83,7 +83,7 @@ describe("static deploy assets", () => {
       (match) => match[1],
     );
     assert.equal(scripts[0], "js/google-tag.js");
-    assert.match(scripts[1], /^js\/app\.bundle\.js\?\d{8}$/);
+    assert.match(scripts[1], /^js\/app\.bundle\.js\?\d{12}$/);
     assert.ok(
       fs.statSync(path.join(outDir, "app/js/app.bundle.js")).size > 0,
       "generated app bundle should not be empty",
