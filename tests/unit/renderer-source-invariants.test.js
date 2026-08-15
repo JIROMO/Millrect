@@ -14,6 +14,7 @@ const interactionSource = fs.readFileSync(
   path.join(ROOT, "app/js/interaction.js"),
   "utf8",
 );
+const uiSource = fs.readFileSync(path.join(ROOT, "app/js/ui.js"), "utf8");
 
 function functionBody(source, name) {
   const start = source.indexOf(`function ${name}`);
@@ -248,6 +249,30 @@ test("complex paths use a simplified SVG hit proxy", () => {
   assert.match(
     interactionSource,
     /tool === "select" \|\| tool === "hand"[\s\S]*?\{ gridOnly: true \}/,
+  );
+});
+
+test("complex path selection renders immediately and reuses its bbox", () => {
+  const selectionBody = functionBody(rendererSource, "renderSelectionNow");
+  assert.match(selectionBody, /_replaceRenderRoot\("selection-root"/);
+  assert.doesNotMatch(selectionBody, /requestAnimationFrame|render\(\)/);
+
+  const selectionChangeBody = functionBody(
+    interactionSource,
+    "_renderSelectionChange",
+  );
+  assert.match(selectionChangeBody, /renderSelectionNow\(\)/);
+  assert.match(
+    functionBody(interactionSource, "handleSelDown"),
+    /_renderSelectionChange\(\)/,
+  );
+
+  const bboxBody = functionBody(rendererSource, "getShapeBBox");
+  assert.match(bboxBody, /shape\.type === "path"/);
+  assert.match(bboxBody, /_getCachedShapeBBox/);
+  assert.match(
+    functionBody(uiSource, "buildPropsHTML"),
+    /const bb = getShapeBBox\(s, getCurrentPage\(\)\.scale\)/,
   );
 });
 

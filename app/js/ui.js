@@ -1861,20 +1861,11 @@ function buildPropsHTML(s) {
       `<div class="prop-multi-actions"><button id="btn-text-edit">${t("props.textEdit")}</button></div>`,
     );
   } else if (s.type === "path") {
-    let minX = Infinity,
-      minY = Infinity,
-      maxX = -Infinity,
-      maxY = -Infinity;
-    for (const poly of s.contours)
-      for (const ring of poly)
-        for (const [x, y] of ring) {
-          if (x < minX) minX = x;
-          if (y < minY) minY = y;
-          if (x > maxX) maxX = x;
-          if (y > maxY) maxY = y;
-        }
-    const wMM = isFinite(minX) ? fmtNum(realToMM(maxX - minX)) : "0";
-    const hMM = isFinite(minY) ? fmtNum(realToMM(maxY - minY)) : "0";
+    // 選択枠と共有する bbox キャッシュを使い、多穴 Boolean path の全頂点を
+    // プロパティパネル生成時にもう一度走査しない。
+    const bb = getShapeBBox(s, getCurrentPage().scale);
+    const wMM = bb ? fmtNum(paperDistToMM(bb.w, getCurrentPage().scale)) : "0";
+    const hMM = bb ? fmtNum(paperDistToMM(bb.h, getCurrentPage().scale)) : "0";
     geometry.push(pRowUnit(t("props.widthMm"), "path-w", wMM, "mm"));
     geometry.push(pRowUnit(t("props.heightMm"), "path-h", hMM, "mm"));
   } else if (s.type === "bezier") {

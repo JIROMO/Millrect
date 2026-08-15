@@ -1817,6 +1817,23 @@ function liveUpdateShapes(ids, options = {}) {
   }
 }
 
+// 選択だけが変わったときは、全体 render の次フレームを待たずに選択枠だけを
+// 同期更新する。多穴 Boolean path をクリックした際の「図形は反応したのに青い枠が
+// 一拍遅れて出る」感覚をなくし、shape-root や 3D シーンには触れない。
+function renderSelectionNow() {
+  if (!_vp) return false;
+  const state = getState();
+  const page = getCurrentPage();
+  if (!state.selectedShapeIds.length) {
+    _clearRenderRoot("selection-root");
+    return true;
+  }
+  _replaceRenderRoot("selection-root", () =>
+    renderSelectionHandles(state.selectedShapeIds, page, state.zoom),
+  );
+  return true;
+}
+
 // ── ドラッグ中のライブ移動（transform のみ・DOM 非再生成）──────────
 // グループのように子の多い図形を毎フレーム renderShape で作り直すと重い
 // （renderShape(group) が全子要素を再生成する）。代わりに既存ノードへ
@@ -2427,6 +2444,11 @@ function getShapeBBox(shape, scale, ancestorGroups) {
     ancestorGroups.some((g) => hasVisualTransform(g));
 
   if (!hasTransform) {
+    if (shape.type === "path") {
+      return _getCachedShapeBBox(shape, scale, ancestorGroups, "world", () =>
+        _getShapeBBoxLegacy(shape, scale),
+      );
+    }
     return _getShapeBBoxLegacy(shape, scale);
   }
 
@@ -2634,6 +2656,11 @@ function getShapeLocalBBoxPaper(shape, scale) {
         pts.map(([x, y]) => [realToPaper(x, scale), realToPaper(y, scale)]),
       );
     });
+  }
+  if (shape.type === "path") {
+    return _getCachedShapeBBox(shape, scale, [], "local", () =>
+      _getShapeBBoxLegacy(shape, scale),
+    );
   }
   return _getShapeBBoxLegacy(shape, scale);
 }

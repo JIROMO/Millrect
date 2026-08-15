@@ -923,6 +923,11 @@ function commitMarquee(a, b) {
 }
 
 // ── Select / Resize ───────────────────────────────────────────
+function _renderSelectionChange() {
+  if (typeof renderSelectionNow === "function" && renderSelectionNow()) return;
+  render();
+}
+
 function handleSelDown(e, svgEl, pp, rp) {
   const state = getState();
   const tool = state.activeTool;
@@ -981,7 +986,7 @@ function handleSelDown(e, svgEl, pp, rp) {
         origOffsetY: res.shape.textOffsetY || 0,
       };
       svgEl.style.cursor = "move";
-      render();
+      _renderSelectionChange();
       uiUpdate();
     }
     return;
@@ -1031,7 +1036,7 @@ function handleSelDown(e, svgEl, pp, rp) {
         origPivots,
       };
       svgEl.style.cursor = ROTATE_CURSOR;
-      render();
+      _renderSelectionChange();
       uiUpdate();
       return;
     }
@@ -1047,7 +1052,7 @@ function handleSelDown(e, svgEl, pp, rp) {
       origRotation: res.shape.rotation || 0,
     };
     svgEl.style.cursor = ROTATE_CURSOR;
-    render();
+    _renderSelectionChange();
     uiUpdate();
     return;
   }
@@ -1125,7 +1130,7 @@ function handleSelDown(e, svgEl, pp, rp) {
       setTextNativeLiveTransform(sid, true);
     }
     svgEl.style.cursor = HANDLE_CURSORS[hi] || "crosshair";
-    render();
+    _renderSelectionChange();
     uiUpdate();
     return;
   }
@@ -1143,7 +1148,7 @@ function handleSelDown(e, svgEl, pp, rp) {
         else state.selectedShapeIds.splice(idx, 1);
         _ds = null;
         _resetTextClickState();
-        render();
+        _renderSelectionChange();
         uiUpdate();
         return;
       }
@@ -1163,7 +1168,7 @@ function handleSelDown(e, svgEl, pp, rp) {
         _lastPP = pp;
         _beginDuplicate([...state.selectedShapeIds]);
       }
-      render();
+      _renderSelectionChange();
       uiUpdate();
       return;
     }
@@ -1203,7 +1208,7 @@ function handleSelDown(e, svgEl, pp, rp) {
         const curIdx = allShapes.indexOf(cur);
         const nextIdx = (curIdx + 1) % allShapes.length;
         state.selectedShapeIds = [allShapes[nextIdx]];
-        render();
+        _renderSelectionChange();
         uiUpdate();
         return;
       }
@@ -1215,7 +1220,7 @@ function handleSelDown(e, svgEl, pp, rp) {
       else state.selectedShapeIds.splice(idx, 1);
       _ds = null;
       _resetTextClickState();
-      render();
+      _renderSelectionChange();
       uiUpdate();
       return;
     }
@@ -1230,7 +1235,7 @@ function handleSelDown(e, svgEl, pp, rp) {
     if (clickedShape?.type === "text") {
       _ds = { action: "move-pending", startPP: pp };
       svgEl.style.cursor = "text";
-      render();
+      _renderSelectionChange();
       uiUpdate();
       return;
     }
@@ -1249,7 +1254,7 @@ function handleSelDown(e, svgEl, pp, rp) {
     _ds = { action: "marquee", startPP: pp, startRP: rp };
     svgEl.style.cursor = "crosshair";
   }
-  render();
+  _renderSelectionChange();
   uiUpdate();
 }
 
