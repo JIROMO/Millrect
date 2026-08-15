@@ -233,6 +233,9 @@ test("complex paths use a simplified SVG hit proxy", () => {
     /"pointer-events": complexHitPath \? "none" : "all"/,
   );
   assert.match(rendererSource, /"data-hit-proxy": "simplified-path"/);
+  assert.match(rendererSource, /_simplifySnapRing\(paperRing, 0\.02\)/);
+  assert.match(rendererSource, /options\.interactive !== false/);
+  assert.match(rendererSource, /"data-complex-display-path": "true"/);
   assert.match(rendererSource, /_simplifySnapRing/);
   assert.match(
     rendererSource,
@@ -288,6 +291,11 @@ test("complex path selection renders immediately and reuses its bbox", () => {
   const bboxBody = functionBody(rendererSource, "getShapeBBox");
   assert.match(bboxBody, /shape\.type === "path"/);
   assert.match(bboxBody, /_getCachedShapeBBox/);
+  assert.ok(
+    bboxBody.indexOf('shape.type === "path"') <
+      bboxBody.indexOf("sampleShapePointsReal(shape)"),
+    "untransformed paths should consult the bbox cache before copying vertices",
+  );
   assert.match(
     functionBody(uiSource, "buildPropsHTML"),
     /const bb = getShapeBBox\(s, getCurrentPage\(\)\.scale\)/,
@@ -307,6 +315,15 @@ test("geometry hit testing includes the visible stroke width", () => {
   assert.match(
     functionBody(interactionSource, "realPointInShapeGeometry"),
     /_pickTolReal\(scale, shape\)/,
+  );
+  const hitBody = functionBody(
+    interactionSource,
+    "realPointInShapeGeometry",
+  );
+  assert.ok(
+    hitBody.indexOf("realPointInPaperBBox") <
+      hitBody.indexOf("_worldOutlineForShape"),
+    "hit testing should reject by bbox before walking path vertices",
   );
 });
 

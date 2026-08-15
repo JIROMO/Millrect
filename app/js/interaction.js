@@ -2423,7 +2423,9 @@ function _shapeLocalRings(shape) {
     case "path": {
       const rings = [];
       for (const poly of shape.contours || []) {
-        for (const ring of poly) rings.push(ring.map(([x, y]) => [x, y]));
+        // Hit testing is read-only. Reuse the stored rings instead of cloning
+        // every Boolean vertex on each click.
+        for (const ring of poly) rings.push(ring);
       }
       return rings.length ? { rings, closed: true } : null;
     }
@@ -2435,6 +2437,9 @@ function _shapeLocalRings(shape) {
 function _worldOutlineForShape(shape, ancestorGroups) {
   const local = _shapeLocalRings(shape);
   if (!local) return null;
+  const needsTransform =
+    hasVisualTransform(shape) || ancestorGroups.some(hasVisualTransform);
+  if (!needsTransform) return local;
   const rings = local.rings.map((r) =>
     r.map(([x, y]) => applyWorldTransformReal(x, y, shape, ancestorGroups)),
   );
@@ -2449,11 +2454,12 @@ function realPointInShapeGeometry(rp, shape, scale, ancestorGroups = []) {
     // 内側をつかんでも選択・移動できるよう bbox にフォールバックする
     return true;
   }
+  // 複合 path の輪郭走査より先に、キャッシュ済み bbox で大半の候補を落とす。
+  // 離れた減算済み部品がページ上に何個あっても、その全頂点を調べない。
+  const bb = getShapeBBox(shape, scale, ancestorGroups);
+  if (!bb || !realPointInPaperBBox(rp, bb, scale)) return false;
   const outline = _worldOutlineForShape(shape, ancestorGroups);
-  if (!outline) {
-    const bb = getShapeBBox(shape, scale);
-    return Boolean(bb && realPointInPaperBBox(rp, bb, scale));
-  }
+  if (!outline) return true;
   const areaType =
     shape.type === "text" ||
     shape.type === "image" ||

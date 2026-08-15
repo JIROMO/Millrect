@@ -1895,7 +1895,7 @@ function clearLiveDragTransforms() {
 // 移動がカクつく。操作中だけ既存の軽量 hit proxy を同じ色で表示し、確定時に
 // 正確な path へ戻す。ドキュメントの輪郭データには触れない。
 function _setComplexPathLivePreview(node, active) {
-  const exact = node?.querySelector?.('[data-exact-complex-path="true"]');
+  const exact = node?.querySelector?.('[data-complex-display-path="true"]');
   const proxy = node?.querySelector?.('[data-hit-proxy="simplified-path"]');
   if (!exact || !proxy) return false;
   if (active) {
@@ -2242,19 +2242,36 @@ function renderShape(shape, scale, selIds, options = {}) {
       }),
     );
   } else if (shape.type === "path") {
-    let d = "";
     let vertexCount = 0;
     for (const polygon of shape.contours) {
       for (const ring of polygon) {
         if (!ring.length) continue;
         vertexCount += ring.length;
-        d += `M ${ring.map(([x, y]) => `${realToPaper(x, scale)},${realToPaper(y, scale)}`).join(" L ")} Z `;
       }
     }
     // 円を 1 個くり抜くだけでも polygon-clipping の結果は約 130 頂点になる。
     // 512 頂点まで正確な SVG hit-test を使うと、最も一般的な減算直後から
     // pointermove / click が重くなるため、通常の Boolean 円弧も軽量プロキシへ回す。
     const complexHitPath = options.interactive !== false && vertexCount > 96;
+    let d = "";
+    for (const polygon of shape.contours) {
+      for (const ring of polygon) {
+        if (!ring.length) continue;
+        const paperRing = ring.map(([x, y]) => [
+          realToPaper(x, scale),
+          realToPaper(y, scale),
+        ]);
+        // 保存・演算用 contours は一切変更しない。インタラクティブ表示だけを
+        // 紙面 0.02mm 以内で簡略化し、既に減算済みの100穴 pathでも Chromiumが
+        // ラスタライズする頂点数を大幅に減らす。export は interactive:false のため
+        // 常に元の全頂点を使う。
+        const displayRing =
+          complexHitPath && typeof _simplifySnapRing === "function"
+            ? _simplifySnapRing(paperRing, 0.02)
+            : paperRing;
+        d += `M ${displayRing.map(([x, y]) => `${x},${y}`).join(" L ")} Z `;
+      }
+    }
     g.appendChild(
       se("path", {
         d: d.trim(),
@@ -2262,7 +2279,7 @@ function renderShape(shape, scale, selIds, options = {}) {
         "stroke-width": sw,
         fill,
         "fill-rule": shape.fillRule || "evenodd",
-        ...(complexHitPath ? { "data-exact-complex-path": "true" } : {}),
+        ...(complexHitPath ? { "data-complex-display-path": "true" } : {}),
         // 巨大な Boolean path を直接 hit-test させると、Chromium が
         // mousemove ごとに全輪郭の point-in-path を評価してしまう。
         "pointer-events": complexHitPath ? "none" : "all",
@@ -2446,19 +2463,24 @@ function getShapeBBox(shape, scale, ancestorGroups) {
     });
   }
 
-  const sample = sampleShapePointsReal(shape);
-  if (!sample.length) return _getShapeBBoxLegacy(shape, scale);
-
   const hasTransform =
     hasVisualTransform(shape) ||
     ancestorGroups.some((g) => hasVisualTransform(g));
 
+  // Boolean path は数万頂点になる。sampleShapePointsReal() は全頂点を新しい
+  // 配列へ複製するため、キャッシュを見る前に呼ぶと選択・プロパティ更新のたびに
+  // O(頂点数) の走査と確保が発生してしまう。変換なし path は先にキャッシュへ
+  // 到達させ、2回目以降を本当に O(1) にする。
+  if (!hasTransform && shape.type === "path") {
+    return _getCachedShapeBBox(shape, scale, ancestorGroups, "world", () =>
+      _getShapeBBoxLegacy(shape, scale),
+    );
+  }
+
+  const sample = sampleShapePointsReal(shape);
+  if (!sample.length) return _getShapeBBoxLegacy(shape, scale);
+
   if (!hasTransform) {
-    if (shape.type === "path") {
-      return _getCachedShapeBBox(shape, scale, ancestorGroups, "world", () =>
-        _getShapeBBoxLegacy(shape, scale),
-      );
-    }
     return _getShapeBBoxLegacy(shape, scale);
   }
 
