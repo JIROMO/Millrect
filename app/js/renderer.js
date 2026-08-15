@@ -2224,7 +2224,10 @@ function renderShape(shape, scale, selIds, options = {}) {
         d += `M ${ring.map(([x, y]) => `${realToPaper(x, scale)},${realToPaper(y, scale)}`).join(" L ")} Z `;
       }
     }
-    const complexHitPath = options.interactive !== false && vertexCount > 512;
+    // 円を 1 個くり抜くだけでも polygon-clipping の結果は約 130 頂点になる。
+    // 512 頂点まで正確な SVG hit-test を使うと、最も一般的な減算直後から
+    // pointermove / click が重くなるため、通常の Boolean 円弧も軽量プロキシへ回す。
+    const complexHitPath = options.interactive !== false && vertexCount > 96;
     g.appendChild(
       se("path", {
         d: d.trim(),
@@ -2260,7 +2263,10 @@ function renderShape(shape, scale, selIds, options = {}) {
           stroke: "transparent",
           "stroke-width": Math.max(sw, 1),
           "fill-rule": shape.fillRule || "evenodd",
-          "pointer-events": "all",
+          // 塗り無しの path に "all" を使うと透明な内部までヒットしてしまい、
+          // interaction.js が正確な全輪郭を再走査する必要が生じる。線だけなら
+          // 簡略化した stroke 自体を当たり判定に使える。
+          "pointer-events": fill === "none" ? "stroke" : "all",
           "data-hit-proxy": "simplified-path",
           "data-preview-fill": fill,
           "data-preview-stroke": stroke,

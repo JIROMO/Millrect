@@ -216,7 +216,7 @@ test("keypoint snapping caches drag candidates and skips tiny recalculations", (
 test("complex paths use a simplified SVG hit proxy", () => {
   assert.match(
     rendererSource,
-    /const complexHitPath = options\.interactive !== false && vertexCount > 512/,
+    /const complexHitPath = options\.interactive !== false && vertexCount > 96/,
   );
   assert.match(
     rendererSource,
@@ -224,6 +224,14 @@ test("complex paths use a simplified SVG hit proxy", () => {
   );
   assert.match(rendererSource, /"data-hit-proxy": "simplified-path"/);
   assert.match(rendererSource, /_simplifySnapRing/);
+  assert.match(
+    rendererSource,
+    /"pointer-events": fill === "none" \? "stroke" : "all"/,
+  );
+  assert.match(
+    interactionSource,
+    /if \(proxyHit && !e\.ctrlKey\)/,
+  );
   assert.match(rendererSource, /function _setComplexPathLivePreview/);
   assert.match(rendererSource, /function liveResizePathByTransform/);
   assert.match(rendererSource, /function clearLiveResizeTransforms/);

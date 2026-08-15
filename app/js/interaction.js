@@ -1173,11 +1173,7 @@ function handleSelDown(e, svgEl, pp, rp) {
   // 軽量輪郭で済ませた結果。その結果を信頼し、正確な全頂点を JS で再走査しない。
   let picked = null;
   const proxyHit = e.target.closest?.('[data-hit-proxy="simplified-path"]');
-  if (
-    proxyHit &&
-    proxyHit.getAttribute("data-preview-fill") !== "none" &&
-    !e.ctrlKey
-  ) {
+  if (proxyHit && !e.ctrlKey) {
     const domId = svgClosest(proxyHit, "[data-id]")?.getAttribute("data-id");
     const topId = domId ? resolveToTopLevelId(domId) : null;
     const domRes = topId ? findShapeById(topId) : null;
