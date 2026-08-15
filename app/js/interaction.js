@@ -1190,6 +1190,17 @@ function handleSelDown(e, svgEl, pp, rp) {
   // 複雑な Boolean path の透明 hit proxy は、穴を含む evenodd 判定を Chromium が
   // 軽量輪郭で済ませた結果。その結果を信頼し、正確な全頂点を JS で再走査しない。
   let picked = null;
+  const hitExcludeIds = new Set();
+  const bboxMiss = e.target.closest?.(
+    '[data-hit-proxy="path-bbox-miss"]',
+  );
+  if (bboxMiss && !e.ctrlKey) {
+    const domId = svgClosest(bboxMiss, "[data-id]")?.getAttribute("data-id");
+    const topId = domId ? resolveToTopLevelId(domId) : null;
+    // グループ子の空白は従来どおりグループ全体の bbox で選択する。
+    // トップレベル path の空白だけを、既知の miss として候補から除外する。
+    if (topId && domId === topId) hitExcludeIds.add(topId);
+  }
   const proxyHit = e.target.closest?.('[data-hit-proxy="simplified-path"]');
   if (proxyHit && !e.ctrlKey) {
     const domId = svgClosest(proxyHit, "[data-id]")?.getAttribute("data-id");
@@ -1199,7 +1210,7 @@ function handleSelDown(e, svgEl, pp, rp) {
       picked = domRes.shape;
     }
   }
-  if (!picked) picked = findTopShapeAtRealPoint(rp);
+  if (!picked) picked = findTopShapeAtRealPoint(rp, hitExcludeIds);
   if (picked) {
     const id = picked.id;
 
@@ -2470,7 +2481,7 @@ function realPointInShapeGeometry(rp, shape, scale, ancestorGroups = []) {
   return _nearAnyRing(rp.x, rp.y, outline.rings, tol, outline.closed);
 }
 
-function findTopShapeAtRealPoint(rp) {
+function findTopShapeAtRealPoint(rp, excludeIds = null) {
   const page = getCurrentPage();
   const scale = page.scale;
 
@@ -2480,6 +2491,7 @@ function findTopShapeAtRealPoint(rp) {
     for (let si = layer.shapes.length - 1; si >= 0; si--) {
       const s = layer.shapes[si];
       if (s.locked) continue;
+      if (excludeIds?.has(s.id)) continue;
       if (realPointInShapeGeometry(rp, s, scale)) return s;
     }
   }

@@ -2254,6 +2254,10 @@ function renderShape(shape, scale, selIds, options = {}) {
     // pointermove / click が重くなるため、通常の Boolean 円弧も軽量プロキシへ回す。
     const complexHitPath = options.interactive !== false && vertexCount > 96;
     let d = "";
+    let hitBoxMinX = Infinity,
+      hitBoxMinY = Infinity,
+      hitBoxMaxX = -Infinity,
+      hitBoxMaxY = -Infinity;
     for (const polygon of shape.contours) {
       for (const ring of polygon) {
         if (!ring.length) continue;
@@ -2269,8 +2273,31 @@ function renderShape(shape, scale, selIds, options = {}) {
           complexHitPath && typeof _simplifySnapRing === "function"
             ? _simplifySnapRing(paperRing, 0.02)
             : paperRing;
+        for (const [x, y] of displayRing) {
+          if (x < hitBoxMinX) hitBoxMinX = x;
+          if (y < hitBoxMinY) hitBoxMinY = y;
+          if (x > hitBoxMaxX) hitBoxMaxX = x;
+          if (y > hitBoxMaxY) hitBoxMaxY = y;
+        }
         d += `M ${displayRing.map(([x, y]) => `${x},${y}`).join(" L ")} Z `;
       }
+    }
+    if (complexHitPath && isFinite(hitBoxMinX)) {
+      // 軽量輪郭に当たらなかった bbox 内のクリックを明示的な miss として拾う。
+      // interaction.js はこの path を候補から除外できるため、選択解除時に
+      // 100穴ぶんの元輪郭を JS で再走査しなくてよい。
+      g.appendChild(
+        se("rect", {
+          x: hitBoxMinX,
+          y: hitBoxMinY,
+          width: hitBoxMaxX - hitBoxMinX,
+          height: hitBoxMaxY - hitBoxMinY,
+          fill: "transparent",
+          stroke: "none",
+          "pointer-events": "all",
+          "data-hit-proxy": "path-bbox-miss",
+        }),
+      );
     }
     g.appendChild(
       se("path", {
