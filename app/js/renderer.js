@@ -459,6 +459,16 @@ function _syncRenderRoots() {
   const roots = Object.fromEntries(
     RENDER_ROOT_ORDER.map((id) => [id, _ensureRenderRoot(id)]),
   );
+  const orderedRoots = RENDER_ROOT_ORDER.map((id) => roots[id]);
+  const currentChildren = Array.from(_vp.children);
+  // 通常の描画後はルート順が既に正しい。ここで既存ノードへ insertBefore を
+  // 繰り返すと、選択枠だけの更新でも巨大な shape-root（100穴 Boolean path 等）を
+  // DOM 上で抜き差しし、Chromium が全輪郭を再ラスタライズしてしまう。
+  if (
+    orderedRoots.every((root, index) => currentChildren[index] === root)
+  ) {
+    return roots;
+  }
   const rootSet = new Set(Object.values(roots));
   const firstTransient = Array.from(_vp.children).find(
     (node) => !rootSet.has(node),

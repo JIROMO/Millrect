@@ -928,6 +928,19 @@ function _renderSelectionChange() {
   render();
 }
 
+let _selectionUiFrame = 0;
+function _updateSelectionUiAfterPaint() {
+  if (_selectionUiFrame) return;
+  // 1つ目の rAF では何も重い処理をせず、同期更新済みの選択枠を先に paint させる。
+  // プロパティ／レイヤーパネルの再構築は次フレームへ送り、初動を塞がない。
+  _selectionUiFrame = requestAnimationFrame(() => {
+    _selectionUiFrame = requestAnimationFrame(() => {
+      _selectionUiFrame = 0;
+      uiUpdate();
+    });
+  });
+}
+
 function handleSelDown(e, svgEl, pp, rp) {
   const state = getState();
   const tool = state.activeTool;
@@ -987,7 +1000,7 @@ function handleSelDown(e, svgEl, pp, rp) {
       };
       svgEl.style.cursor = "move";
       _renderSelectionChange();
-      uiUpdate();
+      _updateSelectionUiAfterPaint();
     }
     return;
   }
@@ -1037,7 +1050,7 @@ function handleSelDown(e, svgEl, pp, rp) {
       };
       svgEl.style.cursor = ROTATE_CURSOR;
       _renderSelectionChange();
-      uiUpdate();
+      _updateSelectionUiAfterPaint();
       return;
     }
     const res = findShapeById(sid);
@@ -1053,7 +1066,7 @@ function handleSelDown(e, svgEl, pp, rp) {
     };
     svgEl.style.cursor = ROTATE_CURSOR;
     _renderSelectionChange();
-    uiUpdate();
+    _updateSelectionUiAfterPaint();
     return;
   }
 
@@ -1131,7 +1144,7 @@ function handleSelDown(e, svgEl, pp, rp) {
     }
     svgEl.style.cursor = HANDLE_CURSORS[hi] || "crosshair";
     _renderSelectionChange();
-    uiUpdate();
+    _updateSelectionUiAfterPaint();
     return;
   }
 
@@ -1149,7 +1162,7 @@ function handleSelDown(e, svgEl, pp, rp) {
         _ds = null;
         _resetTextClickState();
         _renderSelectionChange();
-        uiUpdate();
+        _updateSelectionUiAfterPaint();
         return;
       }
       _resetTextClickState();
@@ -1169,7 +1182,7 @@ function handleSelDown(e, svgEl, pp, rp) {
         _beginDuplicate([...state.selectedShapeIds]);
       }
       _renderSelectionChange();
-      uiUpdate();
+      _updateSelectionUiAfterPaint();
       return;
     }
   }
@@ -1209,7 +1222,7 @@ function handleSelDown(e, svgEl, pp, rp) {
         const nextIdx = (curIdx + 1) % allShapes.length;
         state.selectedShapeIds = [allShapes[nextIdx]];
         _renderSelectionChange();
-        uiUpdate();
+        _updateSelectionUiAfterPaint();
         return;
       }
     }
@@ -1221,7 +1234,7 @@ function handleSelDown(e, svgEl, pp, rp) {
       _ds = null;
       _resetTextClickState();
       _renderSelectionChange();
-      uiUpdate();
+      _updateSelectionUiAfterPaint();
       return;
     }
     const clickedShape = picked;
@@ -1236,7 +1249,7 @@ function handleSelDown(e, svgEl, pp, rp) {
       _ds = { action: "move-pending", startPP: pp };
       svgEl.style.cursor = "text";
       _renderSelectionChange();
-      uiUpdate();
+      _updateSelectionUiAfterPaint();
       return;
     }
     _ds = { action: "move", startPP: pp };
@@ -1255,7 +1268,7 @@ function handleSelDown(e, svgEl, pp, rp) {
     svgEl.style.cursor = "crosshair";
   }
   _renderSelectionChange();
-  uiUpdate();
+  _updateSelectionUiAfterPaint();
 }
 
 function _computeBboxAfterResize(o, hi, dx, dy, shiftKey, ratio) {

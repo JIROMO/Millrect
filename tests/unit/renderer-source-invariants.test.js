@@ -71,6 +71,15 @@ test("transient canvas overlays live in dedicated render roots", () => {
   );
 });
 
+test("selection-only updates do not reinsert an already ordered shape root", () => {
+  const body = functionBody(rendererSource, "_syncRenderRoots");
+  assert.match(body, /const currentChildren = Array\.from\(_vp\.children\)/);
+  assert.match(
+    body,
+    /currentChildren\[index\] === root[\s\S]*?return roots/,
+  );
+});
+
 test("selection move updates handles without drawing snap residue", () => {
   const liveUpdateBody = functionBody(rendererSource, "liveUpdateShapes");
   assert.match(
@@ -265,6 +274,15 @@ test("complex path selection renders immediately and reuses its bbox", () => {
   assert.match(
     functionBody(interactionSource, "handleSelDown"),
     /_renderSelectionChange\(\)/,
+  );
+  const deferredUiBody = functionBody(
+    interactionSource,
+    "_updateSelectionUiAfterPaint",
+  );
+  assert.match(deferredUiBody, /requestAnimationFrame/);
+  assert.match(
+    functionBody(interactionSource, "handleSelDown"),
+    /_updateSelectionUiAfterPaint\(\)/,
   );
 
   const bboxBody = functionBody(rendererSource, "getShapeBBox");
