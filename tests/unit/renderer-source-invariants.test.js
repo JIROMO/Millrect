@@ -233,7 +233,8 @@ test("complex paths use a simplified SVG hit proxy", () => {
     /"pointer-events": complexHitPath \? "none" : "all"/,
   );
   assert.match(rendererSource, /"data-hit-proxy": "simplified-path"/);
-  assert.match(rendererSource, /"data-hit-proxy": "path-bbox-miss"/);
+  assert.match(rendererSource, /const COMPLEX_PATH_HIT_STROKE_PX = 12/);
+  assert.match(rendererSource, /"vector-effect": "non-scaling-stroke"/);
   assert.match(rendererSource, /_simplifySnapRing\(paperRing, 0\.02\)/);
   assert.match(rendererSource, /options\.interactive !== false/);
   assert.match(rendererSource, /"data-complex-display-path": "true"/);
@@ -252,13 +253,11 @@ test("complex paths use a simplified SVG hit proxy", () => {
   assert.match(interactionSource, /_ds\.pathResizeFast =/);
   assert.match(interactionSource, /if \(_ds\.pathResizeFast\)/);
   assert.match(interactionSource, /const proxyHit = e\.target\.closest/);
-  assert.match(interactionSource, /const hitExcludeIds = new Set\(\)/);
-  assert.match(interactionSource, /findTopShapeAtRealPoint\(rp, hitExcludeIds\)/);
+  assert.match(interactionSource, /const domShapeHit = svgClosest/);
   assert.match(
-    functionBody(interactionSource, "findTopShapeAtRealPoint"),
-    /excludeIds\?\.has\(s\.id\)/,
+    interactionSource,
+    /if \(!picked && \(domShapeHit \|\| e\.ctrlKey\)\)/,
   );
-  assert.match(interactionSource, /if \(!picked\) picked = findTopShapeAtRealPoint/);
   assert.match(interactionSource, /function _captureSelectionMoveOrigins/);
   assert.match(
     interactionSource,

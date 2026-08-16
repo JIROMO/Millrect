@@ -434,6 +434,7 @@ let _svg = null,
 
 const VIEWPORT_CULL_SHAPE_THRESHOLD = 250;
 const VIEWPORT_CULL_OVERSCAN = 1.5;
+const COMPLEX_PATH_HIT_STROKE_PX = 12;
 
 const RENDER_ROOT_ORDER = [
   "paper-root",
@@ -1900,6 +1901,7 @@ function _setComplexPathLivePreview(node, active) {
   if (!exact || !proxy) return false;
   if (active) {
     exact.setAttribute("visibility", "hidden");
+    proxy.setAttribute("vector-effect", "none");
     proxy.setAttribute("fill", proxy.getAttribute("data-preview-fill") || "none");
     proxy.setAttribute(
       "stroke",
@@ -1911,9 +1913,10 @@ function _setComplexPathLivePreview(node, active) {
     );
   } else {
     exact.removeAttribute("visibility");
+    proxy.setAttribute("vector-effect", "non-scaling-stroke");
     proxy.setAttribute("fill", "transparent");
     proxy.setAttribute("stroke", "transparent");
-    proxy.setAttribute("stroke-width", "1");
+    proxy.setAttribute("stroke-width", String(COMPLEX_PATH_HIT_STROKE_PX));
   }
   return true;
 }
@@ -2254,10 +2257,6 @@ function renderShape(shape, scale, selIds, options = {}) {
     // pointermove / click が重くなるため、通常の Boolean 円弧も軽量プロキシへ回す。
     const complexHitPath = options.interactive !== false && vertexCount > 96;
     let d = "";
-    let hitBoxMinX = Infinity,
-      hitBoxMinY = Infinity,
-      hitBoxMaxX = -Infinity,
-      hitBoxMaxY = -Infinity;
     for (const polygon of shape.contours) {
       for (const ring of polygon) {
         if (!ring.length) continue;
@@ -2273,31 +2272,8 @@ function renderShape(shape, scale, selIds, options = {}) {
           complexHitPath && typeof _simplifySnapRing === "function"
             ? _simplifySnapRing(paperRing, 0.02)
             : paperRing;
-        for (const [x, y] of displayRing) {
-          if (x < hitBoxMinX) hitBoxMinX = x;
-          if (y < hitBoxMinY) hitBoxMinY = y;
-          if (x > hitBoxMaxX) hitBoxMaxX = x;
-          if (y > hitBoxMaxY) hitBoxMaxY = y;
-        }
         d += `M ${displayRing.map(([x, y]) => `${x},${y}`).join(" L ")} Z `;
       }
-    }
-    if (complexHitPath && isFinite(hitBoxMinX)) {
-      // 軽量輪郭に当たらなかった bbox 内のクリックを明示的な miss として拾う。
-      // interaction.js はこの path を候補から除外できるため、選択解除時に
-      // 100穴ぶんの元輪郭を JS で再走査しなくてよい。
-      g.appendChild(
-        se("rect", {
-          x: hitBoxMinX,
-          y: hitBoxMinY,
-          width: hitBoxMaxX - hitBoxMinX,
-          height: hitBoxMaxY - hitBoxMinY,
-          fill: "transparent",
-          stroke: "none",
-          "pointer-events": "all",
-          "data-hit-proxy": "path-bbox-miss",
-        }),
-      );
     }
     g.appendChild(
       se("path", {
@@ -2332,7 +2308,8 @@ function renderShape(shape, scale, selIds, options = {}) {
           d: hitD.trim(),
           fill: "transparent",
           stroke: "transparent",
-          "stroke-width": Math.max(sw, 1),
+          "stroke-width": COMPLEX_PATH_HIT_STROKE_PX,
+          "vector-effect": "non-scaling-stroke",
           "fill-rule": shape.fillRule || "evenodd",
           // 塗り無しの path に "all" を使うと透明な内部までヒットしてしまい、
           // interaction.js が正確な全輪郭を再走査する必要が生じる。線だけなら
