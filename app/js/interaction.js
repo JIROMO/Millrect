@@ -257,6 +257,10 @@ function onMouseDown(e, svgEl) {
       : {};
   const { pt: pp } = getSnapped(sv.x, sv.y, anchorSnap);
   const rp = paperToReal(pp.x, pp.y);
+  const editRP =
+    state.oneMmMode && !["select", "hand"].includes(tool)
+      ? quantizeRealPointForUnitMode(rp, state)
+      : rp;
   if (
     typeof handleReferenceScaleAnchorClick === "function" &&
     handleReferenceScaleAnchorClick(rp)
@@ -303,14 +307,14 @@ function onMouseDown(e, svgEl) {
       origPanY: state.panY,
     };
     svgEl.style.cursor = "grabbing";
-  } else if (tool === "line") _ds = { tool, sp: pp, sr: rp };
-  else if (tool === "rect") _ds = { tool, sp: pp, sr: rp };
-  else if (tool === "circle") _ds = { tool, sp: pp, sr: rp };
-  else if (tool === "text") handleTextToolDown(e, rp);
-  else if (tool === "dimension") handleDimDown(pp, rp);
-  else if (tool === "measure") handleMeasureDown(rp);
+  } else if (tool === "line") _ds = { tool, sp: pp, sr: editRP };
+  else if (tool === "rect") _ds = { tool, sp: pp, sr: editRP };
+  else if (tool === "circle") _ds = { tool, sp: pp, sr: editRP };
+  else if (tool === "text") handleTextToolDown(e, editRP);
+  else if (tool === "dimension") handleDimDown(pp, editRP);
+  else if (tool === "measure") handleMeasureDown(editRP);
   else if (tool === "bezier") {
-    handleBezierDown(rp, pp, e.shiftKey, e.altKey);
+    handleBezierDown(editRP, pp, e.shiftKey, e.altKey);
   } else if (tool === "pencil") {
     handlePencilDown(e, svgEl);
   }
@@ -383,7 +387,15 @@ function onMouseMove(e, svgEl) {
   const snapOpts = isSelectionMove ? { gridOnly: true } : _getSelectSnapOpts();
   const { pt: pp, snapped, snapType } = getSnapped(sv.x, sv.y, snapOpts);
   _lastPP = pp;
-  const rp = paperToReal(pp.x, pp.y);
+  let rp = paperToReal(pp.x, pp.y);
+  const coordinateEdit =
+    state.oneMmMode &&
+    (["line", "rect", "circle", "text", "dimension", "measure", "bezier"].includes(
+      tool,
+    ) ||
+      ["resize", "multi-resize", "vertex"].includes(_ds?.action) ||
+      !!_bezierEditId);
+  if (coordinateEdit) rp = quantizeRealPointForUnitMode(rp, state);
   updateStatusCoords(rp);
   if (!isSelectionMove) {
     snapped
@@ -557,7 +569,13 @@ function onMouseUp(e, svgEl) {
   const releaseSnap =
     tool === "select" || tool === "hand" ? { gridOnly: true } : {};
   const { pt: pp } = getSnapped(sv.x, sv.y, releaseSnap);
-  const rp = paperToReal(pp.x, pp.y);
+  let rp = paperToReal(pp.x, pp.y);
+  if (
+    getState().oneMmMode &&
+    !["select", "hand", "pencil"].includes(tool)
+  ) {
+    rp = quantizeRealPointForUnitMode(rp);
+  }
   if ((tool === "select" || tool === "hand") && _ds?.action === "pan") {
     _ds = null;
     svgEl.style.cursor = tool === "hand" ? "grab" : "default";
@@ -1399,6 +1417,30 @@ function _resizeRoundShape(origShape, shape, hi, dx, dy, shiftKey) {
   }
 }
 
+function _quantizePrimitiveGeometryForUnitMode(shape) {
+  const state = getState();
+  if (!state.oneMmMode || !shape) return shape;
+  const q = (value) => quantizeRealForUnitMode(value, state);
+  const fieldsByType = {
+    line: ["x1", "y1", "x2", "y2"],
+    rect: ["x", "y", "width", "height"],
+    image: ["x", "y", "width", "height"],
+    circle: ["cx", "cy", "r"],
+    ellipse: ["cx", "cy", "rx", "ry"],
+    text: ["x", "y", "width"],
+    rawpath: ["x", "y", "bx", "by"],
+  };
+  for (const key of fieldsByType[shape.type] || []) {
+    if (typeof shape[key] === "number") shape[key] = q(shape[key]);
+  }
+  if (shape.type === "dimension") {
+    if (shape.from) shape.from = quantizeRealPointForUnitMode(shape.from, state);
+    if (shape.to) shape.to = quantizeRealPointForUnitMode(shape.to, state);
+    if (typeof shape.offset === "number") shape.offset = q(shape.offset);
+  }
+  return shape;
+}
+
 function handleMultiResize(rp, shiftKey) {
   if (!_ds || _ds.action !== "multi-resize") return;
   const { hi, startRP, origShapes, origBB } = _ds;
@@ -1482,6 +1524,7 @@ function handleMultiResize(rp, shiftKey) {
         delete shape.r;
       }
     }
+    _quantizePrimitiveGeometryForUnitMode(shape);
   }
   render();
 }
@@ -1931,6 +1974,7 @@ function handleResize(rp, shiftKey) {
     }
   }
 
+  _quantizePrimitiveGeometryForUnitMode(shape);
   liveUpdateShapes([shapeId]);
   _updatePathSizeDisplay(shape);
 }
@@ -1986,6 +2030,28 @@ function handleSelMove(pp, shiftKey) {
   if (kp) {
     dxR = kp.dxR;
     dyR = kp.dyR;
+  }
+  if (state.oneMmMode) {
+    if (!_ds.oneMmMoveAnchor) {
+      const first = state.selectedShapeIds[0]
+        ? findShapeById(state.selectedShapeIds[0])
+        : null;
+      _ds.oneMmMoveAnchor = first?.shape
+        ? shapeBBoxMM(first.shape, page.scale)
+        : null;
+    }
+    const quantized = quantizeMoveDeltaForUnitMode(
+      dxR,
+      dyR,
+      _ds.oneMmMoveAnchor,
+      state,
+    );
+    dxR = quantized.dxReal;
+    dyR = quantized.dyReal;
+    if (shiftKey) {
+      if (Math.abs(dxR) >= Math.abs(dyR)) dyR = 0;
+      else dxR = 0;
+    }
   }
   // mouseup で複製オフセットとして記録するため保持
   _ds.lastDxR = dxR;
@@ -2926,7 +2992,8 @@ function applyAngleSnap(sr, er) {
 
 function buildPreview(tool, sr, er, shiftKey) {
   if (tool === "line") {
-    const ep = shiftKey ? applyAngleSnap(sr, er) : er;
+    let ep = shiftKey ? applyAngleSnap(sr, er) : er;
+    ep = quantizeRealPointForUnitMode(ep);
     return {
       id: "__p__",
       type: "line",
@@ -2962,17 +3029,21 @@ function buildPreview(tool, sr, er, shiftKey) {
         type: "circle",
         cx: sr.x,
         cy: sr.y,
-        r: Math.hypot(er.x - sr.x, er.y - sr.y),
+        r: quantizeRealForUnitMode(Math.hypot(er.x - sr.x, er.y - sr.y)),
         strokeWidth: "medium",
       };
     }
-    const rx = Math.abs(er.x - sr.x) / 2;
-    const ry = Math.abs(er.y - sr.y) / 2;
+    const rx = quantizeRealForUnitMode(Math.abs(er.x - sr.x) / 2);
+    const ry = quantizeRealForUnitMode(Math.abs(er.y - sr.y) / 2);
+    const center = quantizeRealPointForUnitMode({
+      x: (sr.x + er.x) / 2,
+      y: (sr.y + er.y) / 2,
+    });
     return {
       id: "__p__",
       type: "ellipse",
-      cx: (sr.x + er.x) / 2,
-      cy: (sr.y + er.y) / 2,
+      cx: center.x,
+      cy: center.y,
       rx,
       ry,
       strokeWidth: "medium",
@@ -2985,7 +3056,8 @@ function commitShape(tool, sr, er, shiftKey) {
   const style = _drawStyle();
   let newId = null;
   if (tool === "line") {
-    const ep = shiftKey ? applyAngleSnap(sr, er) : er;
+    let ep = shiftKey ? applyAngleSnap(sr, er) : er;
+    ep = quantizeRealPointForUnitMode(ep);
     if (Math.hypot(ep.x - sr.x, ep.y - sr.y) < MIN) return;
     newId = genId("line");
     addShape({
@@ -3024,7 +3096,9 @@ function commitShape(tool, sr, er, shiftKey) {
     });
   } else if (tool === "circle") {
     if (shiftKey) {
-      const r = Math.hypot(er.x - sr.x, er.y - sr.y);
+      const r = quantizeRealForUnitMode(
+        Math.hypot(er.x - sr.x, er.y - sr.y),
+      );
       if (r < MIN) return;
       newId = genId("circle");
       addShape({
@@ -3038,15 +3112,19 @@ function commitShape(tool, sr, er, shiftKey) {
         strokeWidth: "medium",
       });
     } else {
-      const rx = Math.abs(er.x - sr.x) / 2;
-      const ry = Math.abs(er.y - sr.y) / 2;
+      const rx = quantizeRealForUnitMode(Math.abs(er.x - sr.x) / 2);
+      const ry = quantizeRealForUnitMode(Math.abs(er.y - sr.y) / 2);
+      const center = quantizeRealPointForUnitMode({
+        x: (sr.x + er.x) / 2,
+        y: (sr.y + er.y) / 2,
+      });
       if (rx < MIN || ry < MIN) return;
       newId = genId("ellipse");
       addShape({
         id: newId,
         type: "ellipse",
-        cx: (sr.x + er.x) / 2,
-        cy: (sr.y + er.y) / 2,
+        cx: center.x,
+        cy: center.y,
         rx,
         ry,
         stroke: style.stroke,
@@ -3078,6 +3156,8 @@ function showSizePopover(tool, rp, clientX, clientY) {
     font-family: "Gen Interface JP", system-ui, sans-serif; font-size: 13px; color: #222;
   `;
 
+  const mmStep = getState().oneMmMode ? 1 : 0.1;
+  const origin = quantizeRealPointForUnitMode(rp);
   let fields = "";
   const titleKey = {
     rect: "sizePopover.title.rect",
@@ -3089,13 +3169,13 @@ function showSizePopover(tool, rp, clientX, clientY) {
     fields = `
       <label style="display:block;margin-bottom:8px">
         ${t("sizePopover.width")}<br>
-        <input id="mr-sp-w" type="number" value="100" min="0.1" step="0.1"
+        <input id="mr-sp-w" type="number" value="100" min="0.1" step="${mmStep}"
           style="width:100%;box-sizing:border-box;padding:4px 6px;margin-top:3px;border:1px solid #bbb;border-radius:4px;outline:none;transition:border-color 0.15s"
           onfocus="this.style.borderColor='#4a6cf7'" onblur="this.style.borderColor='#bbb'">
       </label>
       <label style="display:block;margin-bottom:12px">
         ${t("sizePopover.height")}<br>
-        <input id="mr-sp-h" type="number" value="60" min="0.1" step="0.1"
+        <input id="mr-sp-h" type="number" value="60" min="0.1" step="${mmStep}"
           style="width:100%;box-sizing:border-box;padding:4px 6px;margin-top:3px;border:1px solid #bbb;border-radius:4px;outline:none;transition:border-color 0.15s"
           onfocus="this.style.borderColor='#4a6cf7'" onblur="this.style.borderColor='#bbb'">
       </label>`;
@@ -3103,7 +3183,7 @@ function showSizePopover(tool, rp, clientX, clientY) {
     fields = `
       <label style="display:block;margin-bottom:12px">
         ${t("sizePopover.radius")}<br>
-        <input id="mr-sp-r" type="number" value="50" min="0.1" step="0.1"
+        <input id="mr-sp-r" type="number" value="50" min="0.1" step="${mmStep}"
           style="width:100%;box-sizing:border-box;padding:4px 6px;margin-top:3px;border:1px solid #bbb;border-radius:4px;outline:none;transition:border-color 0.15s"
           onfocus="this.style.borderColor='#4a6cf7'" onblur="this.style.borderColor='#bbb'">
       </label>`;
@@ -3111,7 +3191,7 @@ function showSizePopover(tool, rp, clientX, clientY) {
     fields = `
       <label style="display:block;margin-bottom:8px">
         ${t("sizePopover.length")}<br>
-        <input id="mr-sp-len" type="number" value="100" min="0.1" step="0.1"
+        <input id="mr-sp-len" type="number" value="100" min="0.1" step="${mmStep}"
           style="width:100%;box-sizing:border-box;padding:4px 6px;margin-top:3px;border:1px solid #bbb;border-radius:4px;outline:none;transition:border-color 0.15s"
           onfocus="this.style.borderColor='#4a6cf7'" onblur="this.style.borderColor='#bbb'">
       </label>
@@ -3171,15 +3251,21 @@ function showSizePopover(tool, rp, clientX, clientY) {
     let newId = null;
 
     if (tool === "rect") {
-      const w = parseFloat(document.getElementById("mr-sp-w").value) * MM;
-      const h = parseFloat(document.getElementById("mr-sp-h").value) * MM;
+      const w =
+        quantizeMmForUnitMode(
+          parseFloat(document.getElementById("mr-sp-w").value),
+        ) * MM;
+      const h =
+        quantizeMmForUnitMode(
+          parseFloat(document.getElementById("mr-sp-h").value),
+        ) * MM;
       if (!isFinite(w) || !isFinite(h) || w <= 0 || h <= 0) return;
       newId = genId("rect");
       addShape({
         id: newId,
         type: "rect",
-        x: rp.x,
-        y: rp.y,
+        x: origin.x,
+        y: origin.y,
         width: w,
         height: h,
         stroke: style.stroke,
@@ -3187,33 +3273,43 @@ function showSizePopover(tool, rp, clientX, clientY) {
         strokeWidth: "medium",
       });
     } else if (tool === "circle") {
-      const r = parseFloat(document.getElementById("mr-sp-r").value) * MM;
+      const r =
+        quantizeMmForUnitMode(
+          parseFloat(document.getElementById("mr-sp-r").value),
+        ) * MM;
       if (!isFinite(r) || r <= 0) return;
       newId = genId("circle");
       addShape({
         id: newId,
         type: "circle",
-        cx: rp.x + r,
-        cy: rp.y + r,
+        cx: origin.x + r,
+        cy: origin.y + r,
         r,
         stroke: style.stroke,
         fill: style.fill,
         strokeWidth: "medium",
       });
     } else if (tool === "line") {
-      const len = parseFloat(document.getElementById("mr-sp-len").value) * MM;
+      const len =
+        quantizeMmForUnitMode(
+          parseFloat(document.getElementById("mr-sp-len").value),
+        ) * MM;
       const ang =
         (parseFloat(document.getElementById("mr-sp-ang").value) * Math.PI) /
         180;
       if (!isFinite(len) || len <= 0) return;
       newId = genId("line");
+      const end = quantizeRealPointForUnitMode({
+        x: origin.x + len * Math.cos(ang),
+        y: origin.y + len * Math.sin(ang),
+      });
       addShape({
         id: newId,
         type: "line",
-        x1: rp.x,
-        y1: rp.y,
-        x2: rp.x + len * Math.cos(ang),
-        y2: rp.y + len * Math.sin(ang),
+        x1: origin.x,
+        y1: origin.y,
+        x2: end.x,
+        y2: end.y,
         stroke: style.stroke,
         strokeWidth: "medium",
         strokeLinecap: "butt",
@@ -3315,8 +3411,11 @@ function cancelAltDuplicate() {
 
 function updateStatusCoords(rp) {
   const el = document.getElementById("status-coords");
-  if (el)
-    el.textContent = `x: ${fmtNum(realToMM(rp.x))}  y: ${fmtNum(realToMM(rp.y))} mm`;
+  if (el) {
+    const xMm = quantizeMmForUnitMode(realToMM(rp.x));
+    const yMm = quantizeMmForUnitMode(realToMM(rp.y));
+    el.textContent = `x: ${fmtNum(xMm)}  y: ${fmtNum(yMm)} mm`;
+  }
 }
 function uiUpdate() {
   window.dispatchEvent(new CustomEvent("millrect:uiupdate"));

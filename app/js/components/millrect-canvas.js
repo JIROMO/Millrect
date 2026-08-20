@@ -131,6 +131,7 @@ class MillrectCanvas extends HTMLElement {
           <span class="status-label" data-i18n="status.scale">Scale</span>
           <span id="status-scale">1/10</span>
         </span>
+        <span id="status-one-mm-mode" hidden data-i18n="status.oneMmMode">1 mm mode</span>
         <span>
           <span class="status-label" data-i18n="status.zoom">Zoom</span>
           <span id="status-zoom">200%</span>

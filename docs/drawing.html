@@ -44,6 +44,7 @@
         <a href="#sketch-import">スケッチ取り込み</a>
         <a href="#layers">レイヤー</a>
         <a href="#snap">スナップ</a>
+        <a href="#one-mm-mode">1mmモード</a>
       </nav>
     </aside>
 
@@ -306,6 +307,23 @@
         </tbody>
       </table>
       <p>優先順位: 端点 → 交点 → 中点 → 中心 → 垂線。該当がなければグリッド（1 / 5 / 10 mm）に吸着します。</p>
+
+      <h2 id="one-mm-mode">1mmモード</h2>
+      <p>
+        小数mmを使わない作図では、Pages タブの <strong>ページ設定 → 1mmモード</strong> を ON にします。
+        矩形・円・線などの作図、図形の移動とリサイズ、頂点編集、座標・サイズの数値入力を、<strong>実寸の整数mm</strong>に丸めて確定します。
+        ON の間はステータスバーに「1mm単位」と表示されます。
+      </p>
+      <ul>
+        <li><strong>縮尺から独立</strong> — 1/1、1/10 などのページ縮尺にかかわらず、実寸1mm単位で丸めます</li>
+        <li><strong>スナップから独立</strong> — スナップは近くの端点・交点・グリッドを選び、1mmモードは編集結果の座標と寸法を整数mmにします。併用できます</li>
+        <li><strong>既存図形は維持</strong> — ON にしただけでは既存図形を変更しません。ON 後に描画・移動・リサイズ・数値編集した結果へ適用します</li>
+        <li><strong>輪郭精度を維持</strong> — Boolean 減算後のパスや曲線は、正確な形状を保つため内部の全頂点を一括で整数化しません</li>
+      </ul>
+      <div class="docs-callout docs-callout-tip">
+        <strong>使い分け</strong>
+        <p>家具の概略、配置図、ラフな部品図など、小数mmが不要な作図に向いています。細かな加工寸法や曲線を調整するときは OFF にしてください。</p>
+      </div>
 
       <h2 id="more">整列・合成など</h2>
       <p>

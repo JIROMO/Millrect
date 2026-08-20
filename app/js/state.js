@@ -380,6 +380,7 @@ function defaultState() {
     showViewGuides: true, // 他ビュー輪郭の見通し線（UI 専用・Undo 非対象）
     gridSize: 1,
     snapEnabled: true,
+    oneMmMode: false,
     drawFill: "none",
     drawStroke: "#1a1a2e",
     penWidth: 1.5, // 鉛筆の線幅（用紙 mm）。UI 専用・Undo 非対象
@@ -421,6 +422,43 @@ function realToMM(v) {
 }
 function mmToReal(v) {
   return v * REAL_PER_MM;
+}
+
+// Optional coarse editing mode. It quantizes newly committed edits in real
+// millimeters, independent of drawing scale and paper-space grid settings.
+function quantizeMmForUnitMode(valueMm, state = getState()) {
+  return state?.oneMmMode ? Math.round(valueMm) : valueMm;
+}
+
+function quantizeRealForUnitMode(valueReal, state = getState()) {
+  return state?.oneMmMode
+    ? mmToReal(Math.round(realToMM(valueReal)))
+    : valueReal;
+}
+
+function quantizeRealPointForUnitMode(point, state = getState()) {
+  if (!point || !state?.oneMmMode) return point;
+  return {
+    x: quantizeRealForUnitMode(point.x, state),
+    y: quantizeRealForUnitMode(point.y, state),
+  };
+}
+
+function quantizeMoveDeltaForUnitMode(
+  dxReal,
+  dyReal,
+  anchorMm,
+  state = getState(),
+) {
+  if (!state?.oneMmMode || !anchorMm) return { dxReal, dyReal };
+  return {
+    dxReal: mmToReal(
+      Math.round(anchorMm.x + realToMM(dxReal)) - anchorMm.x,
+    ),
+    dyReal: mmToReal(
+      Math.round(anchorMm.y + realToMM(dyReal)) - anchorMm.y,
+    ),
+  };
 }
 
 // ── Page helpers ─────────────────────────────────────────────

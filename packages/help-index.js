@@ -382,6 +382,14 @@ var HELP_INDEX = [
     summary: "端点・交点・グリッドへの自動吸着",
   },
   {
+    title: "1mmモード",
+    section: "2D 描画",
+    page: "drawing.html",
+    anchor: "one-mm-mode",
+    keywords: ["1mm", "整数", "丸め", "座標", "移動", "リサイズ", "ページ設定"],
+    summary: "作図・移動・数値入力を実寸の整数mmに丸める",
+  },
+  {
     title: "回転・反転について",
     section: "2D 描画",
     page: "drawing.html",
@@ -1045,6 +1053,12 @@ var HELP_INDEX_EN = {
     section: "2D drawing",
     keywords: ["snap", "grid", "endpoint", "midpoint", "magnet"],
     summary: "Snap to endpoints, intersections, and grid",
+  },
+  "drawing.html#one-mm-mode": {
+    title: "1 mm mode",
+    section: "2D drawing",
+    keywords: ["1 mm", "integer", "round", "quantize", "coordinates", "move", "resize"],
+    summary: "Commit drawing, movement, and numeric input in whole real millimeters",
   },
   "drawing.html#transform": {
     title: "Rotation and flip",

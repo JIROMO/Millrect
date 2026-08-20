@@ -101,7 +101,9 @@ function _layerListSignature(state, page) {
 
 function _propertiesPanelSignature(state) {
   const ids = state.selectedShapeIds || [];
-  if (!ids.length) return `${_uiLocaleKey()}|empty|${state.activeTool}`;
+  const unitMode = state.oneMmMode ? "1mm" : "free";
+  if (!ids.length)
+    return `${_uiLocaleKey()}|empty|${state.activeTool}|${unitMode}`;
   const page = getCurrentPage();
   const sc = page?.scale
     ? `${page.scale.numerator}/${page.scale.denominator}`
@@ -123,7 +125,7 @@ function _propertiesPanelSignature(state) {
   const editMode = `${typeof _bezierEditId !== "undefined" ? _bezierEditId : ""}/${
     typeof _vertexEditId !== "undefined" ? _vertexEditId : ""
   }`;
-  return `${_uiLocaleKey()}|${state.currentPageId}|${sc}|${state.activeTool}|${shapes}|${editMode}`;
+  return `${_uiLocaleKey()}|${state.currentPageId}|${sc}|${state.activeTool}|${shapes}|${editMode}|${unitMode}`;
 }
 
 function _pageSettingsSignature(state, page) {
@@ -133,6 +135,7 @@ function _pageSettingsSignature(state, page) {
     paper: page?.paper,
     orientation: page?.orientation,
     scale: page?.scale,
+    oneMmMode: !!state.oneMmMode,
     pages: (state.pages || []).map((pageItem) => ({
       id: pageItem.id,
       name: pageItem.name,
@@ -1123,8 +1126,9 @@ function updatePropertiesPanel() {
       if (key === "fill" || key === "stroke") return;
       const sid = state.selectedShapeIds[0];
       if (key === "path-w" || key === "path-h") {
-        const newVal = parseFloat(inp.value);
+        const newVal = quantizeMmForUnitMode(parseFloat(inp.value));
         if (isNaN(newVal) || newVal <= 0) return;
+        inp.value = fmtNum(newVal);
         const r = findShapeById(sid);
         if (!r || r.shape.type !== "path") return;
         const sh = r.shape;
@@ -1159,8 +1163,9 @@ function updatePropertiesPanel() {
         return;
       }
       if (key === "circle-diameter") {
-        const newVal = parseFloat(inp.value);
+        const newVal = quantizeMmForUnitMode(parseFloat(inp.value));
         if (isNaN(newVal) || newVal <= 0) return;
+        inp.value = fmtNum(newVal);
         updateShape(sid, { r: mmToReal(newVal) / 2 });
         // 半径フィールドを直径に追従させる（パネルは再構築しない方針）
         const rInp = c.querySelector('[data-key="r"]');
@@ -1169,8 +1174,9 @@ function updatePropertiesPanel() {
         return;
       }
       if (key === "line-length") {
-        const newVal = parseFloat(inp.value);
+        const newVal = quantizeMmForUnitMode(parseFloat(inp.value));
         if (isNaN(newVal) || newVal < 0) return;
+        inp.value = fmtNum(newVal);
         const r = findShapeById(sid);
         if (!r || r.shape.type !== "line") return;
         const sh = r.shape;
@@ -1191,7 +1197,11 @@ function updatePropertiesPanel() {
       }
       let raw = inp.type === "number" ? parseFloat(inp.value) : inp.value;
       if (inp.type === "number" && isNaN(raw)) return;
-      if (inp.dataset.unit === "mm") raw = mmToReal(raw);
+      if (inp.dataset.unit === "mm") {
+        raw = quantizeMmForUnitMode(raw);
+        inp.value = fmtNum(raw);
+        raw = mmToReal(raw);
+      }
       updateShape(sid, { [key]: raw });
       // 半径を編集したら直径フィールドを追従させる
       if (key === "r") {
@@ -1551,7 +1561,10 @@ function buildMultiSizeHTML(shapeIds) {
 }
 
 function applySizeToSelection(key, rawValue, shapeIds, unit) {
-  const value = unit === "mm" ? mmToReal(rawValue) : rawValue;
+  const value =
+    unit === "mm"
+      ? mmToReal(quantizeMmForUnitMode(rawValue))
+      : rawValue;
   let changed = false;
   for (const id of shapeIds) {
     const res = findShapeById(id);
@@ -2189,6 +2202,10 @@ function _bindArrayDuplicateEvents(container) {
 
 function updatePageSettings() {
   updatePageSettingsLabels();
+  const oneMmMode = document.getElementById("one-mm-mode");
+  if (oneMmMode) oneMmMode.checked = !!getState().oneMmMode;
+  const oneMmStatus = document.getElementById("status-one-mm-mode");
+  if (oneMmStatus) oneMmStatus.hidden = !getState().oneMmMode;
 }
 
 function bindPageSettings() {
@@ -2228,6 +2245,10 @@ function bindPageSettings() {
   });
   document.getElementById("snap-enabled")?.addEventListener("change", (e) => {
     getState().snapEnabled = e.target.checked;
+  });
+  document.getElementById("one-mm-mode")?.addEventListener("change", (e) => {
+    getState().oneMmMode = e.target.checked;
+    updateAll();
   });
   document.getElementById("show-grid")?.addEventListener("change", (e) => {
     getState().showGrid = e.target.checked;

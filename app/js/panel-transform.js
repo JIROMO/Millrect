@@ -310,13 +310,14 @@ function buildAlignPositionHTML(ids) {
   const svgDV = `<svg width="14" height="14" viewBox="0 0 14 14"><rect x="2" y="0" width="10" height="3" rx="1" fill="currentColor"/><rect x="4" y="5" width="6" height="4" rx="1" fill="currentColor"/><rect x="2" y="11" width="10" height="3" rx="1" fill="currentColor"/></svg>`;
 
   const disableDistrib = ids.length < 3 ? " disabled" : "";
+  const mmStep = getState().oneMmMode ? 1 : 0.1;
 
   const posSection = bb
     ? `
     <div class="prop-section-title">${t("props.position")}</div>
     <div class="prop-xy-row">
-      <div class="prop-xy-field"><span class="prop-xy-label">X</span><input type="number" id="pos-x" value="${fmtNum(bb.x)}" step="0.1"><span class="prop-xy-unit">mm</span></div>
-      <div class="prop-xy-field"><span class="prop-xy-label">Y</span><input type="number" id="pos-y" value="${fmtNum(bb.y)}" step="0.1"><span class="prop-xy-unit">mm</span></div>
+      <div class="prop-xy-field"><span class="prop-xy-label">X</span><input type="number" id="pos-x" value="${fmtNum(bb.x)}" step="${mmStep}"><span class="prop-xy-unit">mm</span></div>
+      <div class="prop-xy-field"><span class="prop-xy-label">Y</span><input type="number" id="pos-y" value="${fmtNum(bb.y)}" step="${mmStep}"><span class="prop-xy-unit">mm</span></div>
     </div>`
     : "";
 
@@ -442,8 +443,9 @@ function bindAlignPositionEvents(c, ids) {
       const pageScale = getCurrentPage().scale;
       const bb = shapeBBoxMM(res.shape, pageScale);
       if (!bb) return;
-      const targetMm = parseFloat(posX.value);
+      const targetMm = quantizeMmForUnitMode(parseFloat(posX.value));
       if (isNaN(targetMm)) return;
+      posX.value = fmtNum(targetMm);
       shiftShape(res.shape, mmToReal(targetMm - bb.x), 0);
       pushHistory();
       render();
@@ -456,8 +458,9 @@ function bindAlignPositionEvents(c, ids) {
       const pageScale = getCurrentPage().scale;
       const bb = shapeBBoxMM(res.shape, pageScale);
       if (!bb) return;
-      const targetMm = parseFloat(posY.value);
+      const targetMm = quantizeMmForUnitMode(parseFloat(posY.value));
       if (isNaN(targetMm)) return;
+      posY.value = fmtNum(targetMm);
       shiftShape(res.shape, 0, mmToReal(targetMm - bb.y));
       pushHistory();
       render();

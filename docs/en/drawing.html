@@ -46,6 +46,7 @@
         <a href="#sketch-import">Sketch import</a>
         <a href="#layers">Layers</a>
         <a href="#snap">Snap</a>
+        <a href="#one-mm-mode">1 mm mode</a>
       </nav>
     </aside>
 
@@ -373,6 +374,23 @@
         </tbody>
       </table>
       <p>Priority: endpoint → intersection → midpoint → center → perpendicular. If none match, snap to the grid (1 / 5 / 10 mm).</p>
+
+      <h2 id="one-mm-mode">1 mm mode</h2>
+      <p>
+        For drawings that do not need fractional millimeters, turn on <strong>Pages → Page settings → 1 mm mode</strong>.
+        Drawing rectangles, circles, lines, and similar shapes; moving and resizing shapes; editing vertices; and entering coordinates or sizes are committed in <strong>whole real millimeters</strong>.
+        The status bar shows “1 mm mode” while it is enabled.
+      </p>
+      <ul>
+        <li><strong>Independent of page scale</strong> — values are rounded in real 1 mm increments at 1/1, 1/10, or any other page scale</li>
+        <li><strong>Independent of snapping</strong> — Snap chooses nearby endpoints, intersections, or grid points; 1 mm mode quantizes the committed coordinates and dimensions. They can be used together</li>
+        <li><strong>Existing shapes stay unchanged</strong> — enabling the mode does not convert existing geometry. It applies when you subsequently draw, move, resize, or enter a value</li>
+        <li><strong>Contour accuracy is preserved</strong> — paths produced by Boolean subtraction and curves do not have every internal vertex rounded, so their exact contours remain intact</li>
+      </ul>
+      <div class="docs-callout docs-callout-tip">
+        <strong>When to use it</strong>
+        <p>Use this mode for furniture layouts, placement plans, and rough parts where fractional millimeters add noise. Turn it off when adjusting fine machining dimensions or curves.</p>
+      </div>
 
       <h2 id="more">Alignment, boolean ops, and more</h2>
       <p>

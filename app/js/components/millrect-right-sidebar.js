@@ -129,6 +129,13 @@ class MillrectRightSidebar extends HTMLElement {
                   </label>
                 </div>
                 <div class="settings-row">
+                  <label data-i18n="page.oneMmMode" data-i18n-title="page.oneMmMode.title">1mmモード</label>
+                  <label class="custom-toggle" data-i18n-title="page.oneMmMode.title">
+                    <input type="checkbox" id="one-mm-mode">
+                    <span class="custom-toggle-track"></span>
+                  </label>
+                </div>
+                <div class="settings-row">
                   <label data-i18n="page.showGrid">グリッド表示</label>
                   <label class="custom-toggle">
                     <input type="checkbox" id="show-grid" checked>
