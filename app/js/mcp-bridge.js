@@ -202,22 +202,22 @@
       return { ok: true };
     },
 
-    booleanSubtract: () => {
-      const ok = subtractSelectedShapes();
+    booleanSubtract: async () => {
+      const ok = await subtractSelectedShapesAsync();
       render();
       uiUpdate();
       return ok ? { ok: true } : { ok: false, error: "boolean subtract failed" };
     },
 
-    booleanUnion: () => {
-      const ok = unionSelectedShapes();
+    booleanUnion: async () => {
+      const ok = await unionSelectedShapesAsync();
       render();
       uiUpdate();
       return ok ? { ok: true } : { ok: false, error: "boolean union failed" };
     },
 
-    booleanIntersect: () => {
-      const ok = intersectSelectedShapes();
+    booleanIntersect: async () => {
+      const ok = await intersectSelectedShapesAsync();
       render();
       uiUpdate();
       return ok
@@ -225,8 +225,8 @@
         : { ok: false, error: "boolean intersect failed" };
     },
 
-    booleanExclude: () => {
-      const ok = excludeSelectedShapes();
+    booleanExclude: async () => {
+      const ok = await excludeSelectedShapesAsync();
       render();
       uiUpdate();
       return ok ? { ok: true } : { ok: false, error: "boolean exclude failed" };

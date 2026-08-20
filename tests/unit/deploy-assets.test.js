@@ -88,6 +88,14 @@ describe("static deploy assets", () => {
       fs.statSync(path.join(outDir, "app/js/app.bundle.js")).size > 0,
       "generated app bundle should not be empty",
     );
+    assert.ok(
+      fs.existsSync(path.join(outDir, "app/js/boolean-clip-worker.js")),
+      "Boolean Worker must be deployed beside the app bundle",
+    );
+    assert.ok(
+      fs.existsSync(path.join(outDir, "app/js/boolean-clip-core.js")),
+      "Boolean Worker shared core must be deployed",
+    );
   });
 
   it("every local asset in every published HTML resolves within the build", () => {

@@ -1014,42 +1014,36 @@ function _normalizeContours(contours) {
   return contours.map((polygon) => _normalizePolygonRings(polygon));
 }
 
-function _expandBooleanEntries(entries) {
+function _expandBooleanEntries(entries, sourceId = null) {
   const expanded = [];
   for (const entry of entries) {
+    const booleanSourceId = sourceId || entry.booleanSourceId || entry.shape.id;
     if (entry.shape.type === "group") {
       for (const child of entry.shape.children) {
         if (child.type === "group") {
-          expanded.push(..._expandBooleanEntries([{ ...entry, shape: child }]));
+          expanded.push(
+            ..._expandBooleanEntries(
+              [{ ...entry, shape: child, booleanSourceId }],
+              booleanSourceId,
+            ),
+          );
           continue;
         }
         const poly = shapeToClipPolygon(child);
-        if (poly) expanded.push({ ...entry, shape: child, poly });
+        if (poly)
+          expanded.push({
+            ...entry,
+            shape: child,
+            poly,
+            booleanSourceId,
+          });
       }
       continue;
     }
     const poly = shapeToClipPolygon(entry.shape);
-    if (poly) expanded.push({ ...entry, poly });
+    if (poly) expanded.push({ ...entry, poly, booleanSourceId });
   }
   return expanded;
-}
-
-function _unionEntryPolys(entries) {
-  const polys = entries.map((entry) => entry.poly).filter(Boolean);
-  if (!polys.length) return null;
-  if (polys.length === 1) return polys[0];
-  return polygonClipping.union(...polys);
-}
-
-function _runBooleanClip(op, polys) {
-  if (!polys.length) return null;
-  if (op === "union") return polygonClipping.union(...polys);
-  if (op === "intersection") return polygonClipping.intersection(...polys);
-  if (op === "exclude") {
-    if (polys.length === 1) return polys[0];
-    return polygonClipping.xor(...polys);
-  }
-  return null;
 }
 
 function _findSelectedShapeEntries(ids, page) {
@@ -1102,63 +1096,137 @@ function _replaceSelectedWithPath(ids, page, contours, refShape, anchorEntry) {
   return newShape;
 }
 
-function booleanSelectedShapes(op) {
+function _prepareBooleanSelection(op) {
   const state = getState();
   const ids = [...state.selectedShapeIds];
-  if (ids.length < 2) return false;
+  if (ids.length < 2) return null;
   const page = getCurrentPage();
 
   const entries = _findSelectedShapeEntries(ids, page);
   const expanded = _expandBooleanEntries(entries);
-  if (expanded.length < 2) return false;
+  if (expanded.length < 2) return null;
 
-  const polys = expanded.map((entry) => entry.poly);
-  let result;
-  try {
-    if (op === "subtract") {
-      const base = _lowestZOrderEntry(entries);
-      let basePoly;
-      let cuts;
-      if (base.shape.type === "group") {
-        const childIds = new Set(base.shape.children.map((child) => child.id));
-        basePoly = _unionEntryPolys(
-          expanded.filter((entry) => childIds.has(entry.shape.id)),
-        );
-        cuts = expanded
-          .filter((entry) => !childIds.has(entry.shape.id))
-          .map((entry) => entry.poly);
-      } else {
-        basePoly = shapeToClipPolygon(base.shape);
-        cuts = expanded
-          .filter((entry) => entry.shape.id !== base.shape.id)
-          .map((entry) => entry.poly);
-      }
-      if (!basePoly) return false;
-      if (!cuts.length) return false;
-      result = polygonClipping.difference(basePoly, ...cuts);
+  let polys = expanded.map((entry) => entry.poly);
+  let options = {};
+  if (op === "subtract") {
+    const base = _lowestZOrderEntry(entries);
+    if (!base) return null;
+    if (base.shape.type === "group") {
+      const basePolys = expanded
+        .filter((entry) => entry.booleanSourceId === base.shape.id)
+        .map((entry) => entry.poly);
+      const cuts = expanded
+        .filter((entry) => entry.booleanSourceId !== base.shape.id)
+        .map((entry) => entry.poly);
+      if (!basePolys.length || !cuts.length) return null;
+      polys = [...basePolys, ...cuts];
+      options = { baseCount: basePolys.length };
     } else {
-      result = _runBooleanClip(op, polys);
+      const basePoly = shapeToClipPolygon(base.shape);
+      const cuts = expanded
+        .filter((entry) => entry.shape.id !== base.shape.id)
+        .map((entry) => entry.poly);
+      if (!basePoly || !cuts.length) return null;
+      polys = [basePoly, ...cuts];
+      options = { baseCount: 1 };
     }
+  }
+
+  const anchorEntry = _lowestZOrderEntry(entries);
+  return {
+    op,
+    state,
+    ids,
+    page,
+    pageId: page.id,
+    documentVersion:
+      typeof getDocumentRenderVersion === "function"
+        ? getDocumentRenderVersion()
+        : null,
+    polys,
+    options,
+    entries,
+    expanded,
+    anchorEntry,
+    refShape: expanded[0]?.shape || anchorEntry?.shape,
+  };
+}
+
+function _applyPreparedBoolean(prepared, result) {
+  if (!result?.length) return false;
+  result = _normalizeContours(result);
+  const newShape = _replaceSelectedWithPath(
+    prepared.ids,
+    prepared.page,
+    result,
+    prepared.refShape,
+    prepared.anchorEntry,
+  );
+  if (!newShape) return false;
+  prepared.state.selectedShapeIds = [newShape.id];
+  pushHistory();
+  return true;
+}
+
+function booleanSelectedShapes(op) {
+  const prepared = _prepareBooleanSelection(op);
+  if (!prepared) return false;
+  try {
+    const result = runBooleanClipOperation(
+      op,
+      prepared.polys,
+      prepared.options,
+    );
+    return _applyPreparedBoolean(prepared, result);
   } catch (e) {
     console.error(`boolean ${op} failed`, e);
     return false;
   }
-  if (!result?.length) return false;
-  result = _normalizeContours(result);
+}
 
-  const anchorEntry = _lowestZOrderEntry(entries);
-  const refShape = expanded[0]?.shape || anchorEntry.shape;
-  const newShape = _replaceSelectedWithPath(
-    ids,
-    page,
-    result,
-    refShape,
-    anchorEntry,
+let _booleanOperationPending = false;
+
+function _preparedBooleanIsCurrent(prepared) {
+  if (getCurrentPage()?.id !== prepared.pageId) return false;
+  if (
+    prepared.documentVersion !== null &&
+    getDocumentRenderVersion() !== prepared.documentVersion
+  ) {
+    return false;
+  }
+  const selected = getState().selectedShapeIds;
+  return (
+    selected.length === prepared.ids.length &&
+    prepared.ids.every((id, index) => selected[index] === id)
   );
-  if (!newShape) return false;
-  state.selectedShapeIds = [newShape.id];
-  pushHistory();
-  return true;
+}
+
+async function booleanSelectedShapesAsync(op) {
+  if (_booleanOperationPending) return false;
+  const prepared = _prepareBooleanSelection(op);
+  if (!prepared) return false;
+  _booleanOperationPending = true;
+  try {
+    let result;
+    try {
+      result = await runBooleanClipInWorker(
+        op,
+        prepared.polys,
+        prepared.options,
+      );
+    } catch (workerError) {
+      if (workerError?.booleanOperation) throw workerError;
+      console.warn("Boolean Worker unavailable; using main thread", workerError);
+      result = runBooleanClipOperation(op, prepared.polys, prepared.options);
+    }
+    if (!_preparedBooleanIsCurrent(prepared)) return false;
+    return _applyPreparedBoolean(prepared, result);
+  } catch (e) {
+    console.error(`boolean ${op} failed`, e);
+    return false;
+  } finally {
+    _booleanOperationPending = false;
+  }
 }
 
 function mergeSelectedShapes() {
@@ -1179,6 +1247,22 @@ function intersectSelectedShapes() {
 
 function excludeSelectedShapes() {
   return booleanSelectedShapes("exclude");
+}
+
+function unionSelectedShapesAsync() {
+  return booleanSelectedShapesAsync("union");
+}
+
+function subtractSelectedShapesAsync() {
+  return booleanSelectedShapesAsync("subtract");
+}
+
+function intersectSelectedShapesAsync() {
+  return booleanSelectedShapesAsync("intersection");
+}
+
+function excludeSelectedShapesAsync() {
+  return booleanSelectedShapesAsync("exclude");
 }
 
 function flattenSelectedShapes() {

@@ -40,6 +40,7 @@ const CORE_FILES = [
   "app/js/interaction-geometry.js",
   "app/js/profiles.js",
   "app/js/constraints.js",
+  "app/js/boolean-clip-core.js",
   "app/js/commands.js",
 ];
 
@@ -130,6 +131,7 @@ const EXPORT_NAMES = [
   "extractProfilesFromPage",
   // boolean 入力（回転焼き込みの回帰テスト用）
   "shapeToClipPolygon",
+  "runBooleanClipOperation",
   "offsetClipPolygon",
   "insetClipPolygon",
   "outsetClipPolygon",

@@ -18,6 +18,18 @@ const interactionGeometrySource = fs.readFileSync(
   path.join(ROOT, "app/js/interaction-geometry.js"),
   "utf8",
 );
+const commandsSource = fs.readFileSync(
+  path.join(ROOT, "app/js/commands.js"),
+  "utf8",
+);
+const booleanWorkerSource = fs.readFileSync(
+  path.join(ROOT, "app/js/boolean-clip-worker.js"),
+  "utf8",
+);
+const booleanWorkerClientSource = fs.readFileSync(
+  path.join(ROOT, "app/js/boolean-worker-client.js"),
+  "utf8",
+);
 const uiSource = fs.readFileSync(path.join(ROOT, "app/js/ui.js"), "utf8");
 
 function functionBody(source, name) {
@@ -339,6 +351,37 @@ test("geometry hit testing includes the visible stroke width", () => {
     hitBody.indexOf("realPointInPaperBBox") <
       hitBody.indexOf("_worldOutlineForShape"),
     "hit testing should reject by bbox before walking path vertices",
+  );
+});
+
+test("selection broad phase uses a page spatial index before precise geometry", () => {
+  const findBody = functionBody(interactionSource, "findTopShapeAtRealPoint");
+  assert.match(findBody, /_pickCandidatesAtRealPoint\(rp, page, scale\)/);
+  assert.doesNotMatch(findBody, /for \(let li = page\.layers\.length/);
+  assert.match(interactionSource, /const _PICK_INDEX_CELL_PAPER = 32/);
+  assert.match(interactionSource, /getDocumentRenderVersion\(\)/);
+});
+
+test("interactive Boolean operations run in a Worker and reject stale results", () => {
+  const asyncBody = functionBody(commandsSource, "booleanSelectedShapesAsync");
+  assert.match(asyncBody, /await runBooleanClipInWorker\(/);
+  assert.match(asyncBody, /_preparedBooleanIsCurrent\(prepared\)/);
+  assert.match(booleanWorkerClientSource, /new Worker\("js\/boolean-clip-worker\.js"\)/);
+  assert.match(
+    booleanWorkerSource,
+    /importScripts\("\.\.\/vendor\/polygon-clipping\.umd\.js", "boolean-clip-core\.js"\)/,
+  );
+  assert.match(booleanWorkerClientSource, /function warmBooleanClipWorker\(\)/);
+  assert.match(uiSource, /requestIdleCallback\(warmBoolean/);
+});
+
+test("compound path containment skips rings whose bounds miss the pointer", () => {
+  const body = functionBody(interactionSource, "_pointInRings");
+  assert.match(body, /const bounds = ringBounds\?\.\[ri\]/);
+  assert.match(body, /px < bounds\.minX/);
+  assert.match(
+    functionBody(interactionSource, "realPointInShapeGeometry"),
+    /outline\.rings, outline\.ringBounds/,
   );
 });
 

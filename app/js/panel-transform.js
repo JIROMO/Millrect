@@ -21,25 +21,25 @@ const BOOLEAN_ACTIONS = [
     op: "union",
     labelKey: "props.boolean.union",
     shortcut: "⌥⇧U",
-    fn: () => mergeSelectedShapes(),
+    fn: () => unionSelectedShapesAsync(),
   },
   {
     op: "subtract",
     labelKey: "props.boolean.subtract",
     shortcut: "⌥⇧S",
-    fn: () => subtractSelectedShapes(),
+    fn: () => subtractSelectedShapesAsync(),
   },
   {
     op: "intersect",
     labelKey: "props.boolean.intersect",
     shortcut: "⌥⇧I",
-    fn: () => intersectSelectedShapes(),
+    fn: () => intersectSelectedShapesAsync(),
   },
   {
     op: "exclude",
     labelKey: "props.boolean.exclude",
     shortcut: "⌥⇧E",
-    fn: () => excludeSelectedShapes(),
+    fn: () => excludeSelectedShapesAsync(),
   },
   {
     op: "flatten",
@@ -76,10 +76,10 @@ function buildBooleanMenuHTML(selectedCount) {
 
 function bindBooleanMenuEvents(container) {
   container.querySelectorAll("[data-boolean]").forEach((btn) => {
-    btn.addEventListener("click", () => {
+    btn.addEventListener("click", async () => {
       if (btn.disabled) return;
       const action = BOOLEAN_ACTIONS.find((a) => a.op === btn.dataset.boolean);
-      if (!action?.fn()) {
+      if (!(await action?.fn())) {
         if (typeof showErrorToast === "function") {
           showErrorToast(t("toast.boolean.failed"));
         }
@@ -246,19 +246,19 @@ function bindRevolvedShapeBuilderEvents(container) {
 }
 
 const BOOLEAN_KEY_MAP = {
-  KeyU: { fn: () => mergeSelectedShapes(), minSelection: 2 },
-  KeyS: { fn: () => subtractSelectedShapes(), minSelection: 2 },
-  KeyI: { fn: () => intersectSelectedShapes(), minSelection: 2 },
-  KeyE: { fn: () => excludeSelectedShapes(), minSelection: 2 },
+  KeyU: { fn: () => unionSelectedShapesAsync(), minSelection: 2 },
+  KeyS: { fn: () => subtractSelectedShapesAsync(), minSelection: 2 },
+  KeyI: { fn: () => intersectSelectedShapesAsync(), minSelection: 2 },
+  KeyE: { fn: () => excludeSelectedShapesAsync(), minSelection: 2 },
   KeyF: { fn: () => flattenSelectedShapes(), minSelection: 1 },
 };
 
-function runBooleanShortcut(code) {
+async function runBooleanShortcut(code) {
   const action = BOOLEAN_KEY_MAP[code];
   if (!action) return false;
   const count = getState().selectedShapeIds.length;
   if (count < action.minSelection) return false;
-  if (!action.fn()) {
+  if (!(await action.fn())) {
     if (typeof showErrorToast === "function") {
       showErrorToast(t("toast.boolean.failed"));
     }

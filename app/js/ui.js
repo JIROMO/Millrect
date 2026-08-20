@@ -34,6 +34,14 @@ function initUI() {
   bindPanelSections(sidebar);
   initPanelSplit();
   updateAll();
+  if (typeof warmBooleanClipWorker === "function") {
+    const warmBoolean = () => warmBooleanClipWorker();
+    if (typeof requestIdleCallback === "function") {
+      requestIdleCallback(warmBoolean, { timeout: 1500 });
+    } else {
+      setTimeout(warmBoolean, 0);
+    }
+  }
 }
 
 const _uiPanelCache = Object.create(null);

@@ -2318,10 +2318,24 @@ function _distPointToSeg(px, py, ax, ay, bx, by) {
   return Math.hypot(px - cx, py - cy);
 }
 
-function _pointInRings(px, py, rings) {
+function _pointInRings(px, py, rings, ringBounds = null) {
   // even-odd: 複数リング（穴あき path 等）をまとめて判定
   let inside = false;
-  for (const ring of rings) {
+  for (let ri = 0; ri < rings.length; ri++) {
+    const bounds = ringBounds?.[ri];
+    // A ring can only toggle even-odd containment when the point lies inside
+    // its bbox. For a 100-hole panel this normally leaves the outer ring and
+    // at most one hole instead of walking every hole's vertices.
+    if (
+      bounds &&
+      (px < bounds.minX ||
+        px > bounds.maxX ||
+        py < bounds.minY ||
+        py > bounds.maxY)
+    ) {
+      continue;
+    }
+    const ring = rings[ri];
     for (let i = 0, j = ring.length - 1; i < ring.length; j = i++) {
       const xi = ring[i][0],
         yi = ring[i][1];
@@ -2497,7 +2511,11 @@ function realPointInShapeGeometry(rp, shape, scale, ancestorGroups = []) {
     shape.type === "text" ||
     shape.type === "image" ||
     (shape.fill && shape.fill !== "none");
-  if (outline.closed && areaType && _pointInRings(rp.x, rp.y, outline.rings))
+  if (
+    outline.closed &&
+    areaType &&
+    _pointInRings(rp.x, rp.y, outline.rings, outline.ringBounds)
+  )
     return true;
   return _nearAnyRing(
     rp.x,
@@ -2509,18 +2527,104 @@ function realPointInShapeGeometry(rp, shape, scale, ancestorGroups = []) {
   );
 }
 
+// Page-level broad phase for selection. Precise geometry remains authoritative,
+// but only shapes whose padded paper-space bbox contains the pointer reach it.
+const _PICK_INDEX_CELL_PAPER = 32;
+const _PICK_INDEX_MAX_CELLS_PER_SHAPE = 256;
+let _pickSpatialIndexCache = null;
+
+function _pickIndexCellKey(x, y) {
+  return `${x},${y}`;
+}
+
+function _buildPagePickSpatialIndex(page, scale) {
+  const buckets = new Map();
+  const wideEntries = [];
+  let z = 0;
+  const zoom = getState().zoom || 1;
+  for (const layer of page.layers) {
+    for (const shape of layer.shapes) {
+      const entryZ = z++;
+      if (!layer.visible || layer.locked || shape.locked) continue;
+      const bbox = getShapeBBox(shape, scale);
+      if (!bbox) continue;
+      const padding =
+        _PICK_TOL_PX / zoom + resolveStrokeWidthMm(shape?.strokeWidth) / 2;
+      const padded = {
+        x: bbox.x - padding,
+        y: bbox.y - padding,
+        w: bbox.w + padding * 2,
+        h: bbox.h + padding * 2,
+      };
+      const entry = { shape, bbox: padded, z: entryZ };
+      const minCX = Math.floor(padded.x / _PICK_INDEX_CELL_PAPER);
+      const maxCX = Math.floor(
+        (padded.x + padded.w) / _PICK_INDEX_CELL_PAPER,
+      );
+      const minCY = Math.floor(padded.y / _PICK_INDEX_CELL_PAPER);
+      const maxCY = Math.floor(
+        (padded.y + padded.h) / _PICK_INDEX_CELL_PAPER,
+      );
+      const cellCount = (maxCX - minCX + 1) * (maxCY - minCY + 1);
+      if (cellCount > _PICK_INDEX_MAX_CELLS_PER_SHAPE) {
+        wideEntries.push(entry);
+        continue;
+      }
+      for (let cx = minCX; cx <= maxCX; cx++) {
+        for (let cy = minCY; cy <= maxCY; cy++) {
+          const key = _pickIndexCellKey(cx, cy);
+          let bucket = buckets.get(key);
+          if (!bucket) buckets.set(key, (bucket = []));
+          bucket.push(entry);
+        }
+      }
+    }
+  }
+  return { buckets, wideEntries };
+}
+
+function _pickCandidatesAtRealPoint(rp, page, scale) {
+  const version =
+    typeof getDocumentRenderVersion === "function"
+      ? getDocumentRenderVersion()
+      : -1;
+  const zoom = getState().zoom || 1;
+  const scaleKey = scale
+    ? `${scale.numerator}/${scale.denominator}`
+    : "1/1";
+  const key = `${version}|${page.id}|${scaleKey}|${zoom}`;
+  if (!_pickSpatialIndexCache || _pickSpatialIndexCache.key !== key) {
+    _pickSpatialIndexCache = {
+      key,
+      ..._buildPagePickSpatialIndex(page, scale),
+    };
+  }
+  const px = realToPaperDist(rp.x, scale);
+  const py = realToPaperDist(rp.y, scale);
+  const cx = Math.floor(px / _PICK_INDEX_CELL_PAPER);
+  const cy = Math.floor(py / _PICK_INDEX_CELL_PAPER);
+  const nearby = [
+    ...(_pickSpatialIndexCache.buckets.get(_pickIndexCellKey(cx, cy)) || []),
+    ..._pickSpatialIndexCache.wideEntries,
+  ];
+  return nearby
+    .filter(
+      (entry) =>
+        px >= entry.bbox.x &&
+        px <= entry.bbox.x + entry.bbox.w &&
+        py >= entry.bbox.y &&
+        py <= entry.bbox.y + entry.bbox.h,
+    )
+    .sort((a, b) => b.z - a.z)
+    .map((entry) => entry.shape);
+}
+
 function findTopShapeAtRealPoint(rp) {
   const page = getCurrentPage();
   const scale = page.scale;
 
-  for (let li = page.layers.length - 1; li >= 0; li--) {
-    const layer = page.layers[li];
-    if (!layer.visible || layer.locked) continue;
-    for (let si = layer.shapes.length - 1; si >= 0; si--) {
-      const s = layer.shapes[si];
-      if (s.locked) continue;
-      if (realPointInShapeGeometry(rp, s, scale)) return s;
-    }
+  for (const shape of _pickCandidatesAtRealPoint(rp, page, scale)) {
+    if (realPointInShapeGeometry(rp, shape, scale)) return shape;
   }
 
   for (const dim of page.dimensions || []) {
@@ -3257,9 +3361,9 @@ function _ctxHasDim(ids) {
   return ids.some((id) => findShapeById(id)?.isDimension);
 }
 
-function _ctxRun(action) {
+async function _ctxRun(action) {
   dismissContextMenu();
-  action();
+  await action();
   render();
   uiUpdate();
 }
@@ -3543,25 +3647,25 @@ function _buildShapeContextItems(ids) {
             label: t("context.boolean.union"),
             shortcut: "⌥⇧U",
             disabled: ids.length < 2,
-            action: () => mergeSelectedShapes(),
+            action: () => unionSelectedShapesAsync(),
           },
           {
             label: t("context.boolean.subtract"),
             shortcut: "⌥⇧S",
             disabled: ids.length < 2,
-            action: () => subtractSelectedShapes(),
+            action: () => subtractSelectedShapesAsync(),
           },
           {
             label: t("context.boolean.intersect"),
             shortcut: "⌥⇧I",
             disabled: ids.length < 2,
-            action: () => intersectSelectedShapes(),
+            action: () => intersectSelectedShapesAsync(),
           },
           {
             label: t("context.boolean.exclude"),
             shortcut: "⌥⇧E",
             disabled: ids.length < 2,
-            action: () => excludeSelectedShapes(),
+            action: () => excludeSelectedShapesAsync(),
           },
           {
             label: t("context.boolean.flatten"),
