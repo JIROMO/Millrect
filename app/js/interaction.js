@@ -1190,7 +1190,6 @@ function handleSelDown(e, svgEl, pp, rp) {
   // 複雑な Boolean path の透明 hit proxy は、穴を含む evenodd 判定を Chromium が
   // 軽量輪郭で済ませた結果。その結果を信頼し、正確な全頂点を JS で再走査しない。
   let picked = null;
-  const domShapeHit = svgClosest(e.target, "[data-id]");
   const proxyHit = e.target.closest?.('[data-hit-proxy="simplified-path"]');
   if (proxyHit && !e.ctrlKey) {
     const domId = svgClosest(proxyHit, "[data-id]")?.getAttribute("data-id");
@@ -1200,12 +1199,9 @@ function handleSelDown(e, svgEl, pp, rp) {
       picked = domRes.shape;
     }
   }
-  // DOM 上で図形が何もヒットしていない通常クリックは確実な空白なので、
-  // ページ内の全 Boolean path を幾何走査せず即時に選択解除する。
-  // 図形上・Ctrl循環時だけ、透明内部や重なりを解決する正確な判定へ進む。
-  if (!picked && (domShapeHit || e.ctrlKey)) {
-    picked = findTopShapeAtRealPoint(rp);
-  }
+  // 軽量 proxy は高速化の補助であり、選択可否の唯一の根拠にはしない。
+  // 高倍率や細い曲線で proxy が外れた場合も、正確な幾何判定へフォールバックする。
+  if (!picked) picked = findTopShapeAtRealPoint(rp);
   if (picked) {
     const id = picked.id;
 
@@ -2286,10 +2282,15 @@ function _beginTextShapeEdit(shape) {
   editTextShape(shape);
 }
 
-function realPointInPaperBBox(rp, bb, scale) {
+function realPointInPaperBBox(rp, bb, scale, paddingPaper = 0) {
   const px = realToPaperDist(rp.x, scale);
   const py = realToPaperDist(rp.y, scale);
-  return px >= bb.x && px <= bb.x + bb.w && py >= bb.y && py <= bb.y + bb.h;
+  return (
+    px >= bb.x - paddingPaper &&
+    px <= bb.x + bb.w + paddingPaper &&
+    py >= bb.y - paddingPaper &&
+    py <= bb.y + bb.h + paddingPaper
+  );
 }
 
 // ── Geometry-aware hit testing ────────────────────────────────
@@ -2463,7 +2464,9 @@ function realPointInShapeGeometry(rp, shape, scale, ancestorGroups = []) {
   // 複合 path の輪郭走査より先に、キャッシュ済み bbox で大半の候補を落とす。
   // 離れた減算済み部品がページ上に何個あっても、その全頂点を調べない。
   const bb = getShapeBBox(shape, scale, ancestorGroups);
-  if (!bb || !realPointInPaperBBox(rp, bb, scale)) return false;
+  const tol = _pickTolReal(scale, shape);
+  const tolPaper = realToPaperDist(tol, scale);
+  if (!bb || !realPointInPaperBBox(rp, bb, scale, tolPaper)) return false;
   const outline = _worldOutlineForShape(shape, ancestorGroups);
   if (!outline) return true;
   const areaType =
@@ -2472,7 +2475,6 @@ function realPointInShapeGeometry(rp, shape, scale, ancestorGroups = []) {
     (shape.fill && shape.fill !== "none");
   if (outline.closed && areaType && _pointInRings(rp.x, rp.y, outline.rings))
     return true;
-  const tol = _pickTolReal(scale, shape);
   return _nearAnyRing(rp.x, rp.y, outline.rings, tol, outline.closed);
 }
 

@@ -253,11 +253,7 @@ test("complex paths use a simplified SVG hit proxy", () => {
   assert.match(interactionSource, /_ds\.pathResizeFast =/);
   assert.match(interactionSource, /if \(_ds\.pathResizeFast\)/);
   assert.match(interactionSource, /const proxyHit = e\.target\.closest/);
-  assert.match(interactionSource, /const domShapeHit = svgClosest/);
-  assert.match(
-    interactionSource,
-    /if \(!picked && \(domShapeHit \|\| e\.ctrlKey\)\)/,
-  );
+  assert.match(interactionSource, /if \(!picked\) picked = findTopShapeAtRealPoint/);
   assert.match(interactionSource, /function _captureSelectionMoveOrigins/);
   assert.match(
     interactionSource,
@@ -321,6 +317,10 @@ test("geometry hit testing includes the visible stroke width", () => {
   assert.match(
     functionBody(interactionSource, "realPointInShapeGeometry"),
     /_pickTolReal\(scale, shape\)/,
+  );
+  assert.match(
+    functionBody(interactionSource, "realPointInShapeGeometry"),
+    /realPointInPaperBBox\(rp, bb, scale, tolPaper\)/,
   );
   const hitBody = functionBody(
     interactionSource,

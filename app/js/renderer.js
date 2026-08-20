@@ -2295,7 +2295,7 @@ function renderShape(shape, scale, selIds, options = {}) {
           if (!ring.length) continue;
           const paperRing = _simplifySnapRing(
             ring.map(([x, y]) => [realToPaper(x, scale), realToPaper(y, scale)]),
-            0.2,
+            0.02,
           );
           if (!paperRing.length) continue;
           hitD += `M ${paperRing.map(([x, y]) => `${x},${y}`).join(" L ")} Z `;
