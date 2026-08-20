@@ -2338,8 +2338,19 @@ function _pointInRings(px, py, rings) {
   return inside;
 }
 
-function _nearAnyRing(px, py, rings, tol, closed) {
-  for (const ring of rings) {
+function _nearAnyRing(px, py, rings, tol, closed, ringBounds = null) {
+  for (let ri = 0; ri < rings.length; ri++) {
+    const ring = rings[ri];
+    const bounds = ringBounds?.[ri];
+    if (
+      bounds &&
+      (px < bounds.minX - tol ||
+        px > bounds.maxX + tol ||
+        py < bounds.minY - tol ||
+        py > bounds.maxY + tol)
+    ) {
+      continue;
+    }
     const n = ring.length;
     const edges = closed ? n : n - 1;
     for (let i = 0; i < edges; i++) {
@@ -2441,7 +2452,20 @@ function _shapeLocalRings(shape) {
   }
 }
 
-function _worldOutlineForShape(shape, ancestorGroups) {
+function _worldOutlineForShape(shape, ancestorGroups, scale) {
+  if (
+    shape.type === "path" &&
+    typeof getPathInteractionGeometry === "function"
+  ) {
+    const geometry = getPathInteractionGeometry(shape, scale, ancestorGroups);
+    if (geometry?.hitRealRings?.length) {
+      return {
+        rings: geometry.hitRealRings,
+        ringBounds: geometry.hitRingBounds,
+        closed: true,
+      };
+    }
+  }
   const local = _shapeLocalRings(shape);
   if (!local) return null;
   const needsTransform =
@@ -2467,7 +2491,7 @@ function realPointInShapeGeometry(rp, shape, scale, ancestorGroups = []) {
   const tol = _pickTolReal(scale, shape);
   const tolPaper = realToPaperDist(tol, scale);
   if (!bb || !realPointInPaperBBox(rp, bb, scale, tolPaper)) return false;
-  const outline = _worldOutlineForShape(shape, ancestorGroups);
+  const outline = _worldOutlineForShape(shape, ancestorGroups, scale);
   if (!outline) return true;
   const areaType =
     shape.type === "text" ||
@@ -2475,7 +2499,14 @@ function realPointInShapeGeometry(rp, shape, scale, ancestorGroups = []) {
     (shape.fill && shape.fill !== "none");
   if (outline.closed && areaType && _pointInRings(rp.x, rp.y, outline.rings))
     return true;
-  return _nearAnyRing(rp.x, rp.y, outline.rings, tol, outline.closed);
+  return _nearAnyRing(
+    rp.x,
+    rp.y,
+    outline.rings,
+    tol,
+    outline.closed,
+    outline.ringBounds,
+  );
 }
 
 function findTopShapeAtRealPoint(rp) {

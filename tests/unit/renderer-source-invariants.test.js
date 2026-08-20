@@ -14,6 +14,10 @@ const interactionSource = fs.readFileSync(
   path.join(ROOT, "app/js/interaction.js"),
   "utf8",
 );
+const interactionGeometrySource = fs.readFileSync(
+  path.join(ROOT, "app/js/interaction-geometry.js"),
+  "utf8",
+);
 const uiSource = fs.readFileSync(path.join(ROOT, "app/js/ui.js"), "utf8");
 
 function functionBody(source, name) {
@@ -235,10 +239,14 @@ test("complex paths use a simplified SVG hit proxy", () => {
   assert.match(rendererSource, /"data-hit-proxy": "simplified-path"/);
   assert.match(rendererSource, /const COMPLEX_PATH_HIT_STROKE_PX = 12/);
   assert.match(rendererSource, /"vector-effect": "non-scaling-stroke"/);
-  assert.match(rendererSource, /_simplifySnapRing\(paperRing, 0\.02\)/);
+  assert.match(rendererSource, /getPathInteractionGeometry\(shape, scale\)/);
+  assert.match(
+    interactionGeometrySource,
+    /const PATH_INTERACTION_TOLERANCE_PAPER = 0\.02/,
+  );
+  assert.match(interactionGeometrySource, /_simplifySnapRing\(/);
   assert.match(rendererSource, /options\.interactive !== false/);
   assert.match(rendererSource, /"data-complex-display-path": "true"/);
-  assert.match(rendererSource, /_simplifySnapRing/);
   assert.match(
     rendererSource,
     /"pointer-events": fill === "none" \? "stroke" : "all"/,
@@ -254,6 +262,7 @@ test("complex paths use a simplified SVG hit proxy", () => {
   assert.match(interactionSource, /if \(_ds\.pathResizeFast\)/);
   assert.match(interactionSource, /const proxyHit = e\.target\.closest/);
   assert.match(interactionSource, /if \(!picked\) picked = findTopShapeAtRealPoint/);
+  assert.match(interactionSource, /getPathInteractionGeometry\(/);
   assert.match(interactionSource, /function _captureSelectionMoveOrigins/);
   assert.match(
     interactionSource,

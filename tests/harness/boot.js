@@ -37,6 +37,7 @@ const FROZEN_NOW = 1700000000000;
 const CORE_FILES = [
   "app/js/state.js",
   "app/js/transform.js",
+  "app/js/interaction-geometry.js",
   "app/js/profiles.js",
   "app/js/constraints.js",
   "app/js/commands.js",
@@ -110,6 +111,7 @@ const EXPORT_NAMES = [
   "getPageCanvasMM",
   "snapToShapes",
   "_simplifySnapRing",
+  "getPathInteractionGeometry",
   "dimensionValueMM",
   // history
   "undo",

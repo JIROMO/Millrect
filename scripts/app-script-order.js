@@ -41,6 +41,7 @@ module.exports = [
   "js/state.js",
   "js/project-fonts.js",
   "js/transform.js",
+  "js/interaction-geometry.js",
   "js/profiles.js",
   "js/constraints.js",
   "js/renderer.js",

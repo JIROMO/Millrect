@@ -1892,9 +1892,9 @@ function clearLiveDragTransforms() {
   }
 }
 
-// 多頂点 path は transform だけでも Chromium が正確な全輪郭を再ラスタライズし、
+// 多頂点 path は transform だけでも Chromium が輪郭を再ラスタライズし、
 // 移動がカクつく。操作中だけ既存の軽量 hit proxy を同じ色で表示し、確定時に
-// 正確な path へ戻す。ドキュメントの輪郭データには触れない。
+// 通常の表示用 path へ戻す。ドキュメントの正確な輪郭データには触れない。
 function _setComplexPathLivePreview(node, active) {
   const exact = node?.querySelector?.('[data-complex-display-path="true"]');
   const proxy = node?.querySelector?.('[data-hit-proxy="simplified-path"]');
@@ -2245,36 +2245,40 @@ function renderShape(shape, scale, selIds, options = {}) {
       }),
     );
   } else if (shape.type === "path") {
-    let vertexCount = 0;
-    for (const polygon of shape.contours) {
-      for (const ring of polygon) {
-        if (!ring.length) continue;
-        vertexCount += ring.length;
-      }
-    }
+    const interactionGeometry =
+      options.interactive !== false &&
+      typeof getPathInteractionGeometry === "function"
+        ? getPathInteractionGeometry(shape, scale)
+        : null;
+    const vertexCount =
+      interactionGeometry?.canonicalVertexCount ||
+      shape.contours.reduce(
+        (sum, polygon) =>
+          sum + polygon.reduce((ringSum, ring) => ringSum + ring.length, 0),
+        0,
+      );
     // 円を 1 個くり抜くだけでも polygon-clipping の結果は約 130 頂点になる。
     // 512 頂点まで正確な SVG hit-test を使うと、最も一般的な減算直後から
     // pointermove / click が重くなるため、通常の Boolean 円弧も軽量プロキシへ回す。
     const complexHitPath = options.interactive !== false && vertexCount > 96;
-    let d = "";
-    for (const polygon of shape.contours) {
-      for (const ring of polygon) {
-        if (!ring.length) continue;
-        const paperRing = ring.map(([x, y]) => [
-          realToPaper(x, scale),
-          realToPaper(y, scale),
-        ]);
-        // 保存・演算用 contours は一切変更しない。インタラクティブ表示だけを
-        // 紙面 0.02mm 以内で簡略化し、既に減算済みの100穴 pathでも Chromiumが
-        // ラスタライズする頂点数を大幅に減らす。export は interactive:false のため
-        // 常に元の全頂点を使う。
-        const displayRing =
-          complexHitPath && typeof _simplifySnapRing === "function"
-            ? _simplifySnapRing(paperRing, 0.02)
-            : paperRing;
-        d += `M ${displayRing.map(([x, y]) => `${x},${y}`).join(" L ")} Z `;
-      }
-    }
+    // 保存・演算用 contours は一切変更しない。通常表示とヒット判定は同じ
+    // キャッシュ済み interaction geometry を使う。export は interactive:false
+    // のため、常に元の全頂点から正確な path を生成する。
+    const displayPaperRings = complexHitPath
+      ? interactionGeometry?.displayPaperRings || []
+      : shape.contours.flatMap((polygon) =>
+          polygon
+            .filter((ring) => ring.length)
+            .map((ring) =>
+              ring.map(([x, y]) => [realToPaper(x, scale), realToPaper(y, scale)]),
+            ),
+        );
+    const d = displayPaperRings
+      .map(
+        (ring) =>
+          `M ${ring.map(([x, y]) => `${x},${y}`).join(" L ")} Z`,
+      )
+      .join(" ");
     g.appendChild(
       se("path", {
         d: d.trim(),
@@ -2288,24 +2292,12 @@ function renderShape(shape, scale, selIds, options = {}) {
         "pointer-events": complexHitPath ? "none" : "all",
       }),
     );
-    if (complexHitPath && typeof _simplifySnapRing === "function") {
-      let hitD = "";
-      for (const polygon of shape.contours) {
-        for (const ring of polygon) {
-          if (!ring.length) continue;
-          const paperRing = _simplifySnapRing(
-            ring.map(([x, y]) => [realToPaper(x, scale), realToPaper(y, scale)]),
-            0.02,
-          );
-          if (!paperRing.length) continue;
-          hitD += `M ${paperRing.map(([x, y]) => `${x},${y}`).join(" L ")} Z `;
-        }
-      }
-      // 見た目は上の正確な path、クリック判定だけを軽い透明 path が担当する。
+    if (complexHitPath && displayPaperRings.length) {
+      // 見た目とクリック判定で同じ軽量輪郭を共有し、透明 path が判定を担当する。
       // evenodd を揃えるため穴や輪郭間の隙間でも誤選択しない。
       g.appendChild(
         se("path", {
-          d: hitD.trim(),
+          d,
           fill: "transparent",
           stroke: "transparent",
           "stroke-width": COMPLEX_PATH_HIT_STROKE_PX,
