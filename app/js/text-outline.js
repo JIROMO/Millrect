@@ -12,7 +12,9 @@ function isTextOutlineAvailable() {
 }
 
 function isTextNativePreviewEnabled() {
-  return isTextOutlineAvailable();
+  // Normal text stays as browser-rendered text. Outline generation remains
+  // available only to callers that explicitly request an outline operation.
+  return false;
 }
 
 function isTextNativeLayoutEnabled() {

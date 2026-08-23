@@ -31,6 +31,10 @@ const booleanWorkerClientSource = fs.readFileSync(
   "utf8",
 );
 const uiSource = fs.readFileSync(path.join(ROOT, "app/js/ui.js"), "utf8");
+const textOutlineSource = fs.readFileSync(
+  path.join(ROOT, "app/js/text-outline.js"),
+  "utf8",
+);
 
 function functionBody(source, name) {
   const start = source.indexOf(`function ${name}`);
@@ -58,6 +62,16 @@ function functionBody(source, name) {
   }
   assert.fail(`${name} body should close`);
 }
+
+test("text shapes use normal browser text instead of glyph contour paths", () => {
+  assert.doesNotMatch(rendererSource, /getTextNativePreviewChildren/);
+  assert.match(rendererSource, /se\("foreignObject"/);
+  assert.match(rendererSource, /div\.className = "millrect-text-shape"/);
+  assert.match(
+    functionBody(textOutlineSource, "isTextNativePreviewEnabled"),
+    /return false/,
+  );
+});
 
 test("transient canvas overlays live in dedicated render roots", () => {
   const renderRootOrder = rendererSource.match(

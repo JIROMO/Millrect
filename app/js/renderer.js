@@ -676,13 +676,6 @@ function measureTextWidth(shape, scale) {
   if (textHasFixedWidth(shape) && scale) {
     return realToPaper(shape.width, scale);
   }
-  if (scale && typeof getTextNativePreviewChildren === "function") {
-    const preview = getTextNativePreviewChildren(shape.id, shape, scale);
-    if (preview?.length) {
-      const bb = textNativePreviewBBoxPaper(preview, scale);
-      if (bb) return bb.w;
-    }
-  }
   return measureTextLayout(shape, null).w;
 }
 
@@ -801,18 +794,6 @@ function measureTextLayoutDom(shape, paperWidth) {
 }
 
 function measureTextLayout(shape, paperWidth) {
-  const scale = getCurrentPage()?.scale;
-  if (scale && shape?.id && typeof getTextNativeLayoutMetrics === "function") {
-    const metrics = getTextNativeLayoutMetrics(shape.id, shape, scale);
-    if (metrics?.layoutPaper) {
-      const fixedW = textHasFixedWidth(shape);
-      const expectedW = fixedW ? realToPaper(shape.width, scale) : null;
-      const pw = paperWidth != null && paperWidth > 0 ? paperWidth : null;
-      if (pw === expectedW || (pw == null && !fixedW)) {
-        return metrics.layoutPaper;
-      }
-    }
-  }
   return measureTextLayoutDom(shape, paperWidth);
 }
 
@@ -900,25 +881,12 @@ function getTextLayoutBoxPaper(shape, scale) {
   const fixedW = textHasFixedWidth(shape);
   const pw = textPaperWidth(shape, scale);
   const layout = measureTextLayout(shape, pw);
-  let h = layout.h;
-
-  // 行高は layout 基準。glyph がはみ出す場合のみ下端を延長（幅は typographic frame）
-  const preview =
-    typeof getTextNativePreviewChildren === "function"
-      ? getTextNativePreviewChildren(shape.id, shape, scale)
-      : null;
-  if (preview?.length) {
-    const inkBb = textNativePreviewBBoxPaper(preview, scale);
-    if (inkBb) {
-      h = Math.max(h, inkBb.y + inkBb.h - anchorY);
-    }
-  }
 
   return {
     x: anchorX,
     y: anchorY,
     w: fixedW ? pw : layout.w,
-    h,
+    h: layout.h,
   };
 }
 
@@ -2134,90 +2102,33 @@ function renderShape(shape, scale, selIds, options = {}) {
     );
   } else if (shape.type === "text") {
     const layoutBox = getTextLayoutBoxPaper(shape, scale);
-    const fillColor = textShapeInkColor(shape);
-    let preview =
-      typeof getTextNativePreviewChildren === "function"
-        ? getTextNativePreviewChildren(shape.id, shape, scale)
-        : null;
-
-    let pathCount = 0;
-    if (preview?.length) {
-      for (const child of preview) {
-        let d = "";
-        for (const polygon of child.contours || []) {
-          for (const ring of polygon) {
-            if (!ring.length) continue;
-            d += `M ${ring.map(([x, y]) => `${realToPaper(x, scale)},${realToPaper(y, scale)}`).join(" L ")} Z `;
-          }
-        }
-        if (!d.trim()) continue;
-        pathCount++;
-        g.appendChild(
-          se("path", {
-            d: d.trim(),
-            stroke: "none",
-            fill: fillColor,
-            "fill-rule": child.fillRule || "nonzero",
-            "pointer-events": "none",
-          }),
-        );
-      }
-    }
-
-    if (!pathCount) {
-      preview = null;
-    }
-
-    // native glyph path が無い間（初回生成中・アウトライン失敗時）は
-    // foreignObject の DOM テキストで代替表示する。以前は native 有効時に
-    // 常に抑止していたため、アウトライン失敗がキャッシュされると図形が
-    // 完全に不可視（選択枠だけ）になっていた
-    if (!preview?.length) {
-      const px = layoutBox.x;
-      const py = layoutBox.y;
-      const fo = se("foreignObject", {
-        x: px,
-        y: py,
-        width: layoutBox.w,
-        height: layoutBox.h,
-        overflow: "visible",
-        "pointer-events": "none",
-      });
-      const div = document.createElementNS(
-        "http://www.w3.org/1999/xhtml",
-        "div",
-      );
-      div.className = "millrect-text-shape";
-      applyTextShapeElementStyle(div, shape);
-      const nativeLayout =
-        typeof getTextNativeLayoutMetrics === "function"
-          ? getTextNativeLayoutMetrics(shape.id, shape, scale)
-          : null;
-      const domLayout =
-        nativeLayout?.layoutPaper ||
-        measureTextLayoutDom(shape, textPaperWidth(shape, scale));
-      applyTextShapeInset(div, domLayout);
-      div.style.pointerEvents = "none";
-      div.style.userSelect = "none";
-      div.textContent = shape.text || "";
-      fo.appendChild(div);
-      g.appendChild(fo);
-    }
-
-    if (
-      !preview?.length &&
-      typeof isTextNativePreviewEnabled === "function" &&
-      isTextNativePreviewEnabled() &&
-      shape.text &&
-      /\S/.test(shape.text) &&
-      !(
-        typeof isTextNativeLiveTransform === "function" &&
-        isTextNativeLiveTransform(shape.id)
-      )
-    ) {
-      scheduleTextNativeLayout(shape.id, 0);
-      scheduleTextNativePreview(shape.id, 0);
-    }
+    // Text is an editable document element, so let the browser rasterize the
+    // font directly. Building a compound path from glyph contours can corrupt
+    // overlapping Japanese strokes and produces the checkerboard-like holes
+    // seen in characters such as 「内」.
+    const fo = se("foreignObject", {
+      x: layoutBox.x,
+      y: layoutBox.y,
+      width: layoutBox.w,
+      height: layoutBox.h,
+      overflow: "visible",
+      "pointer-events": "none",
+    });
+    const div = document.createElementNS(
+      "http://www.w3.org/1999/xhtml",
+      "div",
+    );
+    div.className = "millrect-text-shape";
+    applyTextShapeElementStyle(div, shape);
+    applyTextShapeInset(
+      div,
+      measureTextLayoutDom(shape, textPaperWidth(shape, scale)),
+    );
+    div.style.pointerEvents = "none";
+    div.style.userSelect = "none";
+    div.textContent = shape.text || "";
+    fo.appendChild(div);
+    g.appendChild(fo);
 
     g.appendChild(
       se("rect", {
