@@ -63,6 +63,120 @@ function _weldTriangleSoup(position, tol = _CSG_WELD_TOL) {
   return geo;
 }
 
+// earcut が穴付きキャップを三角形分割すると、同一直線上の境界に対して片側は
+// 1 本の長い辺、反対側は複数の短い辺になることがある。見た目には閉じていても、
+// indexed mesh としては辺が 1 回ずつしか現れない T 字継ぎ目になり、STL 検証では
+// open edge と判定される。境界辺上に別の境界頂点がある三角形だけを細分化し、両側の
+// 辺分割を一致させる。形状そのものは変えず、元三角形の重心を使った扇形分割にする。
+function _splitBoundaryTJunctions(geometry, tol = _CSG_WELD_TOL) {
+  const index = geometry?.index;
+  const position = geometry?.attributes?.position;
+  if (!index || !position) return geometry;
+
+  const indices = Array.from(index.array);
+  const edgeCounts = new Map();
+  const edgeKey = (a, b) => (a < b ? `${a},${b}` : `${b},${a}`);
+  for (let i = 0; i < indices.length; i += 3) {
+    const a = indices[i],
+      b = indices[i + 1],
+      c = indices[i + 2];
+    for (const [u, v] of [
+      [a, b],
+      [b, c],
+      [c, a],
+    ]) {
+      const key = edgeKey(u, v);
+      edgeCounts.set(key, (edgeCounts.get(key) || 0) + 1);
+    }
+  }
+
+  const boundaryVertices = new Set();
+  for (const [key, count] of edgeCounts) {
+    if (count !== 1) continue;
+    const [a, b] = key.split(",").map(Number);
+    boundaryVertices.add(a);
+    boundaryVertices.add(b);
+  }
+  if (boundaryVertices.size < 3) return geometry;
+
+  const coords = Array.from(position.array);
+  const point = (id) => [coords[id * 3], coords[id * 3 + 1], coords[id * 3 + 2]];
+  const tolSq = tol * tol;
+
+  function pointsStrictlyInsideEdge(a, b) {
+    if (edgeCounts.get(edgeKey(a, b)) !== 1) return [];
+    const pa = point(a);
+    const pb = point(b);
+    const dx = pb[0] - pa[0],
+      dy = pb[1] - pa[1],
+      dz = pb[2] - pa[2];
+    const lenSq = dx * dx + dy * dy + dz * dz;
+    if (lenSq <= tolSq) return [];
+    const edgeTol = Math.min(0.25, tol / Math.sqrt(lenSq));
+    const hits = [];
+    for (const id of boundaryVertices) {
+      if (id === a || id === b) continue;
+      const p = point(id);
+      const t =
+        ((p[0] - pa[0]) * dx +
+          (p[1] - pa[1]) * dy +
+          (p[2] - pa[2]) * dz) /
+        lenSq;
+      if (t <= edgeTol || t >= 1 - edgeTol) continue;
+      const qx = pa[0] + dx * t,
+        qy = pa[1] + dy * t,
+        qz = pa[2] + dz * t;
+      const ex = p[0] - qx,
+        ey = p[1] - qy,
+        ez = p[2] - qz;
+      if (ex * ex + ey * ey + ez * ez <= tolSq) hits.push({ id, t });
+    }
+    hits.sort((x, y) => x.t - y.t);
+    return hits.map((hit) => hit.id);
+  }
+
+  const out = [];
+  let changed = false;
+  for (let i = 0; i < indices.length; i += 3) {
+    const a = indices[i],
+      b = indices[i + 1],
+      c = indices[i + 2];
+    const boundary = [
+      a,
+      ...pointsStrictlyInsideEdge(a, b),
+      b,
+      ...pointsStrictlyInsideEdge(b, c),
+      c,
+      ...pointsStrictlyInsideEdge(c, a),
+    ];
+    if (boundary.length === 3) {
+      out.push(a, b, c);
+      continue;
+    }
+
+    changed = true;
+    const pa = point(a),
+      pb = point(b),
+      pc = point(c);
+    const center = coords.length / 3;
+    coords.push(
+      (pa[0] + pb[0] + pc[0]) / 3,
+      (pa[1] + pb[1] + pc[1]) / 3,
+      (pa[2] + pb[2] + pc[2]) / 3,
+    );
+    for (let j = 0; j < boundary.length; j++) {
+      out.push(center, boundary[j], boundary[(j + 1) % boundary.length]);
+    }
+  }
+  if (!changed || _badEdgeCount(out) >= _badEdgeCount(indices)) return geometry;
+
+  const result = new THREE.BufferGeometry();
+  result.setAttribute("position", new THREE.Float32BufferAttribute(coords, 3));
+  result.setIndex(out);
+  result.computeVertexNormals();
+  return result;
+}
+
 // CSG 演算結果メッシュ（ワールド空間・非 indexed の三角形スープ）を、その場で溶接して
 // 返す。呼び出し側の union/intersect/subtract の直後に必ず通すことで、誤差の連鎖的な
 // 蓄積を断ち切る。
@@ -2531,8 +2645,10 @@ function _makeCleanExportMesh(mesh) {
   src.applyMatrix4(mesh.matrixWorld);
   const welded = _cleanGeometryForExport(src.attributes.position.array);
   src.dispose();
-  const cleaned = _patchOpenBoundaries(welded);
-  if (cleaned !== welded) welded.dispose();
+  const split = _splitBoundaryTJunctions(welded);
+  if (split !== welded) welded.dispose();
+  const cleaned = _patchOpenBoundaries(split);
+  if (cleaned !== split) split.dispose();
   cleaned.computeVertexNormals();
   const mat = mesh.material?.clone?.() || mesh.material;
   return new THREE.Mesh(cleaned, mat);
