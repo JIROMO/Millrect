@@ -229,6 +229,7 @@ function getSnapped(sx, sy, opts = {}) {
 }
 
 function onMouseDown(e, svgEl) {
+  if (typeof renderHoverSelection === "function") renderHoverSelection(null);
   const state = getState();
   const tool = state.activeTool;
   const sv = screenToSVG(e, svgEl);
@@ -238,7 +239,7 @@ function onMouseDown(e, svgEl) {
     (!!svgClosest(e.target, "[data-id]") ||
       !!e.target.closest("[data-handle]") ||
       !!e.target.closest("[data-rotate-handle]"));
-  if (e.button === 1 || (e.button === 0 && e.altKey && !_altOnShape)) {
+  if (e.button === 1 || (e.button === 0 && e.altKey && !_altOnShape && !(tool === "circle" && e.shiftKey))) {
     _panning = true;
     _panStart = {
       x: e.clientX,
@@ -397,7 +398,8 @@ function onMouseMove(e, svgEl) {
       !!_bezierEditId);
   if (coordinateEdit) rp = quantizeRealPointForUnitMode(rp, state);
   updateStatusCoords(rp);
-  if (!isSelectionMove) {
+  if (isHandleResize) removeSnapIndicator();
+  else if (!isSelectionMove) {
     snapped
       ? renderSnapIndicator(pp.x, pp.y, state.zoom, snapType)
       : removeSnapIndicator();
@@ -465,7 +467,7 @@ function onMouseMove(e, svgEl) {
   }
   if (_ds?.action === "multi-resize") {
     document.body.classList.add("dragging");
-    handleMultiResize(rp, e.shiftKey);
+    handleMultiResize(_rawReal(e, svgEl), e.shiftKey);
     return;
   }
   if (tool === "select" && _ds?.action === "move-pending") {
@@ -477,7 +479,7 @@ function onMouseMove(e, svgEl) {
   }
   if (_ds?.action === "resize") {
     document.body.classList.add("dragging");
-    handleResize(rp, e.shiftKey);
+    handleResize(_rawReal(e, svgEl), e.shiftKey);
     return;
   }
   if (tool === "select" && _ds?.action === "move") {
@@ -503,6 +505,9 @@ function onMouseMove(e, svgEl) {
   }
 
   if (!_ds) {
+    if (typeof renderHoverSelection === "function") {
+      renderHoverSelection(tool === "select" ? findTopShapeAtRealPoint(_rawReal(e, svgEl)) : null);
+    }
     if (tool === "dimension" && _dimState) {
       const ds = _dimState;
       if (ds.step === 1) {
@@ -543,7 +548,7 @@ function onMouseMove(e, svgEl) {
     return;
   }
   if (!["line", "rect", "circle"].includes(tool)) return;
-  renderPreview(buildPreview(tool, _ds.sr, rp, e.shiftKey));
+  renderPreview(buildPreview(tool, _ds.sr, rp, e.shiftKey, e.altKey));
 }
 
 function onMouseUp(e, svgEl) {
@@ -755,7 +760,7 @@ function onMouseUp(e, svgEl) {
     return;
   }
   if (!_ds || ["dimension", "text", "select"].includes(tool)) return;
-  commitShape(tool, _ds.sr, rp, e.shiftKey);
+  commitShape(tool, _ds.sr, rp, e.shiftKey, e.altKey);
   removePreview();
   _ds = null;
   document.body.classList.remove("dragging");
@@ -960,6 +965,8 @@ function _updateSelectionUiAfterPaint() {
 }
 
 function handleSelDown(e, svgEl, pp, rp) {
+  // Picking and handle deltas follow the pointer, never the drawing grid.
+  rp = _rawReal(e, svgEl);
   const state = getState();
   const tool = state.activeTool;
   if (
@@ -1144,7 +1151,7 @@ function handleSelDown(e, svgEl, pp, rp) {
     state.selectedShapeIds = [sid];
     const res = findShapeById(sid);
     if (!res) return;
-    if (res.shape?.type === "group") return;
+    if (res.shape?.type === "group" && !canUniformResizeGroup(res.shape)) return;
     const origShape = JSON.parse(JSON.stringify(res.shape));
     _ds = {
       action: "resize",
@@ -1153,6 +1160,7 @@ function handleSelDown(e, svgEl, pp, rp) {
       startRP: rp,
       origShape,
       origPivot: getShapePivotReal(res.shape),
+      origGroupBB: res.shape.type === "group" ? groupResizeBounds(res.shape) : null,
     };
     if (
       origShape?.type === "text" &&
@@ -1291,79 +1299,75 @@ function handleSelDown(e, svgEl, pp, rp) {
   _updateSelectionUiAfterPaint();
 }
 
+function anchoredResizeBox(o, hi, dx, dy, proportional, ratio = o.width / (o.height || 1)) {
+  const left = [0, 6, 7].includes(hi), right = [2, 3, 4].includes(hi);
+  const top = [0, 1, 2].includes(hi), bottom = [4, 5, 6].includes(hi);
+  let width = o.width + (left ? -dx : right ? dx : 0);
+  let height = o.height + (top ? -dy : bottom ? dy : 0);
+  if (proportional) {
+    if (!left && !right) width = height * ratio;
+    else if (!top && !bottom) height = width / ratio;
+    else if (Math.abs(width - o.width) >= Math.abs((height - o.height) * ratio)) height = width / ratio;
+    else width = height * ratio;
+    width = Math.max(1, ratio, width);
+    height = width / ratio;
+  } else {
+    width = Math.max(1, width);
+    height = Math.max(1, height);
+  }
+  if (getState().oneMmMode) {
+    width = Math.max(1, quantizeRealForUnitMode(width));
+    height = proportional ? width / ratio : Math.max(1, quantizeRealForUnitMode(height));
+  }
+  return {
+    x: left ? o.x + o.width - width : right ? o.x : o.x + (o.width - width) / 2,
+    y: top ? o.y + o.height - height : bottom ? o.y : o.y + (o.height - height) / 2,
+    width, height,
+  };
+}
+
 function _computeBboxAfterResize(o, hi, dx, dy, shiftKey, ratio) {
-  let ndx = dx,
-    ndy = dy;
-  if (shiftKey) {
-    if (hi === 0) {
-      ndx = dx;
-      ndy = dx / -ratio;
-      if (Math.abs(dy) > Math.abs(dx / ratio))
-        ((ndy = dy), (ndx = dy * -ratio));
-    }
-    if (hi === 2) {
-      ndx = dx;
-      ndy = -dx / ratio;
-      if (Math.abs(dy) > Math.abs(dx / ratio))
-        ((ndy = dy), (ndx = -dy * ratio));
-    }
-    if (hi === 4) {
-      ndx = dx;
-      ndy = dx / ratio;
-      if (Math.abs(dy) > Math.abs(dx / ratio)) ((ndy = dy), (ndx = dy * ratio));
-    }
-    if (hi === 6) {
-      ndx = dx;
-      ndy = -dx / ratio;
-      if (Math.abs(dy) > Math.abs(dx / ratio))
-        ((ndy = dy), (ndx = -dy * ratio));
-    }
-    if (hi === 3 || hi === 7) {
-      ndy = ndx / ratio;
-    }
-    if (hi === 1 || hi === 5) {
-      ndx = ndy * ratio;
-    }
+  return anchoredResizeBox(o, hi, dx, dy, shiftKey, ratio);
+}
+
+function cornerCircleGeometry(start, end) {
+  const size = quantizeRealForUnitMode(Math.max(Math.abs(end.x - start.x), Math.abs(end.y - start.y)));
+  return { type: "circle", cx: start.x + (end.x < start.x ? -size : size) / 2,
+    cy: start.y + (end.y < start.y ? -size : size) / 2, r: size / 2 };
+}
+
+function canUniformResizeGroup(shape) {
+  if (shape.type === "group") return shape.children?.length > 0 && shape.children.every(canUniformResizeGroup);
+  return ["rect", "image", "text", "circle", "ellipse", "line", "path", "bezier", "pencil", "dimension"].includes(shape.type);
+}
+
+function groupResizeBounds(shape) {
+  const pts = (shape.children || []).flatMap(child => collectWorldPointsReal(child, []));
+  const bb = aabbFromPoints(pts);
+  return bb && bb.w > 0 && bb.h > 0 ? { x: bb.x, y: bb.y, width: bb.w, height: bb.h } : null;
+}
+
+// Uniform scaling commutes with child rotations/flips, including nested groups.
+function scaleGroupGeometry(shape, factor, tx, ty) {
+  const point = p => ({ ...p, x: p.x * factor + tx, y: p.y * factor + ty });
+  if (shape.type === "group") {
+    shape.children.forEach(child => scaleGroupGeometry(child, factor, tx, ty));
+    return;
   }
-  let x = o.x,
-    y = o.y,
-    width = o.width,
-    height = o.height;
-  if (hi === 0) {
-    x += ndx;
-    y += ndy;
-    width -= ndx;
-    height -= ndy;
-  }
-  if (hi === 1) {
-    y += ndy;
-    height -= ndy;
-  }
-  if (hi === 2) {
-    y += ndy;
-    width += ndx;
-    height -= ndy;
-  }
-  if (hi === 3) {
-    width += ndx;
-  }
-  if (hi === 4) {
-    width += ndx;
-    height += ndy;
-  }
-  if (hi === 5) {
-    height += ndy;
-  }
-  if (hi === 6) {
-    x += ndx;
-    width -= ndx;
-    height += ndy;
-  }
-  if (hi === 7) {
-    x += ndx;
-    width -= ndx;
-  }
-  return { x, y, width, height };
+  for (const key of ["x", "cx", "x1", "x2"]) if (typeof shape[key] === "number") shape[key] = shape[key] * factor + tx;
+  for (const key of ["y", "cy", "y1", "y2"]) if (typeof shape[key] === "number") shape[key] = shape[key] * factor + ty;
+  for (const key of ["width", "height", "r", "rx", "ry", "fontSize", "letterSpacing", "offset", "textOffsetX", "textOffsetY", "rxTL", "rxTR", "rxBL", "rxBR"]) if (typeof shape[key] === "number") shape[key] *= factor;
+  if (shape.type === "text" && shape.fontSize == null) shape.fontSize = 3.5 * factor;
+  if (shape.contours) shape.contours = shape.contours.map(poly => poly.map(ring => ring.map(([x,y]) => [x * factor + tx, y * factor + ty])));
+  if (shape.nodes) shape.nodes = shape.nodes.map(n => n.break ? n : ({ ...point(n), h1: n.h1 ? point(n.h1) : null, h2: n.h2 ? point(n.h2) : null }));
+  if (shape.points) shape.points = shape.points.map(point);
+  if (shape.from) shape.from = point(shape.from);
+  if (shape.to) shape.to = point(shape.to);
+}
+
+function invalidateResizeTree(shape) {
+  if (shape.children) shape.children.forEach(invalidateResizeTree);
+  if (typeof markShapeDirty === "function") markShapeDirty(shape.id);
 }
 
 function _resizeRoundShape(origShape, shape, hi, dx, dy, shiftKey) {
@@ -1393,11 +1397,6 @@ function _resizeRoundShape(origShape, shape, hi, dx, dy, shiftKey) {
   );
   width = Math.max(MIN, width);
   height = Math.max(MIN, height);
-  if (width === MIN && (hi === 0 || hi === 2 || hi === 6))
-    x = o.x + o.width - MIN;
-  if (height === MIN && (hi === 0 || hi === 1 || hi === 2))
-    y = o.y + o.height - MIN;
-
   const cx = x + width / 2;
   const cy = y + height / 2;
   if (shiftKey) {
@@ -1585,6 +1584,8 @@ function handleResize(rp, shiftKey) {
   const res = findShapeById(shapeId);
   if (!res) return;
   const shape = res.shape;
+  for (const key of Object.keys(shape)) delete shape[key];
+  Object.assign(shape, JSON.parse(JSON.stringify(origShape)));
 
   let dx = rp.x - startRP.x,
     dy = rp.y - startRP.y;
@@ -1614,95 +1615,13 @@ function handleResize(rp, shiftKey) {
       shape.y2 = origShape.y2 + dy;
     }
   } else if (shape.type === "rect" || shape.type === "image") {
-    const o = origShape;
-    // 回転・反転中は後段のアンカー固定補正が shape.x/y を毎フレーム加算するため、
-    // 各 hi 分岐が触れない軸を前フレームの値のまま残すと補正が累積してしまう。
-    // 基準値にリセットしてから hi 分岐で上書きする。
-    if (_xf) {
-      shape.x = o.x;
-      shape.y = o.y;
-    }
-    let ndx = dx,
-      ndy = dy;
-    if (shiftKey) {
-      const ratio = o.width / (o.height || 1);
-      if (hi === 0) {
-        ndx = dx;
-        ndy = dx / -ratio;
-        if (Math.abs(dy) > Math.abs(dx / ratio))
-          ((ndy = dy), (ndx = dy * -ratio));
-      }
-      if (hi === 2) {
-        ndx = dx;
-        ndy = -dx / ratio;
-        if (Math.abs(dy) > Math.abs(dx / ratio))
-          ((ndy = dy), (ndx = -dy * ratio));
-      }
-      if (hi === 4) {
-        ndx = dx;
-        ndy = dx / ratio;
-        if (Math.abs(dy) > Math.abs(dx / ratio))
-          ((ndy = dy), (ndx = dy * ratio));
-      }
-      if (hi === 6) {
-        ndx = dx;
-        ndy = -dx / ratio;
-        if (Math.abs(dy) > Math.abs(dx / ratio))
-          ((ndy = dy), (ndx = -dy * ratio));
-      }
-    }
-    if (hi === 0) {
-      shape.x = o.x + ndx;
-      shape.y = o.y + ndy;
-      shape.width = Math.max(MIN, o.width - ndx);
-      shape.height = Math.max(MIN, o.height - ndy);
-    }
-    if (hi === 1) {
-      shape.y = o.y + ndy;
-      shape.height = Math.max(MIN, o.height - ndy);
-    }
-    if (hi === 2) {
-      shape.y = o.y + ndy;
-      shape.width = Math.max(MIN, o.width + ndx);
-      shape.height = Math.max(MIN, o.height - ndy);
-    }
-    if (hi === 3) {
-      shape.width = Math.max(MIN, o.width + ndx);
-    }
-    if (hi === 4) {
-      shape.width = Math.max(MIN, o.width + ndx);
-      shape.height = Math.max(MIN, o.height + ndy);
-    }
-    if (hi === 5) {
-      shape.height = Math.max(MIN, o.height + ndy);
-    }
-    if (hi === 6) {
-      shape.x = o.x + ndx;
-      shape.width = Math.max(MIN, o.width - ndx);
-      shape.height = Math.max(MIN, o.height + ndy);
-    }
-    if (hi === 7) {
-      shape.x = o.x + ndx;
-      shape.width = Math.max(MIN, o.width - ndx);
-    }
-    // Shift: 辺ハンドルは軸が1つしかないため、もう一方の辺を中心基準で
-    // 比例スケールしてアスペクト比を保つ（コーナーハンドルは既存ロジックで対応済み）
-    if (shiftKey && (hi === 1 || hi === 5)) {
-      const scale = shape.height / (o.height || 1);
-      const newWidth = Math.max(MIN, o.width * scale);
-      shape.width = newWidth;
-      shape.x = o.x + (o.width - newWidth) / 2;
-    }
-    if (shiftKey && (hi === 3 || hi === 7)) {
-      const scale = shape.width / (o.width || 1);
-      const newHeight = Math.max(MIN, o.height * scale);
-      shape.height = newHeight;
-      shape.y = o.y + (o.height - newHeight) / 2;
-    }
-    if (shape.width === MIN && (hi === 0 || hi === 2 || hi === 6))
-      shape.x = o.x + o.width - MIN;
-    if (shape.height === MIN && (hi === 0 || hi === 1 || hi === 2))
-      shape.y = o.y + o.height - MIN;
+    Object.assign(shape, anchoredResizeBox(origShape, hi, dx, dy, shiftKey));
+  } else if (shape.type === "group") {
+    const bb = _ds.origGroupBB;
+    if (!bb) return;
+    const next = anchoredResizeBox(bb, hi, dx, dy, true);
+    const factor = next.width / bb.width;
+    scaleGroupGeometry(shape, factor, next.x - factor * bb.x, next.y - factor * bb.y);
   } else if (shape.type === "circle" || shape.type === "ellipse") {
     _resizeRoundShape(origShape, shape, hi, dx, dy, shiftKey);
   } else if (shape.type === "path") {
@@ -1718,67 +1637,8 @@ function handleResize(rp, shiftKey) {
           if (x > ox2) ox2 = x;
           if (y > oy2) oy2 = y;
         }
-    let nx1 = ox1,
-      ny1 = oy1,
-      nx2 = ox2,
-      ny2 = oy2;
-    if (hi === 0) {
-      nx1 += dx;
-      ny1 += dy;
-    }
-    if (hi === 1) {
-      ny1 += dy;
-    }
-    if (hi === 2) {
-      nx2 += dx;
-      ny1 += dy;
-    }
-    if (hi === 3) {
-      nx2 += dx;
-    }
-    if (hi === 4) {
-      nx2 += dx;
-      ny2 += dy;
-    }
-    if (hi === 5) {
-      ny2 += dy;
-    }
-    if (hi === 6) {
-      nx1 += dx;
-      ny2 += dy;
-    }
-    if (hi === 7) {
-      nx1 += dx;
-    }
-    if (shiftKey) {
-      const ow = ox2 - ox1 || 1,
-        oh = oy2 - oy1 || 1;
-      const nw = nx2 - nx1,
-        nh = ny2 - ny1;
-      if (hi === 3 || hi === 7) {
-        const w2 = nw;
-        nx2 = nx1 + w2;
-        ny2 = ny1 + (w2 / ow) * oh;
-      } else if (hi === 1 || hi === 5) {
-        const h2 = nh;
-        ny2 = ny1 + h2;
-        nx2 = nx1 + (h2 / oh) * ow;
-      } else {
-        if (Math.abs(nw / ow) >= Math.abs(nh / oh)) {
-          const s = nw / ow;
-          ny1 = oy1 + (hi === 0 || hi === 2 ? -(s - 1) * oh : 0);
-          ny2 = ny1 + oh * s;
-        } else {
-          const s = nh / oh;
-          nx1 = ox1 + (hi === 0 || hi === 6 ? -(s - 1) * ow : 0);
-          nx2 = nx1 + ow * s;
-        }
-      }
-    }
-    nx2 = Math.max(nx1 + MIN, nx2);
-    ny2 = Math.max(ny1 + MIN, ny2);
-    nx1 = Math.min(nx1, nx2 - MIN);
-    ny1 = Math.min(ny1, ny2 - MIN);
+    const box = anchoredResizeBox({ x: ox1, y: oy1, width: ox2 - ox1, height: oy2 - oy1 }, hi, dx, dy, shiftKey);
+    const nx1 = box.x, ny1 = box.y, nx2 = nx1 + box.width, ny2 = ny1 + box.height;
     const sw = (nx2 - nx1) / (ox2 - ox1 || 1),
       sh = (ny2 - ny1) / (oy2 - oy1 || 1);
     if (
@@ -1827,41 +1687,8 @@ function handleResize(rp, shiftKey) {
       if (n.h1) acc(n.h1.x, n.h1.y);
       if (n.h2) acc(n.h2.x, n.h2.y);
     }
-    let nx1 = ox1,
-      ny1 = oy1,
-      nx2 = ox2,
-      ny2 = oy2;
-    if (hi === 0) ((nx1 += dx), (ny1 += dy));
-    if (hi === 1) ny1 += dy;
-    if (hi === 2) ((nx2 += dx), (ny1 += dy));
-    if (hi === 3) nx2 += dx;
-    if (hi === 4) ((nx2 += dx), (ny2 += dy));
-    if (hi === 5) ny2 += dy;
-    if (hi === 6) ((nx1 += dx), (ny2 += dy));
-    if (hi === 7) nx1 += dx;
-    if (shiftKey) {
-      const ow = ox2 - ox1 || 1,
-        oh = oy2 - oy1 || 1;
-      const nw = nx2 - nx1,
-        nh = ny2 - ny1;
-      if (hi === 3 || hi === 7) {
-        ny2 = ny1 + (nw / ow) * oh;
-      } else if (hi === 1 || hi === 5) {
-        nx2 = nx1 + (nh / oh) * ow;
-      } else if (Math.abs(nw / ow) >= Math.abs(nh / oh)) {
-        const s = nw / ow;
-        ny1 = oy1 + (hi === 0 || hi === 2 ? -(s - 1) * oh : 0);
-        ny2 = ny1 + oh * s;
-      } else {
-        const s = nh / oh;
-        nx1 = ox1 + (hi === 0 || hi === 6 ? -(s - 1) * ow : 0);
-        nx2 = nx1 + ow * s;
-      }
-    }
-    nx2 = Math.max(nx1 + MIN, nx2);
-    ny2 = Math.max(ny1 + MIN, ny2);
-    nx1 = Math.min(nx1, nx2 - MIN);
-    ny1 = Math.min(ny1, ny2 - MIN);
+    const box = anchoredResizeBox({ x: ox1, y: oy1, width: ox2 - ox1, height: oy2 - oy1 }, hi, dx, dy, shiftKey);
+    const nx1 = box.x, ny1 = box.y, nx2 = nx1 + box.width, ny2 = ny1 + box.height;
     const sx = (nx2 - nx1) / (ox2 - ox1 || 1),
       sy = (ny2 - ny1) / (oy2 - oy1 || 1);
     const mapPt = (p) =>
@@ -1957,6 +1784,7 @@ function handleResize(rp, shiftKey) {
 
   // 回転・反転中はピボット（bbox中心）がリサイズで動くため、アンカー
   // （ドラッグ反対側）が世界座標で固定されるよう t = M(Δc) − Δc だけ平行移動する
+  if (shape.type === "group") invalidateResizeTree(shape);
   if (_xf && _ds.origPivot) {
     const c0 = _ds.origPivot;
     const c1 = getShapePivotReal(shape);
@@ -1974,7 +1802,10 @@ function handleResize(rp, shiftKey) {
     }
   }
 
-  _quantizePrimitiveGeometryForUnitMode(shape);
+  // Quantize dimensions, not the translated world anchor of a rotated shape.
+  if (!_xf && shape.type !== "group") _quantizePrimitiveGeometryForUnitMode(shape);
+  if (shape.type === "group") invalidateResizeTree(shape);
+  else if (typeof markShapeDirty === "function") markShapeDirty(shapeId);
   liveUpdateShapes([shapeId]);
   _updatePathSizeDisplay(shape);
 }
@@ -2561,9 +2392,8 @@ function realPointInShapeGeometry(rp, shape, scale, ancestorGroups = []) {
   if (shape.type === "group") {
     const bb = getShapeBBox(shape, scale, ancestorGroups);
     if (!bb || !realPointInPaperBBox(rp, bb, scale)) return false;
-    // グループは1オブジェクトとして扱う: 子図形の隙間や塗りなし図形の
-    // 内側をつかんでも選択・移動できるよう bbox にフォールバックする
-    return true;
+    return (shape.children || []).some(child =>
+      realPointInShapeGeometry(rp, child, scale, [...ancestorGroups, shape]));
   }
   // 複合 path の輪郭走査より先に、キャッシュ済み bbox で大半の候補を落とす。
   // 離れた減算済み部品がページ上に何個あっても、その全頂点を調べない。
@@ -2990,7 +2820,7 @@ function applyAngleSnap(sr, er) {
   };
 }
 
-function buildPreview(tool, sr, er, shiftKey) {
+function buildPreview(tool, sr, er, shiftKey, altKey = false) {
   if (tool === "line") {
     let ep = shiftKey ? applyAngleSnap(sr, er) : er;
     ep = quantizeRealPointForUnitMode(ep);
@@ -3023,6 +2853,7 @@ function buildPreview(tool, sr, er, shiftKey) {
     };
   }
   if (tool === "circle") {
+    if (shiftKey && altKey) return { id: "__p__", ...cornerCircleGeometry(sr, er), strokeWidth: "medium" };
     if (shiftKey) {
       return {
         id: "__p__",
@@ -3051,7 +2882,7 @@ function buildPreview(tool, sr, er, shiftKey) {
   }
   return null;
 }
-function commitShape(tool, sr, er, shiftKey) {
+function commitShape(tool, sr, er, shiftKey, altKey = false) {
   const MIN = 0.5;
   const style = _drawStyle();
   let newId = null;
@@ -3095,7 +2926,12 @@ function commitShape(tool, sr, er, shiftKey) {
       strokeWidth: "medium",
     });
   } else if (tool === "circle") {
-    if (shiftKey) {
+    if (shiftKey && altKey) {
+      const geometry = cornerCircleGeometry(sr, er);
+      if (geometry.r < MIN) return;
+      newId = genId("circle");
+      addShape({ id: newId, ...geometry, stroke: style.stroke, fill: style.fill, strokeWidth: "medium" });
+    } else if (shiftKey) {
       const r = quantizeRealForUnitMode(
         Math.hypot(er.x - sr.x, er.y - sr.y),
       );

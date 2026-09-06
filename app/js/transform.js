@@ -152,13 +152,16 @@ function sampleShapePointsReal(shape) {
         [shape.x + shape.width, shape.y + shape.height],
         [shape.x, shape.y + shape.height],
       ];
-    case "circle": {
+    case "circle":
+    case "ellipse": {
+      const rx = shape.type === "circle" ? shape.r : shape.rx;
+      const ry = shape.type === "circle" ? shape.r : shape.ry;
       const pts = [];
       for (let i = 0; i < 16; i++) {
         const a = (2 * Math.PI * i) / 16;
         pts.push([
-          shape.cx + shape.r * Math.cos(a),
-          shape.cy + shape.r * Math.sin(a),
+          shape.cx + rx * Math.cos(a),
+          shape.cy + ry * Math.sin(a),
         ]);
       }
       return pts;

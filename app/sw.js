@@ -13,7 +13,7 @@
 // CACHE_VERSION is rewritten by scripts/build-app-js.js on every
 // `npm run build:site`, in lockstep with the app.bundle.js / app.css query
 // string. Bumping it is what makes activate() drop the previous cache.
-const CACHE_VERSION = "202608261106";
+const CACHE_VERSION = "202609061149";
 const CACHE_NAME = "millrect-" + CACHE_VERSION;
 
 const NETWORK_FIRST_PATHS = [/\/app\/?$/, /\/app\/index\.html$/, /\/docs\//];

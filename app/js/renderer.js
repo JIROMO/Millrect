@@ -444,6 +444,7 @@ const RENDER_ROOT_ORDER = [
   "shape-layer-root",
   "view-guide-root",
   "reference-overlay-root",
+  "hover-root",
   "selection-root",
   "interaction-overlay-root",
   "preview-root",
@@ -2683,13 +2684,54 @@ function appendSelectionSizeBadge(g, bb, zoom, scale, labelBB) {
   g.appendChild(badge);
 }
 
+function appendShapeSelectionOutline(g, shape, page, zoom, hover = false, ancestors = []) {
+  if (shape.type === "group") {
+    for (const child of shape.children || []) appendShapeSelectionOutline(g, child, page, zoom, hover, [...ancestors, shape]);
+    return;
+  }
+  const outline = _worldOutlineForShape(shape, ancestors, page.scale);
+  if (!outline) return;
+  const d = outline.rings.map(ring => ring.map(([x,y], i) =>
+    `${i ? "L" : "M"}${realToPaper(x, page.scale)},${realToPaper(y, page.scale)}`).join(" ") + (outline.closed ? " Z" : "")).join(" ");
+  g.appendChild(se("path", { d, fill: "none", stroke: hover ? "#93b4ff" : "#2563eb",
+    "stroke-width": (hover ? 1.5 : 2) / zoom, "pointer-events": "none", class: hover ? "hover-outline" : "selected-outline" }));
+}
+
+let _hoverSelectionKey = null;
+function renderHoverSelection(shape) {
+  if (!_vp) return;
+  const state = getState(), page = getCurrentPage();
+  if (shape && state.selectedShapeIds.includes(shape.id)) shape = null;
+  const key = shape ? `${shape.id}:${getShapeRenderVersion(shape.id)}:${state.zoom}` : null;
+  if (key === _hoverSelectionKey && (!key || _ensureRenderRoot("hover-root").childNodes.length)) return;
+  _hoverSelectionKey = key;
+  _clearRenderRoot("hover-root");
+  if (shape) {
+    const g = se("g", { "pointer-events": "none" });
+    appendShapeSelectionOutline(g, shape, page, state.zoom, true);
+    _appendToRenderRoot("hover-root", g);
+  }
+}
+
 function renderSelectionHandles(selIds, page, zoom) {
   const g = se("g", {
     id: "sel-handles",
     style: "user-select:none;-webkit-user-select:none",
   });
-  const sw = 0.35 / zoom,
-    hs = 5.5 / zoom;
+  const sw = 1 / zoom,
+    hs = 8 / zoom;
+  const selected = selIds.map(id => findShapeById(id)?.shape).filter(Boolean);
+  for (const shape of selected) appendShapeSelectionOutline(g, shape, page, zoom);
+  if (selected.length > 1) {
+    const boxes = selected.map(shape => getShapeBBox(shape, page.scale)).filter(Boolean);
+    if (boxes.length) {
+      const x = Math.min(...boxes.map(b => b.x)), y = Math.min(...boxes.map(b => b.y));
+      const label = se("text", { x, y: y - 12 / zoom, fill: "#2563eb", "font-size": 12 / zoom,
+        "font-family": DEFAULT_TEXT_FONT_FAMILY, "pointer-events": "none", class: "selection-count" });
+      label.textContent = t("selection.count", { count: selected.length });
+      g.appendChild(label);
+    }
+  }
 
   // Multi-select of same type → draw combined BB handles instead of per-shape handles
   if (selIds.length > 1) {
@@ -2706,6 +2748,7 @@ function renderSelectionHandles(selIds, page, zoom) {
     const types = [...new Set(shapes.map((s) => s.type))];
     const multiResizable =
       types.length === 1 &&
+      !shapes.some(s => hasVisualTransform(s)) &&
       !["line", "bezier", "path", "dimension", "text", "group"].includes(
         types[0],
       );
@@ -2889,6 +2932,10 @@ function renderSelectionHandles(selIds, page, zoom) {
       }
     }
 
+    if (selIds.length > 1) {
+      if (sg !== g) g.appendChild(sg);
+      continue;
+    }
     if (shape.type === "line") {
       const x1 = realToPaper(shape.x1, page.scale),
         y1 = realToPaper(shape.y1, page.scale);
@@ -2946,7 +2993,7 @@ function renderSelectionHandles(selIds, page, zoom) {
           );
         }
       }
-      if (shape.type === "group") {
+      if (shape.type === "group" && !canUniformResizeGroup(shape)) {
         if (sg !== g) g.appendChild(sg);
         continue;
       }
@@ -2954,6 +3001,7 @@ function renderSelectionHandles(selIds, page, zoom) {
       const cursorShift =
         Math.round(((((shape.rotation || 0) % 360) + 360) % 360) / 45) % 8;
       for (let i = 0; i < pts.length; i++) {
+        if (shape.type === "group" && i % 2) continue;
         const [hx, hy] = pts[i];
         sg.appendChild(
           se("rect", {

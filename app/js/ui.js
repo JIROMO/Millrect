@@ -3318,6 +3318,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
   svgEl.addEventListener("mousedown", (e) => onMouseDown(e, svgEl));
   svgEl.addEventListener("mousemove", (e) => onMouseMove(e, svgEl));
+  svgEl.addEventListener("mouseleave", () => renderHoverSelection(null));
   svgEl.addEventListener("mouseup", (e) => onMouseUp(e, svgEl));
   // SVG の外まで選択図形をドラッグしても移動と mouseup を追跡する。
   // SVG 内のイベントは既存リスナーに任せ、二重処理を避ける。
