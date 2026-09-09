@@ -21,6 +21,7 @@ module.exports = [
   "js/components/millrect-right-sidebar.js",
   "js/components/millrect-3d-panel.js",
   "js/db.js",
+  "js/usage-report.js",
   "js/toast.js",
   "../packages/multiview-starter-box.js",
   "../packages/docs-box-scenario.js",

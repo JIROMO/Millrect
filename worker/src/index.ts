@@ -22,6 +22,7 @@
 import { createMcpHonoApp } from "@modelcontextprotocol/hono";
 import { createMcpHandler, McpServer } from "@modelcontextprotocol/server";
 import { Hono, type Context } from "hono";
+import { bodyLimit } from "hono/body-limit";
 import { registerResourcesAndPrompts } from "./mcp-content.js";
 import { registerAllTools } from "./tools/registry.js";
 import { SessionRelay } from "./session-do.js";
@@ -31,6 +32,28 @@ export { SessionRelay };
 type Env = CloudflareBindings;
 
 const app = new Hono<{ Bindings: Env }>();
+
+const MAX_USAGE_BODY_BYTES = 1024;
+const MAX_PROJECT_COUNT = 1_000_000;
+const RAW_IP_RETENTION_DAYS = 30;
+
+function isProjectCount(value: unknown): value is number {
+  return (
+    typeof value === "number" &&
+    Number.isSafeInteger(value) &&
+    value >= 0 &&
+    value <= MAX_PROJECT_COUNT
+  );
+}
+
+async function deleteExpiredUsage(env: Env): Promise<void> {
+  await env.USAGE_DB.prepare(
+    `DELETE FROM usage_daily
+     WHERE observed_date < date('now', ?)`,
+  )
+    .bind(`-${RAW_IP_RETENTION_DAYS} days`)
+    .run();
+}
 
 // Cloudflare Bot Management's JavaScript Detection rewrites HTML responses by
 // injecting an inline bootstrap script. The app intentionally uses a strict CSP,
@@ -111,6 +134,76 @@ app.route("/mcp", mcpApp);
 
 app.get("/health", (c) => c.json({ ok: true, service: "millrect" }));
 
+// ── Anonymous app usage ─────────────────────────────────────────────────────
+// The browser sends only its number of locally saved projects. User-Agent and
+// the connecting IP are taken from trusted request headers at the edge. One row
+// per IP/User-Agent/day is updated on repeat visits instead of logging every
+// autosave or page reload as a separate event.
+app.post(
+  "/api/usage",
+  bodyLimit({
+    maxSize: MAX_USAGE_BODY_BYTES,
+    onError: (c) => c.json({ ok: false, error: "Request body too large" }, 413),
+  }),
+  async (c) => {
+    const requestUrl = new URL(c.req.url);
+    if (c.req.header("origin") !== requestUrl.origin) {
+      return c.json({ ok: false, error: "Invalid origin" }, 403);
+    }
+    if (!c.req.header("content-type")?.toLowerCase().startsWith("application/json")) {
+      return c.json({ ok: false, error: "Expected application/json" }, 415);
+    }
+
+    let body: unknown;
+    try {
+      body = await c.req.json<unknown>();
+    } catch {
+      return c.json({ ok: false, error: "Invalid JSON" }, 400);
+    }
+    const rawProjectCount =
+      typeof body === "object" && body !== null
+        ? Reflect.get(body, "projectCount")
+        : undefined;
+    if (!isProjectCount(rawProjectCount)) {
+      return c.json({ ok: false, error: "Invalid projectCount" }, 400);
+    }
+
+    const ipAddress = (c.req.header("cf-connecting-ip") || "unknown").slice(0, 64);
+    const userAgent = (c.req.header("user-agent") || "unknown").slice(0, 512);
+    const now = new Date().toISOString();
+    const observedDate = now.slice(0, 10);
+    const projectCount = rawProjectCount;
+
+    try {
+      await c.env.USAGE_DB.prepare(
+        `INSERT INTO usage_daily (
+           observed_date, ip_address, user_agent, project_count,
+           visit_count, first_seen_at, last_seen_at
+         ) VALUES (?, ?, ?, ?, 1, ?, ?)
+         ON CONFLICT (observed_date, ip_address, user_agent) DO UPDATE SET
+           project_count = excluded.project_count,
+           visit_count = usage_daily.visit_count + 1,
+           last_seen_at = excluded.last_seen_at`,
+      )
+        .bind(observedDate, ipAddress, userAgent, projectCount, now, now)
+        .run();
+    } catch (error) {
+      console.error(
+        JSON.stringify({
+          event: "usage_write_failed",
+          message: error instanceof Error ? error.message : String(error),
+        }),
+      );
+      return c.json({ ok: false, error: "Could not record usage" }, 500);
+    }
+
+    return new Response(null, {
+      status: 204,
+      headers: { "cache-control": "no-store" },
+    });
+  },
+);
+
 // ── Static site sections — explicit routes, all forwarded to the ASSETS binding ──
 // Listed explicitly (rather than a single bare "*") so the site's URL structure is visible
 // here as the one place that owns routing: "/" is the landing page, "/app" is the drawing
@@ -125,4 +218,18 @@ for (const pattern of STATIC_SECTIONS) {
 // etc.) still falls through to static assets rather than a Hono 404.
 app.all("*", (c) => c.env.ASSETS.fetch(c.req.raw));
 
-export default app;
+export default {
+  fetch: (request, env, ctx) => app.fetch(request, env, ctx),
+  scheduled: (_controller, env, ctx) => {
+    ctx.waitUntil(
+      deleteExpiredUsage(env).catch((error) => {
+        console.error(
+          JSON.stringify({
+            event: "usage_retention_failed",
+            message: error instanceof Error ? error.message : String(error),
+          }),
+        );
+      }),
+    );
+  },
+} satisfies ExportedHandler<Env>;

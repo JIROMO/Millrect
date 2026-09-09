@@ -3307,6 +3307,7 @@ document.addEventListener("DOMContentLoaded", () => {
   setTimeout(hideBootLoader, 8000);
   restoreLastOpenedProjectTab()
     .then(() => {
+      if (typeof scheduleUsageReport === "function") scheduleUsageReport();
       requestAnimationFrame(() => {
         fitPage();
         render();

@@ -139,6 +139,15 @@ async function dbListProjects() {
   });
 }
 
+async function dbCountProjects() {
+  const db = await _openDB();
+  return new Promise((resolve, reject) => {
+    const req = db.transaction(_STORE, "readonly").objectStore(_STORE).count();
+    req.onsuccess = () => resolve(req.result || 0);
+    req.onerror = () => reject(req.error);
+  });
+}
+
 async function dbDeleteProject(id) {
   const db = await _openDB();
   await new Promise((resolve, reject) => {

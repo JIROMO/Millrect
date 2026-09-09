@@ -1,6 +1,7 @@
 {
   "$schema": "worker/node_modules/wrangler/config-schema.json",
   "name": "millrect",
+  "account_id": "64d76a10fff6e7e52e63a365ce399877",
   "main": "worker/src/index.ts",
   "compatibility_date": "2026-08-01",
   "observability": {
@@ -25,6 +26,19 @@
   "migrations": [
     { "tag": "v1", "new_sqlite_classes": ["SessionRelay"] }
   ],
+  "d1_databases": [
+    {
+      "binding": "USAGE_DB",
+      "database_name": "millrect-usage",
+      "database_id": "952f6819-d12b-458d-a189-a8676c02ab97",
+      "migrations_dir": "migrations"
+    }
+  ],
+  "triggers": {
+    // Delete raw IP addresses after 30 days while retaining enough history to
+    // answer whether the web app is actively used.
+    "crons": ["17 3 * * *"]
+  },
   "compatibility_flags": [
     "nodejs_compat"
   ]
