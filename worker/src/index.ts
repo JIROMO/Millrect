@@ -49,7 +49,7 @@ function isProjectCount(value: unknown): value is number {
 async function deleteExpiredUsage(env: Env): Promise<void> {
   await env.USAGE_DB.prepare(
     `DELETE FROM usage_daily
-     WHERE observed_date < date('now', ?)`,
+     WHERE last_seen_at < datetime('now', ?)`,
   )
     .bind(`-${RAW_IP_RETENTION_DAYS} days`)
     .run();
@@ -137,8 +137,8 @@ app.get("/health", (c) => c.json({ ok: true, service: "millrect" }));
 // ── Anonymous app usage ─────────────────────────────────────────────────────
 // The browser sends only its number of locally saved projects. User-Agent and
 // the connecting IP are taken from trusted request headers at the edge. One row
-// per IP/User-Agent/day is updated on repeat visits instead of logging every
-// autosave or page reload as a separate event.
+// per IP is updated on repeat visits instead of logging every app launch as a
+// separate row.
 app.post(
   "/api/usage",
   bodyLimit({
@@ -171,21 +171,21 @@ app.post(
     const ipAddress = (c.req.header("cf-connecting-ip") || "unknown").slice(0, 64);
     const userAgent = (c.req.header("user-agent") || "unknown").slice(0, 512);
     const now = new Date().toISOString();
-    const observedDate = now.slice(0, 10);
     const projectCount = rawProjectCount;
 
     try {
       await c.env.USAGE_DB.prepare(
         `INSERT INTO usage_daily (
-           observed_date, ip_address, user_agent, project_count,
+           ip_address, user_agent, project_count,
            visit_count, first_seen_at, last_seen_at
-         ) VALUES (?, ?, ?, ?, 1, ?, ?)
-         ON CONFLICT (observed_date, ip_address, user_agent) DO UPDATE SET
+         ) VALUES (?, ?, ?, 1, ?, ?)
+         ON CONFLICT (ip_address) DO UPDATE SET
+           user_agent = excluded.user_agent,
            project_count = excluded.project_count,
            visit_count = usage_daily.visit_count + 1,
            last_seen_at = excluded.last_seen_at`,
       )
-        .bind(observedDate, ipAddress, userAgent, projectCount, now, now)
+        .bind(ipAddress, userAgent, projectCount, now, now)
         .run();
     } catch (error) {
       console.error(

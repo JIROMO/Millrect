@@ -1,13 +1,9 @@
 SELECT
-  observed_date,
-  COUNT(*) AS unique_clients,
+  COUNT(*) AS tracked_clients,
   SUM(visit_count) AS app_opens,
   ROUND(AVG(project_count), 1) AS average_saved_projects,
   MAX(project_count) AS maximum_saved_projects
-FROM usage_daily
-GROUP BY observed_date
-ORDER BY observed_date DESC
-LIMIT 30;
+FROM usage_daily;
 
 SELECT
   last_seen_at,
