@@ -2687,6 +2687,7 @@ async function exportSTL() {
       stl = _exportStlOnMainThread(cleanMeshes);
     }
     _downloadStl(stl);
+    if (typeof noteUsageExport === "function") noteUsageExport("stl");
   } finally {
     for (const m of cleanMeshes) {
       m.geometry?.dispose();

@@ -885,6 +885,7 @@ async function exportAllPagesPdf() {
     }
   }
   pdf.save(`${state.projectName || "millrect"}.pdf`);
+  if (typeof noteUsageExport === "function") noteUsageExport("pdf");
 }
 async function svgToPdfFallback(svgEl, pdf, dims) {
   return new Promise((res) => {
@@ -925,6 +926,9 @@ async function dl(content, filename, mime) {
     } else {
       await window.electronAPI.saveProjectJson(filename, content);
     }
+    if (typeof noteUsageExport === "function") {
+      noteUsageExport(_usageExportFormatForMime(mime));
+    }
     return;
   }
   const blob = new Blob([content], { type: mime });
@@ -934,4 +938,13 @@ async function dl(content, filename, mime) {
   a.download = filename;
   a.click();
   setTimeout(() => URL.revokeObjectURL(url), 10000);
+  if (typeof noteUsageExport === "function") {
+    noteUsageExport(_usageExportFormatForMime(mime));
+  }
+}
+
+function _usageExportFormatForMime(mime) {
+  if (mime === "image/svg+xml") return "svg";
+  if (mime === "application/dxf") return "dxf";
+  return "json";
 }

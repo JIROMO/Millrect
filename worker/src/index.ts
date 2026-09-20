@@ -35,7 +35,18 @@ const app = new Hono<{ Bindings: Env }>();
 
 const MAX_USAGE_BODY_BYTES = 1024;
 const MAX_PROJECT_COUNT = 1_000_000;
+const MAX_COUNTER_DELTA = 10_000;
+const MAX_ACTIVE_SECONDS_DELTA = 86_400;
 const RAW_IP_RETENTION_DAYS = 30;
+const USAGE_ACTIONS = new Set([
+  "edit",
+  "export:json",
+  "export:svg",
+  "export:dxf",
+  "export:pdf",
+  "export:stl",
+  "export:3mf",
+]);
 
 function isProjectCount(value: unknown): value is number {
   return (
@@ -44,6 +55,26 @@ function isProjectCount(value: unknown): value is number {
     value >= 0 &&
     value <= MAX_PROJECT_COUNT
   );
+}
+
+function isCounterDelta(value: unknown, maximum: number): value is number {
+  return (
+    typeof value === "number" &&
+    Number.isSafeInteger(value) &&
+    value >= 0 &&
+    value <= maximum
+  );
+}
+
+function readCounterDelta(
+  body: object,
+  key: string,
+  maximum: number,
+  fallback = 0,
+): number | null {
+  const value = Reflect.get(body, key);
+  if (value === undefined) return fallback;
+  return isCounterDelta(value, maximum) ? value : null;
 }
 
 async function deleteExpiredUsage(env: Env): Promise<void> {
@@ -135,10 +166,10 @@ app.route("/mcp", mcpApp);
 app.get("/health", (c) => c.json({ ok: true, service: "millrect" }));
 
 // ── Anonymous app usage ─────────────────────────────────────────────────────
-// The browser sends only its number of locally saved projects. User-Agent and
-// the connecting IP are taken from trusted request headers at the edge. One row
-// per IP is updated on repeat visits instead of logging every app launch as a
-// separate row.
+// The browser sends aggregate engagement counters and its number of locally
+// saved projects. User-Agent and the connecting IP are taken from trusted edge
+// headers. Project contents, names, and individual interaction events are never
+// sent. Repeat visits update the single row for that IP.
 app.post(
   "/api/usage",
   bodyLimit({
@@ -160,32 +191,97 @@ app.post(
     } catch {
       return c.json({ ok: false, error: "Invalid JSON" }, 400);
     }
-    const rawProjectCount =
-      typeof body === "object" && body !== null
-        ? Reflect.get(body, "projectCount")
-        : undefined;
+    if (typeof body !== "object" || body === null || Array.isArray(body)) {
+      return c.json({ ok: false, error: "Invalid request body" }, 400);
+    }
+
+    const rawProjectCount = Reflect.get(body, "projectCount");
     if (!isProjectCount(rawProjectCount)) {
       return c.json({ ok: false, error: "Invalid projectCount" }, 400);
+    }
+
+    // visitDelta defaults to 1 so already-cached clients using the previous
+    // payload continue to record one app launch. Current clients send 0 for
+    // batched activity updates after their initial report.
+    const visitDelta = readCounterDelta(body, "visitDelta", 1, 1);
+    const meaningfulActionDelta = readCounterDelta(
+      body,
+      "meaningfulActionDelta",
+      MAX_COUNTER_DELTA,
+    );
+    const exportDelta = readCounterDelta(
+      body,
+      "exportDelta",
+      MAX_COUNTER_DELTA,
+    );
+    const activeSecondsDelta = readCounterDelta(
+      body,
+      "activeSecondsDelta",
+      MAX_ACTIVE_SECONDS_DELTA,
+    );
+    const rawLastAction = Reflect.get(body, "lastAction");
+    const lastAction = rawLastAction == null ? null : rawLastAction;
+    if (
+      visitDelta === null ||
+      meaningfulActionDelta === null ||
+      exportDelta === null ||
+      activeSecondsDelta === null ||
+      (typeof lastAction !== "string" && lastAction !== null) ||
+      (typeof lastAction === "string" && !USAGE_ACTIONS.has(lastAction))
+    ) {
+      return c.json({ ok: false, error: "Invalid usage counters" }, 400);
     }
 
     const ipAddress = (c.req.header("cf-connecting-ip") || "unknown").slice(0, 64);
     const userAgent = (c.req.header("user-agent") || "unknown").slice(0, 512);
     const now = new Date().toISOString();
+    const activeDate = now.slice(0, 10);
     const projectCount = rawProjectCount;
+    const hasActivity =
+      meaningfulActionDelta > 0 || exportDelta > 0 || activeSecondsDelta > 0;
 
     try {
       await c.env.USAGE_DB.prepare(
         `INSERT INTO usage_daily (
            ip_address, user_agent, project_count,
-           visit_count, first_seen_at, last_seen_at
-         ) VALUES (?, ?, ?, 1, ?, ?)
+           visit_count, first_seen_at, last_seen_at,
+           meaningful_action_count, export_count, active_seconds,
+           active_days, last_active_date, last_action, last_action_at
+         ) VALUES (?, ?, ?, 1, ?, ?, ?, ?, ?, ?, ?, ?, ?)
          ON CONFLICT (ip_address) DO UPDATE SET
            user_agent = excluded.user_agent,
            project_count = excluded.project_count,
-           visit_count = usage_daily.visit_count + 1,
-           last_seen_at = excluded.last_seen_at`,
+           visit_count = usage_daily.visit_count + ?,
+           last_seen_at = excluded.last_seen_at,
+           meaningful_action_count = usage_daily.meaningful_action_count + excluded.meaningful_action_count,
+           export_count = usage_daily.export_count + excluded.export_count,
+           active_seconds = usage_daily.active_seconds + excluded.active_seconds,
+           active_days = usage_daily.active_days + CASE
+             WHEN excluded.last_active_date IS NOT NULL
+              AND (usage_daily.last_active_date IS NULL
+                OR usage_daily.last_active_date <> excluded.last_active_date)
+             THEN 1 ELSE 0 END,
+           last_active_date = COALESCE(excluded.last_active_date, usage_daily.last_active_date),
+           last_action = COALESCE(excluded.last_action, usage_daily.last_action),
+           last_action_at = CASE
+             WHEN excluded.last_action IS NOT NULL THEN excluded.last_action_at
+             ELSE usage_daily.last_action_at END`,
       )
-        .bind(ipAddress, userAgent, projectCount, now, now)
+        .bind(
+          ipAddress,
+          userAgent,
+          projectCount,
+          now,
+          now,
+          meaningfulActionDelta,
+          exportDelta,
+          activeSecondsDelta,
+          hasActivity ? 1 : 0,
+          hasActivity ? activeDate : null,
+          lastAction,
+          lastAction ? now : null,
+          visitDelta,
+        )
         .run();
     } catch (error) {
       console.error(

@@ -159,4 +159,7 @@ function initAutosaveCheckbox() {
 
 function onStateChanged() {
   scheduleAutosave();
+  if (typeof noteUsageMeaningfulAction === "function") {
+    noteUsageMeaningfulAction();
+  }
 }

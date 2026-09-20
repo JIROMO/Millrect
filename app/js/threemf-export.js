@@ -207,6 +207,7 @@ async function export3MF() {
     const payloads = cleanMeshes.map(_meshPayloadFromMesh);
     const bytes = build3MF(payloads);
     _download3MF(bytes);
+    if (typeof noteUsageExport === "function") noteUsageExport("3mf");
   } finally {
     for (const m of cleanMeshes) {
       m.geometry?.dispose();
