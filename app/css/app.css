@@ -3098,7 +3098,8 @@ button.ctx-item {
 
 /* ── Startup dialog ─────────────────────────────────────────── */
 #startup-overlay,
-#project-actions-overlay {
+#project-actions-overlay,
+#feedback-overlay {
   position: fixed;
   inset: 0;
   background: rgba(0, 0, 0, 0.7);
@@ -3109,6 +3110,21 @@ button.ctx-item {
   padding: 20px 0;
   z-index: 9999;
 }
+#feedback-overlay { align-items: center; }
+#feedback-dialog {
+  position: relative;
+  width: min(520px, calc(100vw - 32px));
+  background: var(--surface-1, #1e1e1e);
+  border: 1px solid var(--border, #3a3a3a);
+  border-radius: 12px;
+  padding: 24px 28px 20px;
+  color: var(--text, #e8e8e8);
+  box-shadow: 0 24px 64px rgba(0,0,0,.45);
+}
+#feedback-dialog .pl-header { margin-bottom: 8px; }
+#feedback-dialog textarea { width: 100%; min-height: 150px; margin-top: 16px; resize: vertical; box-sizing: border-box; background: var(--surface-2); color: var(--text); border: 1px solid var(--border); border-radius: 6px; padding: 10px; font: inherit; line-height: 1.5; }
+.feedback-actions { display: flex; justify-content: flex-end; gap: 8px; margin-top: 14px; }
+.feedback-status { min-height: 1.4em; margin: 8px 0 0; color: var(--text-3); font-size: 12px; }
 #project-actions-overlay {
   align-items: center;
   justify-content: flex-start;

@@ -2827,6 +2827,45 @@ function confirmDeleteAllProjects(parentOverlay, projectCount) {
   });
 }
 
+function showFeedbackDialog() {
+  if (document.getElementById("feedback-overlay")) return;
+  const overlay = document.createElement("div");
+  overlay.id = "feedback-overlay";
+  overlay.className = "feedback-overlay";
+  overlay.innerHTML = `<div id="feedback-dialog" role="dialog" aria-modal="true" aria-labelledby="feedback-title">
+    <div class="pl-header"><h2 id="feedback-title">${t("feedback.title")}</h2><button type="button" class="pl-btn-close" aria-label="${t("startup.cancel")}">✕</button></div>
+    <p class="pl-subtitle">${t("feedback.description")}</p>
+    <form id="feedback-form"><textarea id="feedback-message" maxlength="5000" required placeholder="${t("feedback.placeholder")}"></textarea>
+      <p id="feedback-status" class="feedback-status" role="status"></p>
+      <div class="feedback-actions"><button type="button" class="pl-btn-secondary" id="feedback-cancel">${t("startup.cancel")}</button><button type="submit" class="startup-primary" id="feedback-submit">${t("feedback.submit")}</button></div>
+    </form></div>`;
+  document.body.appendChild(overlay);
+  const close = () => overlay.remove();
+  overlay.querySelector(".pl-btn-close").addEventListener("click", close);
+  overlay.querySelector("#feedback-cancel").addEventListener("click", close);
+  overlay.addEventListener("click", (event) => { if (event.target === overlay) close(); });
+  overlay.addEventListener("keydown", (event) => { if (event.key === "Escape") close(); });
+  const form = overlay.querySelector("#feedback-form");
+  const submit = overlay.querySelector("#feedback-submit");
+  const status = overlay.querySelector("#feedback-status");
+  form.addEventListener("submit", async (event) => {
+    event.preventDefault();
+    submit.disabled = true;
+    status.textContent = t("feedback.sending");
+    try {
+      const response = await fetch("/api/feedback", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ message: overlay.querySelector("#feedback-message").value }) });
+      if (!response.ok) throw new Error("send failed");
+      status.textContent = t("feedback.success");
+      form.reset();
+      setTimeout(close, 900);
+    } catch (_error) {
+      status.textContent = t("feedback.error");
+      submit.disabled = false;
+    }
+  });
+  overlay.querySelector("#feedback-message").focus();
+}
+
 function showProjectActionsMenu() {
   if (document.getElementById("project-actions-overlay")) return;
 
@@ -2875,6 +2914,7 @@ function showProjectActionsMenu() {
           ${menuItem({ trigger: "btn-redo", icon: "redo-2", label: t("toolbar.redo"), shortcut: t("projectMenu.shortcut.redo") })}
           ${menuItem({ trigger: "btn-agent-panel", icon: "bot", label: t("toolbar.agent.title") })}
           ${menuItem({ trigger: "btn-help-docs", icon: "circle-help", label: t("toolbar.helpDocs") })}
+          ${menuItem({ id: "pl-btn-feedback", icon: "message-square-more", label: t("feedback.menu") })}
         </section>
         <section class="project-menu-section">
           <h3>${t("projectMenu.section.data")}</h3>
@@ -3042,6 +3082,10 @@ function showProjectActionsMenu() {
   });
 
   overlay.querySelector(".pl-btn-close").focus();
+  overlay.querySelector("#pl-btn-feedback").addEventListener("click", () => {
+    close();
+    showFeedbackDialog();
+  });
 }
 
 function showProjectList() {

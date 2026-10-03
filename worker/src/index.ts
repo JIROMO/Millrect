@@ -34,6 +34,8 @@ type Env = CloudflareBindings;
 const app = new Hono<{ Bindings: Env }>();
 
 const MAX_USAGE_BODY_BYTES = 1024;
+const MAX_FEEDBACK_BODY_BYTES = 8 * 1024;
+const MAX_FEEDBACK_MESSAGE_LENGTH = 5_000;
 const MAX_PROJECT_COUNT = 1_000_000;
 const MAX_COUNTER_DELTA = 10_000;
 const MAX_ACTIVE_SECONDS_DELTA = 86_400;
@@ -164,6 +166,51 @@ mcpApp.all("/", async (c) => {
 app.route("/mcp", mcpApp);
 
 app.get("/health", (c) => c.json({ ok: true, service: "millrect" }));
+
+app.post(
+  "/api/feedback",
+  bodyLimit({
+    maxSize: MAX_FEEDBACK_BODY_BYTES,
+    onError: (c) => c.json({ ok: false, error: "Feedback is too large" }, 413),
+  }),
+  async (c) => {
+    const requestUrl = new URL(c.req.url);
+    if (c.req.header("origin") !== requestUrl.origin) {
+      return c.json({ ok: false, error: "Invalid origin" }, 403);
+    }
+    if (!c.req.header("content-type")?.toLowerCase().startsWith("application/json")) {
+      return c.json({ ok: false, error: "Expected application/json" }, 415);
+    }
+
+    let body: unknown;
+    try {
+      body = await c.req.json<unknown>();
+    } catch {
+      return c.json({ ok: false, error: "Invalid JSON" }, 400);
+    }
+    const message =
+      typeof body === "object" && body !== null && !Array.isArray(body)
+        ? Reflect.get(body, "message")
+        : null;
+    if (typeof message !== "string" || message.trim().length === 0 || message.length > MAX_FEEDBACK_MESSAGE_LENGTH) {
+      return c.json({ ok: false, error: "Invalid feedback message" }, 400);
+    }
+
+    const text = `Millrect feedback\n\n${message.trim()}\n\nUser-Agent: ${(c.req.header("user-agent") || "unknown").slice(0, 512)}`;
+    try {
+      await c.env.EMAIL.send({
+        to: "s.moriya+millrect@jiromo.com",
+        from: { email: "millrect@jiromo.com", name: "Millrect Feedback" },
+        subject: "Millrect feedback",
+        text,
+      });
+    } catch (error) {
+      console.error(JSON.stringify({ event: "feedback_send_failed", message: error instanceof Error ? error.message : String(error) }));
+      return c.json({ ok: false, error: "Could not send feedback" }, 500);
+    }
+    return c.json({ ok: true }, 200, { "cache-control": "no-store" });
+  },
+);
 
 // ── Anonymous app usage ─────────────────────────────────────────────────────
 // The browser sends aggregate engagement counters and its number of locally
