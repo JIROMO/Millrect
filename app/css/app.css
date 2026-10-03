@@ -3124,6 +3124,8 @@ button.ctx-item {
 #feedback-dialog .pl-header { margin-bottom: 8px; }
 #feedback-dialog textarea { width: 100%; min-height: 150px; margin-top: 16px; resize: vertical; box-sizing: border-box; background: var(--surface-2); color: var(--text); border: 1px solid var(--border); border-radius: 6px; padding: 10px; font: inherit; line-height: 1.5; }
 .feedback-actions { display: flex; justify-content: flex-end; gap: 8px; margin-top: 14px; }
+.feedback-actions .startup-primary { width: auto; margin-top: 0; }
+.feedback-actions .pl-btn-secondary { flex: 0 0 auto; }
 .feedback-status { min-height: 1.4em; margin: 8px 0 0; color: var(--text-3); font-size: 12px; }
 #project-actions-overlay {
   align-items: center;
