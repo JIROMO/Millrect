@@ -200,7 +200,7 @@ app.post(
     try {
       await c.env.EMAIL.send({
         to: "s.moriya+millrect@jiromo.com",
-        from: { email: "millrect@millrect.com", name: "Millrect Feedback" },
+        from: { email: "feedback@millrect.com", name: "Millrect Feedback" },
         subject: "Millrect feedback",
         text,
       });
