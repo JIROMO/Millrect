@@ -2080,6 +2080,7 @@ function handleVertexDrag(rp) {
     dy = rp.y - startRP.y;
   const [ox, oy] = origContours[pi][ri][vi];
   shape.contours[pi][ri][vi] = [ox + dx, oy + dy];
+  if (typeof markShapeDirty === "function") markShapeDirty(shapeId);
   render();
   _updatePathSizeDisplay(shape);
 }

@@ -49,6 +49,11 @@ let _histIdx = -1;
 let _state = null;
 let _documentRenderVersion = 0;
 const _shapeRenderVersions = new Map();
+// 図形ごとの render version は全図形共通の単調増加カウンタから採番する。
+// 図形ごとに 1 から数え直すと、プロジェクト読込（_resetRenderableVersions）の
+// 前後で「同じ ID・同じ version・違う座標」が生まれ、version をキーにした
+// 選択枠や bbox のキャッシュが古い位置を返してしまう。
+let _shapeRenderVersionSeq = 0;
 const _pendingRenderableDirtyIds = new Set();
 let _pendingDocumentDirty = false;
 
@@ -147,7 +152,7 @@ function _renderableSnapshotMap(doc) {
 
 function _bumpShapeRenderVersion(id) {
   if (!id) return;
-  _shapeRenderVersions.set(id, (_shapeRenderVersions.get(id) || 0) + 1);
+  _shapeRenderVersions.set(id, ++_shapeRenderVersionSeq);
 }
 
 function _clearPendingRenderableDirty() {
@@ -178,9 +183,11 @@ function _resetRenderableVersions(snapStr) {
   _clearPendingRenderableDirty();
   if (snapStr) {
     const snap = JSON.parse(snapStr);
-    _iterRenderableSnapshots(snap, (shape) =>
-      _bumpShapeRenderVersion(shape?.id),
-    );
+    const bumpDeep = (shape) => {
+      _bumpShapeRenderVersion(shape?.id);
+      for (const child of shape?.children || []) bumpDeep(child);
+    };
+    _iterRenderableSnapshots(snap, bumpDeep);
   }
   _documentRenderVersion++;
 }
@@ -304,25 +311,38 @@ function getAllDimensionsOnPage(page) {
 
 // 図形・寸法線どちらでも検索する汎用ルックアップ
 // 戻り値: { shape, layer|null, page, isDimension }
-function findShapeById(id) {
-  for (const page of _state.pages) {
-    // レイヤー内の図形を検索
-    for (const layer of page.layers) {
-      const shape = layer.shapes.find((s) => s.id === id);
-      if (shape) return { shape, layer, page, isDimension: false };
-      // グループ子要素を検索
-      for (const s of layer.shapes) {
-        if (s.type === "group") {
-          const child = s.children.find((c) => c.id === id);
-          if (child) return { shape: child, layer, page, isDimension: false };
-        }
+// 現在ページを先に探す。読込データ等で別ページに同じ ID が残っていても、
+// 表示中ページの図形（選択・編集の対象）を返すため。
+function _findShapeInPage(page, id) {
+  for (const layer of page.layers) {
+    const shape = layer.shapes.find((s) => s.id === id);
+    if (shape) return { shape, layer, page, isDimension: false };
+    // グループ子要素を検索
+    for (const s of layer.shapes) {
+      if (s.type === "group") {
+        const child = s.children.find((c) => c.id === id);
+        if (child) return { shape: child, layer, page, isDimension: false };
       }
     }
-    // ページ直属の寸法線を検索
-    for (const dim of page.dimensions || []) {
-      if (dim.id === id)
-        return { shape: dim, layer: null, page, isDimension: true };
-    }
+  }
+  // ページ直属の寸法線を検索
+  for (const dim of page.dimensions || []) {
+    if (dim.id === id)
+      return { shape: dim, layer: null, page, isDimension: true };
+  }
+  return null;
+}
+
+function findShapeById(id) {
+  const current = _state.pages.find((p) => p.id === _state.currentPageId);
+  if (current) {
+    const hit = _findShapeInPage(current, id);
+    if (hit) return hit;
+  }
+  for (const page of _state.pages) {
+    if (page === current) continue;
+    const hit = _findShapeInPage(page, id);
+    if (hit) return hit;
   }
   return null;
 }

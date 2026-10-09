@@ -121,6 +121,38 @@ function exportProjectJsonString() {
 function projectJsonFromState(state) {
   return JSON.stringify(_projectDataFromState(state), null, 2);
 }
+// 図形 ID はプロジェクト全体で一意でなければならない（findShapeById や
+// bbox / 描画キャッシュは ID で引く）。別ページに同じ ID が残った古いデータを
+// 読み込むと、選択枠が別ページの図形位置に出る・編集対象が入れ替わる等が起きる。
+// 2 回目以降に現れた ID を genId() で振り直し、そのページの拘束参照も追従させる。
+function _dedupeShapeIdsAcrossPages(pages) {
+  if (!Array.isArray(pages)) return;
+  const seen = new Set();
+  for (const page of pages) {
+    const remap = new Map();
+    const visit = (shape) => {
+      if (!shape || typeof shape !== "object") return;
+      if (shape.id) {
+        if (seen.has(shape.id)) {
+          const next = genId(shape.type || "shape");
+          remap.set(shape.id, next);
+          shape.id = next;
+        }
+        seen.add(shape.id);
+      }
+      if (shape.type === "group") (shape.children || []).forEach(visit);
+    };
+    for (const layer of page.layers || []) (layer.shapes || []).forEach(visit);
+    (page.dimensions || []).forEach(visit);
+    if (!remap.size) continue;
+    for (const c of page.constraints || []) {
+      if (Array.isArray(c.shapeIds)) {
+        c.shapeIds = c.shapeIds.map((id) => remap.get(id) || id);
+      }
+    }
+  }
+}
+
 function importProjectFromJsonString(jsonStr) {
   const raw = typeof jsonStr === "string" ? JSON.parse(jsonStr) : jsonStr;
   if (!isMillrectProjectJson(raw)) {
@@ -129,6 +161,7 @@ function importProjectFromJsonString(jsonStr) {
     throw err;
   }
   const data = _migrateImportedProject(raw);
+  _dedupeShapeIdsAcrossPages(data.pages);
   const state = getState();
   if (data.pages) state.pages = data.pages;
   if (data.projectName) state.projectName = data.projectName;

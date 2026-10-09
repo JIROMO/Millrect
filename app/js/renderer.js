@@ -2575,10 +2575,14 @@ function _getCachedShapeBBox(shape, scale, ancestorGroups, kind, compute) {
   }
   const key = _shapeBBoxCacheKey(shape, scale, ancestorGroups, kind);
   if (!key) return compute();
+  // ID + render version だけをキーにすると、dirty 通知なしに座標が変わった場合
+  // （頂点ドラッグの in-place 更新、別ページの同一 ID 図形など）に古い bbox を返し、
+  // 選択枠だけが図形からズレる。図形オブジェクトと path の contours 配列の参照も
+  // 一致したときだけヒットさせる（座標変更は contours を新しい配列へ置き換える）。
   const hit = _shapeBBoxCache.get(key);
-  if (hit) return hit;
+  if (hit && hit.shape === shape && hit.contours === shape.contours) return hit.bb;
   const bb = compute();
-  if (bb) _shapeBBoxCache.set(key, bb);
+  if (bb) _shapeBBoxCache.set(key, { bb, shape, contours: shape.contours });
   return bb;
 }
 
