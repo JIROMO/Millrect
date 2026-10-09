@@ -16,6 +16,7 @@ describe("usage reporting", () => {
     assert.match(source, /exportDelta/);
     assert.match(source, /activeSecondsDelta/);
     assert.match(source, /document\.visibilityState !== "visible"/);
+    assert.match(source, /lastProjectName: snapshot\.lastProjectName/);
     assert.doesNotMatch(source, /navigator\.userAgent/);
   });
 
@@ -29,6 +30,8 @@ describe("usage reporting", () => {
     assert.match(source, /export_count = usage_daily\.export_count/);
     assert.match(source, /active_days = usage_daily\.active_days/);
     assert.match(source, /visit_count = usage_daily\.visit_count \+ \?/);
+    assert.match(source, /last_project_name = COALESCE\(excluded\.last_project_name/);
+    assert.match(source, /MAX_PROJECT_NAME_LENGTH = 120/);
     assert.doesNotMatch(source, /const observedDate/);
   });
 
@@ -46,6 +49,11 @@ describe("usage reporting", () => {
       path.join(root, "migrations/0003_usage_engagement.sql"),
       "utf8",
     );
+    const projectNameMigration = fs.readFileSync(
+      path.join(root, "migrations/0004_usage_last_project_name.sql"),
+      "utf8",
+    );
+    assert.match(projectNameMigration, /ADD COLUMN last_project_name TEXT/);
     assert.match(config, /"binding": "USAGE_DB"/);
     assert.match(config, /"crons": \["17 3 \* \* \*"\]/);
     assert.match(initialMigration, /CREATE TABLE IF NOT EXISTS usage_daily/);

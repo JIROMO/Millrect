@@ -1,8 +1,9 @@
 "use strict";
 
 // App usage is reported only from the production web app. The Electron build
-// and local development never send telemetry. Project contents and names are
-// not included; counters are batched and one record per IP is updated in D1.
+// and local development never send telemetry. Project contents are not
+// included; only the name of the project last edited/exported is sent. Counters
+// are batched and one record per IP is updated in D1.
 (function initializeUsageReporting(global) {
   const PRODUCTION_HOSTS = new Set(["millrect.com", "www.millrect.com"]);
   const REPORT_DELAY_MS = 1500;
@@ -25,6 +26,7 @@
   let exportDelta = 0;
   let activeSecondsDelta = 0;
   let lastAction = null;
+  let lastProjectName = null;
   let actionSequence = 0;
   let lastInteractionAt = 0;
 
@@ -59,6 +61,7 @@
       exportDelta,
       activeSecondsDelta,
       lastAction,
+      lastProjectName,
       actionSequence,
     };
 
@@ -75,6 +78,7 @@
           exportDelta: snapshot.exportDelta,
           activeSecondsDelta: snapshot.activeSecondsDelta,
           lastAction: snapshot.lastAction,
+          lastProjectName: snapshot.lastProjectName,
         }),
         cache: "no-store",
         credentials: "same-origin",
@@ -92,7 +96,10 @@
         0,
         activeSecondsDelta - snapshot.activeSecondsDelta,
       );
-      if (actionSequence === snapshot.actionSequence) lastAction = null;
+      if (actionSequence === snapshot.actionSequence) {
+        lastAction = null;
+        lastProjectName = null;
+      }
       succeeded = true;
     } catch (error) {
       // Telemetry must never interfere with drawing or local persistence.
@@ -119,10 +126,17 @@
     }, delay);
   }
 
+  function captureProjectName() {
+    const name =
+      typeof getState === "function" ? getState()?.projectName : null;
+    lastProjectName = typeof name === "string" && name.trim() ? name : null;
+  }
+
   function noteUsageMeaningfulAction() {
     if (!canReportUsage() || !hasRecentInteraction()) return;
     meaningfulActionDelta += 1;
     lastAction = "edit";
+    captureProjectName();
     actionSequence += 1;
     scheduleUsageReport(ACTIVITY_REPORT_DELAY_MS);
   }
@@ -133,6 +147,7 @@
     if (!ALLOWED_EXPORT_FORMATS.has(normalized)) return;
     exportDelta += 1;
     lastAction = `export:${normalized}`;
+    captureProjectName();
     actionSequence += 1;
     scheduleUsageReport(ACTIVITY_REPORT_DELAY_MS);
   }

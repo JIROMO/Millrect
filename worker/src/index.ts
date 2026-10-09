@@ -33,13 +33,14 @@ type Env = CloudflareBindings;
 
 const app = new Hono<{ Bindings: Env }>();
 
-const MAX_USAGE_BODY_BYTES = 1024;
+const MAX_USAGE_BODY_BYTES = 2048;
 const MAX_FEEDBACK_BODY_BYTES = 8 * 1024;
 const MAX_FEEDBACK_MESSAGE_LENGTH = 5_000;
 const MAX_PROJECT_COUNT = 1_000_000;
 const MAX_COUNTER_DELTA = 10_000;
 const MAX_ACTIVE_SECONDS_DELTA = 86_400;
 const RAW_IP_RETENTION_DAYS = 30;
+const MAX_PROJECT_NAME_LENGTH = 120;
 const USAGE_ACTIONS = new Set([
   "edit",
   "export:json",
@@ -57,6 +58,19 @@ function isProjectCount(value: unknown): value is number {
     value >= 0 &&
     value <= MAX_PROJECT_COUNT
   );
+}
+
+// 最後に操作したプロジェクト名。未送信(undefined/null)は「変更なし」、
+// 文字列以外は不正。制御文字を除去・前後空白を詰め、長さを制限する。
+function readProjectName(body: object): string | null | undefined {
+  const value = Reflect.get(body, "lastProjectName");
+  if (value == null) return null;
+  if (typeof value !== "string") return undefined;
+  const normalized = value
+    .replace(/[\u0000-\u001f\u007f]/g, " ")
+    .trim()
+    .slice(0, MAX_PROJECT_NAME_LENGTH);
+  return normalized || null;
 }
 
 function isCounterDelta(value: unknown, maximum: number): value is number {
@@ -214,9 +228,10 @@ app.post(
 
 // ── Anonymous app usage ─────────────────────────────────────────────────────
 // The browser sends aggregate engagement counters and its number of locally
-// saved projects. User-Agent and the connecting IP are taken from trusted edge
-// headers. Project contents, names, and individual interaction events are never
-// sent. Repeat visits update the single row for that IP.
+// saved projects, plus the name of the project last edited/exported. User-Agent
+// and the connecting IP are taken from trusted edge headers. Project contents
+// and individual interaction events are never sent. Repeat visits update the
+// single row for that IP.
 app.post(
   "/api/usage",
   bodyLimit({
@@ -266,6 +281,7 @@ app.post(
       "activeSecondsDelta",
       MAX_ACTIVE_SECONDS_DELTA,
     );
+    const lastProjectName = readProjectName(body);
     const rawLastAction = Reflect.get(body, "lastAction");
     const lastAction = rawLastAction == null ? null : rawLastAction;
     if (
@@ -273,6 +289,7 @@ app.post(
       meaningfulActionDelta === null ||
       exportDelta === null ||
       activeSecondsDelta === null ||
+      lastProjectName === undefined ||
       (typeof lastAction !== "string" && lastAction !== null) ||
       (typeof lastAction === "string" && !USAGE_ACTIONS.has(lastAction))
     ) {
@@ -293,8 +310,9 @@ app.post(
            ip_address, user_agent, project_count,
            visit_count, first_seen_at, last_seen_at,
            meaningful_action_count, export_count, active_seconds,
-           active_days, last_active_date, last_action, last_action_at
-         ) VALUES (?, ?, ?, 1, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+           active_days, last_active_date, last_action, last_action_at,
+           last_project_name, last_project_at
+         ) VALUES (?, ?, ?, 1, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
          ON CONFLICT (ip_address) DO UPDATE SET
            user_agent = excluded.user_agent,
            project_count = excluded.project_count,
@@ -312,7 +330,11 @@ app.post(
            last_action = COALESCE(excluded.last_action, usage_daily.last_action),
            last_action_at = CASE
              WHEN excluded.last_action IS NOT NULL THEN excluded.last_action_at
-             ELSE usage_daily.last_action_at END`,
+             ELSE usage_daily.last_action_at END,
+           last_project_name = COALESCE(excluded.last_project_name, usage_daily.last_project_name),
+           last_project_at = CASE
+             WHEN excluded.last_project_name IS NOT NULL THEN excluded.last_project_at
+             ELSE usage_daily.last_project_at END`,
       )
         .bind(
           ipAddress,
@@ -327,6 +349,8 @@ app.post(
           hasActivity ? activeDate : null,
           lastAction,
           lastAction ? now : null,
+          lastProjectName,
+          lastProjectName ? now : null,
           visitDelta,
         )
         .run();

@@ -28,7 +28,9 @@ SELECT
   active_seconds,
   active_days,
   last_action,
-  last_action_at
+  last_action_at,
+  last_project_name,
+  last_project_at
 FROM usage_daily
 ORDER BY last_seen_at DESC
 LIMIT 50;
