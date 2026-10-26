@@ -2498,6 +2498,13 @@ function _getShapeBBoxLegacy(shape, scale) {
     if (!isFinite(minX)) return null;
     return { x: minX, y: minY, w: maxX - minX, h: maxY - minY };
   } else if (shape.type === "dimension") {
+    if (shape.dimensionType === "radius") {
+      const points = [shape.center, shape.to].filter(Boolean).map((p) => ({ x: realToPaper(p.x, scale), y: realToPaper(p.y, scale) }));
+      if (!points.length) return null;
+      const xs = points.map((p) => p.x), ys = points.map((p) => p.y);
+      const pad = 5;
+      return { x: Math.min(...xs) - pad, y: Math.min(...ys) - pad, w: Math.max(...xs) - Math.min(...xs) + pad * 2, h: Math.max(...ys) - Math.min(...ys) + pad * 2 };
+    }
     const fx = realToPaper(shape.from.x, scale),
       fy = realToPaper(shape.from.y, scale);
     const tx = realToPaper(shape.to.x, scale),

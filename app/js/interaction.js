@@ -1706,6 +1706,11 @@ function handleResize(rp, shiftKey) {
     );
   } else if (shape.type === "dimension") {
     const o = origShape;
+    if (shape.dimensionType === "radius") {
+      shape.to = { x: o.to.x + dx, y: o.to.y + dy };
+      delete shape.value;
+      return;
+    }
     const isH = shape.dimensionType === "horizontal";
     // ハンドル位置は from/to の min/max (bbox) から決まるが、from/to のどちらが
     // 右(下)側かは描画方向（どちらからドラッグして引いたか）で変わる。
@@ -1934,7 +1939,11 @@ function handleSelMove(pp, shiftKey) {
         shape.by = orig.by + dyR;
       }
     } else if (shape.type === "dimension") {
-      shape.from = { x: orig.from.x + dxR, y: orig.from.y + dyR };
+      if (shape.dimensionType === "radius") {
+        shape.center = { x: orig.center.x + dxR, y: orig.center.y + dyR };
+      } else {
+        shape.from = { x: orig.from.x + dxR, y: orig.from.y + dyR };
+      }
       shape.to = { x: orig.to.x + dxR, y: orig.to.y + dyR };
       // textOffset is relative to dim line center, so no adjustment needed
     } else if (shape.type === "path") {

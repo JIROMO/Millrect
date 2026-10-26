@@ -606,7 +606,11 @@ function shiftShape(shape, dx, dy) {
     shape.cx += dx;
     shape.cy += dy;
   } else if (shape.type === "dimension") {
-    shape.from = { x: shape.from.x + dx, y: shape.from.y + dy };
+    if (shape.dimensionType === "radius") {
+      shape.center = { x: shape.center.x + dx, y: shape.center.y + dy };
+    } else {
+      shape.from = { x: shape.from.x + dx, y: shape.from.y + dy };
+    }
     shape.to = { x: shape.to.x + dx, y: shape.to.y + dy };
   } else if (shape.type === "bezier") {
     shape.nodes = shape.nodes.map((n) => ({
