@@ -2792,22 +2792,8 @@ function updateMeasureStatus(fr, to, finalResult = false) {
 // ── Dimension (3-click) ───────────────────────────────────────
 function handleDimDown(pp, rp) {
   if (!_dimState) {
-    const hit = findTopShapeAtRealPoint(rp);
-    if (hit?.type === "rect" && Number(hit.rx || hit.cornerRadius || 0) > 0) {
-      const r = Number(hit.rx || hit.cornerRadius);
-      const right = rp.x > hit.x + hit.width / 2;
-      const bottom = rp.y > hit.y + hit.height / 2;
-      _dimState = { step: 1, radius: r, outward: { x: right ? 1 : -1, y: bottom ? 1 : -1 }, center: { x: right ? hit.x + hit.width - r : hit.x + r, y: bottom ? hit.y + hit.height - r : hit.y + r } };
-      return;
-    }
     _dimState = { step: 1, fr: rp, fp: pp };
   } else if (_dimState.step === 1) {
-    if (_dimState.radius) {
-      const ds = _dimState;
-      const distance = Math.max(ds.radius * 1.5, (rp.x - ds.center.x) * ds.outward.x, (rp.y - ds.center.y) * ds.outward.y);
-      addShape({ id: genId("dim"), type: "dimension", dimensionType: "radius", center: { ...ds.center }, to: { x: ds.center.x + ds.outward.x * distance, y: ds.center.y + ds.outward.y * distance }, value: realToMM(ds.radius), prefix: "", suffix: "mm", stroke: "#1a1a2e", strokeWidth: "thin" });
-      cancelDim(); render(); uiUpdate(); return;
-    }
     const dx = Math.abs(rp.x - _dimState.fr.x),
       dy = Math.abs(rp.y - _dimState.fr.y);
     _dimState.step = 2;
