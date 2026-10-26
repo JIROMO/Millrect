@@ -69,6 +69,7 @@ function reorderSelectionZ(ids, mode) {
 // 作図時のクリックずれや MCP からの非整列入力で寸法線が斜めにならないよう正規化する。
 function normalizeDimensionGeometry(dim) {
   if (!dim || dim.type !== "dimension" || !dim.from || !dim.to) return dim;
+  if (dim.dimensionType === "radius") return dim;
   if (dim.dimensionType === "vertical") {
     dim.to.x = dim.from.x;
   } else if (dim.dimensionType === "horizontal") {

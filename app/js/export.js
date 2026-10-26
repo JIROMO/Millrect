@@ -826,6 +826,27 @@ function _prepareDimensionForExport(dimEl) {
   return dimEl;
 }
 
+function _prepareTextForExport(textEl) {
+  for (const fo of Array.from(textEl.querySelectorAll("foreignObject"))) {
+    const div = fo.firstElementChild;
+    const label = div?.textContent || "";
+    if (!label) { fo.remove(); continue; }
+    const x = parseFloat(fo.getAttribute("x") || "0");
+    const y = parseFloat(fo.getAttribute("y") || "0");
+    const w = parseFloat(fo.getAttribute("width") || "0");
+    const h = parseFloat(fo.getAttribute("height") || "0");
+    const align = div.style.textAlign || "left";
+    const anchor = align === "right" ? "end" : align === "center" ? "middle" : "start";
+    const tx = anchor === "end" ? x + w : anchor === "middle" ? x + w / 2 : x;
+    const text = se("text", { x: tx, y: y + h / 2, fill: div.style.color || "#1a1a2e", "font-size": parseFloat(div.style.fontSize || "3.5") || 3.5, "font-family": "Helvetica,Arial,sans-serif", "text-anchor": anchor, "dominant-baseline": "central" });
+    const transform = fo.getAttribute("transform");
+    if (transform) text.setAttribute("transform", transform);
+    text.textContent = label;
+    fo.replaceWith(text);
+  }
+  return textEl;
+}
+
 function buildPageSVG(page, options = {}) {
   const includeDimensions = !!options.includeDimensions;
   const phys = getPaperSizeMm(page);
@@ -843,7 +864,7 @@ function buildPageSVG(page, options = {}) {
     const g = se("g", { id: layer.id });
     for (const shape of layer.shapes) {
       const el = renderShape(shape, page.scale, [], { interactive: false });
-      if (el) g.appendChild(el);
+      if (el) g.appendChild(shape.type === "text" ? _prepareTextForExport(el) : el);
     }
     svg.appendChild(g);
   }

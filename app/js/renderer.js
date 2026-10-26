@@ -310,7 +310,15 @@ function renderDimensionSVG(dim, scale) {
     g.appendChild(labelFo);
   }
 
-  if (dim.dimensionType === "horizontal") {
+  if (dim.dimensionType === "radius") {
+    const cx = rtp(dim.center.x, scale), cy = rtp(dim.center.y, scale);
+    const px = rtp(dim.to.x, scale), py = rtp(dim.to.y, scale);
+    const dx = px - cx, dy = py - cy, len = Math.hypot(dx, dy) || 1;
+    g.appendChild(se("line", { x1: cx, y1: cy, x2: px, y2: py, stroke, "stroke-width": sw, "pointer-events": "none" }));
+    addHitLine(g, cx, cy, px, py);
+    arrowHead(g, px, py, Math.atan2(dy, dx), 2.5, stroke, arrowStyle);
+    addDimLabel(`R${formatDimValue(dimensionValueMM(dim))}`, cx + dx * 0.55, cy + dy * 0.55 - ts * 0.7, 0, px, py);
+  } else if (dim.dimensionType === "horizontal") {
     const x1 = rtp(dim.from.x, scale);
     const yf = rtp(dim.from.y, scale);
     const x2 = rtp(dim.to.x, scale);

@@ -574,6 +574,9 @@ function shapeBBoxMM(shape, pageScale) {
   };
 }
 function dimensionRealDistance(dim) {
+  if (dim.dimensionType === "radius") {
+    return Math.hypot((dim.to?.x || 0) - (dim.center?.x || 0), (dim.to?.y || 0) - (dim.center?.y || 0));
+  }
   return dim.dimensionType === "horizontal"
     ? Math.abs(dim.to.x - dim.from.x)
     : Math.abs(dim.to.y - dim.from.y);
