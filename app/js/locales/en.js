@@ -61,6 +61,8 @@
     "tools.dimension.title": "Dimension (D)",
     "tools.radiusDimension": "R-DIM",
     "tools.radiusDimension.title": "Radius dimension (click a rounded corner, then place the leader)",
+    "props.centerXmm": "Center X",
+    "props.centerYmm": "Center Y",
     "tools.measure": "MEASURE",
     "tools.measure.title":
       "Measure (M) — check distance/angle without placing a dimension",

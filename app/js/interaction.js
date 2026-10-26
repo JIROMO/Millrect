@@ -2797,13 +2797,15 @@ function handleDimDown(pp, rp) {
       const r = Number(hit.rx || hit.cornerRadius);
       const right = rp.x > hit.x + hit.width / 2;
       const bottom = rp.y > hit.y + hit.height / 2;
-      _dimState = { step: 1, radius: r, center: { x: right ? hit.x + hit.width - r : hit.x + r, y: bottom ? hit.y + hit.height - r : hit.y + r } };
+      _dimState = { step: 1, radius: r, outward: { x: right ? 1 : -1, y: bottom ? 1 : -1 }, center: { x: right ? hit.x + hit.width - r : hit.x + r, y: bottom ? hit.y + hit.height - r : hit.y + r } };
       return;
     }
     _dimState = { step: 1, fr: rp, fp: pp };
   } else if (_dimState.step === 1) {
     if (_dimState.radius) {
-      addShape({ id: genId("dim"), type: "dimension", dimensionType: "radius", center: { ..._dimState.center }, to: { ...rp }, value: realToMM(_dimState.radius), prefix: "", suffix: "mm", stroke: "#1a1a2e", strokeWidth: "thin" });
+      const ds = _dimState;
+      const distance = Math.max(ds.radius * 1.5, (rp.x - ds.center.x) * ds.outward.x, (rp.y - ds.center.y) * ds.outward.y);
+      addShape({ id: genId("dim"), type: "dimension", dimensionType: "radius", center: { ...ds.center }, to: { x: ds.center.x + ds.outward.x * distance, y: ds.center.y + ds.outward.y * distance }, value: realToMM(ds.radius), prefix: "", suffix: "mm", stroke: "#1a1a2e", strokeWidth: "thin" });
       cancelDim(); render(); uiUpdate(); return;
     }
     const dx = Math.abs(rp.x - _dimState.fr.x),
@@ -2842,13 +2844,15 @@ function handleRadiusDimDown(rp) {
     _dimState = {
       step: 1,
       radius: r,
+      outward: { x: right ? 1 : -1, y: bottom ? 1 : -1 },
       center: { x: right ? hit.x + hit.width - r : hit.x + r, y: bottom ? hit.y + hit.height - r : hit.y + r },
     };
     return;
   }
   if (_dimState.radius) {
     const ds = _dimState;
-    addShape({ id: genId("dim"), type: "dimension", dimensionType: "radius", center: { ...ds.center }, to: { ...rp }, value: realToMM(ds.radius), suffix: "mm", stroke: "#1a1a2e", strokeWidth: "thin" });
+    const distance = Math.max(ds.radius * 1.5, (rp.x - ds.center.x) * ds.outward.x, (rp.y - ds.center.y) * ds.outward.y);
+    addShape({ id: genId("dim"), type: "dimension", dimensionType: "radius", center: { ...ds.center }, to: { x: ds.center.x + ds.outward.x * distance, y: ds.center.y + ds.outward.y * distance }, value: realToMM(ds.radius), suffix: "mm", stroke: "#1a1a2e", strokeWidth: "thin" });
     cancelDim();
     render();
     uiUpdate();

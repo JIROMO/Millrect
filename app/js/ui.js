@@ -1919,17 +1919,23 @@ function buildPropsHTML(s) {
     const autoValMM = realToMM(dimensionRealDistance(s));
     const isOverridden =
       s.value !== undefined && Math.abs(dimensionValueMM(s) - autoValMM) > 0.01;
+    const isRadiusDimension = s.dimensionType === "radius";
     geometry.push(
       `<div class="prop-row">
         <label>${t("props.dimensionValue")}</label>
         <div class="prop-unit-field"><input type="number" step="0.1" data-key="value" value="${fmtNum(dimensionValueMM(s))}" style="${isOverridden ? "color:#e55;" : ""}"><span class="prop-unit-suffix">mm</span></div>
       </div>`,
       pRO(t("props.direction"), s.dimensionType),
-      pRowMm(t("props.fromXmm"), "from.x", s.from.x),
-      pRowMm(t("props.fromYmm"), "from.y", s.from.y),
+      ...(isRadiusDimension ? [
+        pRowMm(t("props.centerXmm"), "center.x", s.center.x),
+        pRowMm(t("props.centerYmm"), "center.y", s.center.y),
+      ] : [
+        pRowMm(t("props.fromXmm"), "from.x", s.from.x),
+        pRowMm(t("props.fromYmm"), "from.y", s.from.y),
+      ]),
       pRowMm(t("props.toXmm"), "to.x", s.to.x),
       pRowMm(t("props.toYmm"), "to.y", s.to.y),
-      pRowMm(t("props.offset"), "offset", s.offset ?? -80),
+      ...(isRadiusDimension ? [] : [pRowMm(t("props.offset"), "offset", s.offset ?? -80)]),
     );
     dimStyle = [
       pSel(t("props.arrow"), "arrowStyle", s.arrowStyle || "dot", arrowOpts),
