@@ -59,6 +59,8 @@
     "tools.text.title": "テキスト (T)",
     "tools.dimension": "DIM",
     "tools.dimension.title": "寸法線 (D)",
+    "tools.radiusDimension": "R寸法",
+    "tools.radiusDimension.title": "角丸半径寸法（角丸をクリック→引出線の先でクリック）",
     "tools.measure": "MEASURE",
     "tools.measure.title": "計測 (M) — 寸法線を置かず距離・角度を確認",
     "tools.dragHandle.title": "ドラッグで移動",

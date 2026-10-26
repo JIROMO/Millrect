@@ -219,7 +219,7 @@ function getSnapped(sx, sy, opts = {}) {
         excludeIds: opts.excludeIds,
         // 寸法はグループ外接枠ではなく、子図形の実際の端点・中心へ吸着させる。
         // 通常操作では従来の軽量な外接枠スナップを維持する。
-        expandGroups: state.activeTool === "dimension",
+        expandGroups: state.activeTool === "dimension" || state.activeTool === "radius-dimension",
       });
       if (snap) return { pt: snap, snapped: true, snapType: snap.snapType };
     }
@@ -313,6 +313,7 @@ function onMouseDown(e, svgEl) {
   else if (tool === "circle") _ds = { tool, sp: pp, sr: editRP };
   else if (tool === "text") handleTextToolDown(e, editRP);
   else if (tool === "dimension") handleDimDown(pp, editRP);
+  else if (tool === "radius-dimension") handleRadiusDimDown(editRP);
   else if (tool === "measure") handleMeasureDown(editRP);
   else if (tool === "bezier") {
     handleBezierDown(editRP, pp, e.shiftKey, e.altKey);
@@ -2823,6 +2824,31 @@ function handleDimDown(pp, rp) {
       stroke: "#1a1a2e",
       strokeWidth: "thin",
     });
+    cancelDim();
+    render();
+    uiUpdate();
+  }
+}
+
+// 角丸寸法専用ツール: 角丸矩形の角をクリックしてから、引出線の終点をクリックする。
+function handleRadiusDimDown(rp) {
+  if (!_dimState) {
+    const hit = findTopShapeAtRealPoint(rp);
+    if (hit?.type !== "rect") return;
+    const r = Number(hit.rx || hit.cornerRadius || 0);
+    if (!(r > 0)) return;
+    const right = rp.x > hit.x + hit.width / 2;
+    const bottom = rp.y > hit.y + hit.height / 2;
+    _dimState = {
+      step: 1,
+      radius: r,
+      center: { x: right ? hit.x + hit.width - r : hit.x + r, y: bottom ? hit.y + hit.height - r : hit.y + r },
+    };
+    return;
+  }
+  if (_dimState.radius) {
+    const ds = _dimState;
+    addShape({ id: genId("dim"), type: "dimension", dimensionType: "radius", center: { ...ds.center }, to: { ...rp }, value: realToMM(ds.radius), suffix: "mm", stroke: "#1a1a2e", strokeWidth: "thin" });
     cancelDim();
     render();
     uiUpdate();
