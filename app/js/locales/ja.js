@@ -59,8 +59,6 @@
     "tools.text.title": "テキスト (T)",
     "tools.dimension": "DIM",
     "tools.dimension.title": "寸法線 (D)",
-    "tools.radiusDimension": "R寸法",
-    "tools.radiusDimension.title": "角丸半径寸法（角丸をクリック→引出線の先でクリック）",
     "props.centerXmm": "中心 X",
     "props.centerYmm": "中心 Y",
     "tools.measure": "MEASURE",
