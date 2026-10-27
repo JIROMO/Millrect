@@ -575,6 +575,9 @@ function shapeBBoxMM(shape, pageScale) {
 }
 function dimensionRealDistance(dim) {
   if (dim.dimensionType === "radius") {
+    // radius（real units）は角丸/円から作図した時点の半径。to は引出線の終点なので
+    // 旧データ（radius 無し）のみ中心→to の距離で代用する。
+    if (Number(dim.radius) > 0) return Number(dim.radius);
     return Math.hypot((dim.to?.x || 0) - (dim.center?.x || 0), (dim.to?.y || 0) - (dim.center?.y || 0));
   }
   return dim.dimensionType === "horizontal"

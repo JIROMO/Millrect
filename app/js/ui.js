@@ -17,6 +17,7 @@ const TOOL_INFO = {
   circle: "CIRCLE",
   text: "TEXT",
   dimension: "DIM",
+  "radius-dimension": "R-DIM",
   hand: "HAND",
   bezier: "PEN",
   pencil: "PENCIL",
@@ -2457,10 +2458,13 @@ function bindKeyShortcuts() {
       m: "measure",
       M: "measure",
     };
-    if (map[e.key] && !e.ctrlKey && !e.metaKey) {
+    // Shift+D は R（角丸半径）寸法。Caps Lock の "D" は通常の寸法のまま
+    const toolForKey =
+      e.shiftKey && (e.key === "D" || e.key === "d") ? "radius-dimension" : map[e.key];
+    if (toolForKey && !e.ctrlKey && !e.metaKey) {
       cancelDim();
       if (typeof cancelMeasure === "function") cancelMeasure();
-      const tool = map[e.key];
+      const tool = toolForKey;
       getState().activeTool = tool;
       if (typeof onActiveToolChanged === "function") {
         onActiveToolChanged(tool);
@@ -2471,7 +2475,7 @@ function bindKeyShortcuts() {
       updateToolbar();
       updatePropertiesPanel();
       const el = document.getElementById("status-tool");
-      if (el) el.textContent = TOOL_INFO[map[e.key]] || map[e.key];
+      if (el) el.textContent = TOOL_INFO[tool] || tool;
       _updateMeasureStatusVisibility(tool);
       return;
     }

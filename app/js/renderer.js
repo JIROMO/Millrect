@@ -168,6 +168,16 @@ function _measureDimLabelWidth(text, fontSizePx, fontFamily) {
   return _dimLabelMeasureCtx.measureText(String(text)).width;
 }
 
+// 角度 a を [a0, a1]（a0 から正方向へ a1 まで）の円弧範囲へ収める。範囲外なら近い端へ。
+function _clampAngleToArc(a, a0, a1) {
+  const TAU = Math.PI * 2;
+  const norm = (v) => ((v % TAU) + TAU) % TAU;
+  const span = norm(a1 - a0);
+  const rel = norm(a - a0);
+  if (rel <= span) return a;
+  return rel - span < TAU - rel ? a1 : a0;
+}
+
 function renderDimensionSVG(dim, scale) {
   const g = se("g", {
     "data-id": dim.id,
@@ -311,13 +321,38 @@ function renderDimensionSVG(dim, scale) {
   }
 
   if (dim.dimensionType === "radius") {
+    // 中心から円弧へ向かう寸法線＋円弧上の矢印。to が円弧の外なら引出線を延長し、
+    // その先に値を置く（textOffsetX/Y でドラッグ移動可）。
+    // arcAngles（度・ワールド）がある場合は矢印方向を角丸の 1/4 円弧内に収める。
     const cx = rtp(dim.center.x, scale), cy = rtp(dim.center.y, scale);
     const px = rtp(dim.to.x, scale), py = rtp(dim.to.y, scale);
-    const dx = px - cx, dy = py - cy, len = Math.hypot(dx, dy) || 1;
-    g.appendChild(se("line", { x1: cx, y1: cy, x2: px, y2: py, stroke, "stroke-width": sw, "pointer-events": "none" }));
-    addHitLine(g, cx, cy, px, py);
-    arrowHead(g, px, py, Math.atan2(dy, dx), 2.5, stroke, arrowStyle);
-    addDimLabel(`R${formatDimValue(dimensionValueMM(dim))}`, cx + dx * 0.55, cy + dy * 0.55 - ts * 0.7, 0, px, py);
+    const toLen = Math.hypot(px - cx, py - cy);
+    const rP = Number(dim.radius) > 0 ? rtp(dim.radius, scale) : toLen;
+    let ang = toLen > 1e-6 ? Math.atan2(py - cy, px - cx) : -Math.PI / 4;
+    if (Array.isArray(dim.arcAngles) && dim.arcAngles.length === 2) {
+      ang = _clampAngleToArc(ang, dim.arcAngles[0] * Math.PI / 180, dim.arcAngles[1] * Math.PI / 180);
+    }
+    const ux = Math.cos(ang), uy = Math.sin(ang);
+    const ax = cx + ux * rP, ay = cy + uy * rP;
+    const outside = toLen > rP + 0.01;
+    // 引出線の終点: 円弧の外なら to（角度クランプ時は折れ線になる）、内なら円弧上
+    const ex = outside ? px : ax, ey = outside ? py : ay;
+    g.appendChild(se("line", { x1: cx, y1: cy, x2: ax, y2: ay, stroke, "stroke-width": sw, "pointer-events": "none" }));
+    addHitLine(g, cx, cy, ax, ay);
+    if (outside) {
+      g.appendChild(se("line", { x1: ax, y1: ay, x2: ex, y2: ey, stroke, "stroke-width": sw, "pointer-events": "none" }));
+      addHitLine(g, ax, ay, ex, ey);
+    }
+    // arrowHead は「angle 方向に開く」向きで描くため、円弧に外向きで当てるには逆向きを渡す
+    arrowHead(g, ax, ay, ang + Math.PI, 2.5, stroke, arrowStyle);
+    const label = `R${formatDimValue(dimensionValueMM(dim))}`;
+    const gapP = ts * 0.3;
+    if (outside) {
+      const right = ex >= cx;
+      addDimLabel(label, ex + (right ? gapP : -gapP), ey + ts * 0.35, 0, ex, ey, right ? "start" : "end", false);
+    } else {
+      addDimLabel(label, (cx + ax) / 2, (cy + ay) / 2 - ts * 0.4, 0, (cx + ax) / 2, (cy + ay) / 2);
+    }
   } else if (dim.dimensionType === "horizontal") {
     const x1 = rtp(dim.from.x, scale);
     const yf = rtp(dim.from.y, scale);

@@ -59,6 +59,8 @@
     "tools.text.title": "Text (T)",
     "tools.dimension": "DIM",
     "tools.dimension.title": "Dimension (D)",
+    "tools.radiusDimension": "R-DIM",
+    "tools.radiusDimension.title": "Radius dimension (Shift+D) — click a rounded corner or circle",
     "props.centerXmm": "Center X",
     "props.centerYmm": "Center Y",
     "tools.measure": "MEASURE",

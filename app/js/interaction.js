@@ -313,7 +313,12 @@ function onMouseDown(e, svgEl) {
   else if (tool === "circle") _ds = { tool, sp: pp, sr: editRP };
   else if (tool === "text") handleTextToolDown(e, editRP);
   else if (tool === "dimension") handleDimDown(pp, editRP);
-  else if (tool === "radius-dimension") handleRadiusDimDown(editRP);
+  else if (tool === "radius-dimension") {
+    // R 寸法ツール中も既存寸法の値ラベルはその場でドラッグして位置調整できる
+    const dimLabelEl = e.target.closest("[data-dim-label]");
+    if (dimLabelEl) _startDimLabelDrag(dimLabelEl, svgEl, rp);
+    else handleRadiusDimDown(_rawReal(e, svgEl));
+  }
   else if (tool === "measure") handleMeasureDown(editRP);
   else if (tool === "bezier") {
     handleBezierDown(editRP, pp, e.shiftKey, e.altKey);
@@ -439,7 +444,7 @@ function onMouseMove(e, svgEl) {
     render();
     return;
   }
-  if (tool === "select" && _ds?.action === "dim-label") {
+  if (_ds?.action === "dim-label") {
     document.body.classList.add("dragging");
     const { shapeId, startRP, origOffsetX, origOffsetY } = _ds;
     const res = findShapeById(shapeId);
@@ -533,6 +538,8 @@ function onMouseMove(e, svgEl) {
           offset,
         });
       }
+    } else if (tool === "radius-dimension") {
+      handleRadiusDimMove(_rawReal(e, svgEl));
     } else if (tool === "measure" && _measureState) {
       renderPreview({
         id: "__prev__",
@@ -594,7 +601,7 @@ function onMouseUp(e, svgEl) {
     svgEl.style.cursor = "default";
     return;
   }
-  if (tool === "select" && _ds?.action === "dim-label") {
+  if (_ds?.action === "dim-label") {
     const moved =
       Math.abs(rp.x - _ds.startRP.x) > 1 || Math.abs(rp.y - _ds.startRP.y) > 1;
     if (moved) {
@@ -1013,21 +1020,7 @@ function handleSelDown(e, svgEl, pp, rp) {
   // Dimension label drag
   const dimLabelEl = e.target.closest("[data-dim-label]");
   if (dimLabelEl) {
-    const sid = dimLabelEl.getAttribute("data-dim-label");
-    state.selectedShapeIds = [sid];
-    const res = findShapeById(sid);
-    if (res) {
-      _ds = {
-        action: "dim-label",
-        shapeId: sid,
-        startRP: rp,
-        origOffsetX: res.shape.textOffsetX || 0,
-        origOffsetY: res.shape.textOffsetY || 0,
-      };
-      svgEl.style.cursor = "move";
-      _renderSelectionChange();
-      _updateSelectionUiAfterPaint();
-    }
+    _startDimLabelDrag(dimLabelEl, svgEl, rp);
     return;
   }
 
@@ -1709,7 +1702,8 @@ function handleResize(rp, shiftKey) {
     const o = origShape;
     if (shape.dimensionType === "radius") {
       shape.to = { x: o.to.x + dx, y: o.to.y + dy };
-      delete shape.value;
+      // 旧データ（radius 無し）は中心→to の距離が値なので上書き値を外す
+      if (!(Number(shape.radius) > 0)) delete shape.value;
       return;
     }
     const isH = shape.dimensionType === "horizontal";
@@ -2818,31 +2812,148 @@ function handleDimDown(pp, rp) {
   }
 }
 
-// 角丸寸法専用ツール: 角丸矩形の角をクリックしてから、引出線の終点をクリックする。
-function handleRadiusDimDown(rp) {
-  if (!_dimState) {
-    const hit = findTopShapeAtRealPoint(rp);
-    if (hit?.type !== "rect") return;
-    const r = Number(hit.rx || hit.cornerRadius || 0);
-    if (!(r > 0)) return;
-    const right = rp.x > hit.x + hit.width / 2;
-    const bottom = rp.y > hit.y + hit.height / 2;
-    _dimState = {
-      step: 1,
-      radius: r,
-      outward: { x: right ? 1 : -1, y: bottom ? 1 : -1 },
-      center: { x: right ? hit.x + hit.width - r : hit.x + r, y: bottom ? hit.y + hit.height - r : hit.y + r },
-    };
+function _startDimLabelDrag(dimLabelEl, svgEl, rp) {
+  const state = getState();
+  const sid = dimLabelEl.getAttribute("data-dim-label");
+  state.selectedShapeIds = [sid];
+  const res = findShapeById(sid);
+  if (!res) return;
+  _ds = {
+    action: "dim-label",
+    shapeId: sid,
+    startRP: rp,
+    origOffsetX: res.shape.textOffsetX || 0,
+    origOffsetY: res.shape.textOffsetY || 0,
+  };
+  svgEl.style.cursor = "move";
+  _renderSelectionChange();
+  _updateSelectionUiAfterPaint();
+}
+
+// ── Radius dimension（角丸 / 円）──────────────────────────────
+// 角丸矩形の角・円周の近くをホバーするとプレビューし、クリックで即配置する。
+// 値の位置は配置後にラベルをドラッグ（textOffsetX/Y）、引出線の先は選択ハンドルで調整。
+const RADIUS_DIM_PICK_PX = 12;
+
+function _rectCornerRadii(shape) {
+  const lim = Math.min(Math.abs(shape.width), Math.abs(shape.height)) / 2;
+  const clamp = (v) => Math.max(0, Math.min(Number(v) || 0, lim));
+  if (shape.rxMode === "individual") {
+    return { tl: clamp(shape.rxTL), tr: clamp(shape.rxTR), br: clamp(shape.rxBR), bl: clamp(shape.rxBL) };
+  }
+  const r = clamp(shape.rx);
+  return { tl: r, tr: r, br: r, bl: r };
+}
+
+// rp 付近にある角丸の 1/4 円弧 / 円周を探す。戻り値は寸法生成に必要な
+// { center, radius, arcAngles(度・ワールド)|null, angle(引出線の既定方向・rad), dist }
+function _radiusDimCandidates(shape, ancestors, out) {
+  if (shape.ghost) return;
+  if (shape.type === "group") {
+    for (const c of shape.children || []) _radiusDimCandidates(c, [...ancestors, shape], out);
     return;
   }
-  if (_dimState.radius) {
-    const ds = _dimState;
-    const distance = Math.max(ds.radius * 1.5, (rp.x - ds.center.x) * ds.outward.x, (rp.y - ds.center.y) * ds.outward.y);
-    addShape({ id: genId("dim"), type: "dimension", dimensionType: "radius", center: { ...ds.center }, to: { x: ds.center.x + ds.outward.x * distance, y: ds.center.y + ds.outward.y * distance }, value: realToMM(ds.radius), suffix: "mm", stroke: "#1a1a2e", strokeWidth: "thin" });
-    cancelDim();
-    render();
-    uiUpdate();
+  const world = (x, y) => {
+    const [wx, wy] = applyWorldTransformReal(x, y, shape, ancestors);
+    return { x: wx, y: wy };
+  };
+  if (shape.type === "circle" && shape.r > 0) {
+    out.push({ center: world(shape.cx, shape.cy), radius: shape.r, arcAngles: null });
+    return;
   }
+  if (shape.type !== "rect") return;
+  const radii = _rectCornerRadii(shape);
+  const x0 = Math.min(shape.x, shape.x + shape.width), y0 = Math.min(shape.y, shape.y + shape.height);
+  const x1 = x0 + Math.abs(shape.width), y1 = y0 + Math.abs(shape.height);
+  // [半径, ローカル中心, 円弧の両端方向（ローカル単位ベクトル）]
+  const corners = [
+    [radii.tl, x0 + radii.tl, y0 + radii.tl, [-1, 0], [0, -1]],
+    [radii.tr, x1 - radii.tr, y0 + radii.tr, [0, -1], [1, 0]],
+    [radii.br, x1 - radii.br, y1 - radii.br, [1, 0], [0, 1]],
+    [radii.bl, x0 + radii.bl, y1 - radii.bl, [0, 1], [-1, 0]],
+  ];
+  for (const [r, lx, ly, da, db] of corners) {
+    if (!(r > 0)) continue;
+    const c = world(lx, ly);
+    const a = world(lx + da[0] * r, ly + da[1] * r);
+    const b = world(lx + db[0] * r, ly + db[1] * r);
+    let a0 = Math.atan2(a.y - c.y, a.x - c.x), a1 = Math.atan2(b.y - c.y, b.x - c.x);
+    // 反転で回り順が逆になった場合も「a0 から正方向に 90°」になるよう揃える
+    const span = (((a1 - a0) % (Math.PI * 2)) + Math.PI * 2) % (Math.PI * 2);
+    if (span > Math.PI) [a0, a1] = [a1, a0];
+    out.push({ center: c, radius: r, arcAngles: [a0, a1] });
+  }
+}
+
+function _findRadiusDimTarget(rp) {
+  const state = getState(), page = getCurrentPage();
+  const tol = paperToRealDist(RADIUS_DIM_PICK_PX / (state.zoom || 1), page.scale);
+  const cands = [];
+  for (const layer of page.layers) {
+    if (layer.visible === false) continue;
+    for (const shape of layer.shapes) _radiusDimCandidates(shape, [], cands);
+  }
+  let best = null;
+  for (const cand of cands) {
+    const dx = rp.x - cand.center.x, dy = rp.y - cand.center.y;
+    const d = Math.hypot(dx, dy);
+    let ang = Math.atan2(dy, dx);
+    let dist = Math.abs(d - cand.radius);
+    if (cand.arcAngles) {
+      // 1/4 円弧の角度範囲外では、円弧の最寄り端点までの距離で判定する
+      const clamped = _clampAngleToArc(ang, cand.arcAngles[0], cand.arcAngles[1]);
+      if (clamped !== ang) {
+        dist = Math.hypot(
+          rp.x - (cand.center.x + Math.cos(clamped) * cand.radius),
+          rp.y - (cand.center.y + Math.sin(clamped) * cand.radius),
+        );
+      }
+    }
+    if (dist > tol || (best && dist >= best.dist)) continue;
+    if (cand.arcAngles) {
+      // 既定の引出線は 1/4 円弧の中央（45°）方向
+      const [a0, a1] = cand.arcAngles;
+      const span = (((a1 - a0) % (Math.PI * 2)) + Math.PI * 2) % (Math.PI * 2);
+      ang = a0 + span / 2;
+    } // 円はカーソル方向（ang のまま）へ引き出す
+    best = { ...cand, angle: ang, dist };
+  }
+  return best;
+}
+
+function _buildRadiusDimension(target, id) {
+  // 引出線の先は円弧から 8mm 外（小さい R でも値が角に重ならない）
+  const len = target.radius + mmToReal(8);
+  const dim = {
+    id,
+    type: "dimension",
+    dimensionType: "radius",
+    center: { ...target.center },
+    radius: target.radius,
+    to: {
+      x: target.center.x + Math.cos(target.angle) * len,
+      y: target.center.y + Math.sin(target.angle) * len,
+    },
+    stroke: "#1a1a2e",
+    strokeWidth: "thin",
+  };
+  if (target.arcAngles) dim.arcAngles = target.arcAngles.map((a) => (a * 180) / Math.PI);
+  return dim;
+}
+
+function handleRadiusDimMove(rawRP) {
+  const target = _findRadiusDimTarget(rawRP);
+  if (target) renderPreview(_buildRadiusDimension(target, "__prev__"));
+  else removePreview();
+}
+
+function handleRadiusDimDown(rawRP) {
+  const target = _findRadiusDimTarget(rawRP);
+  if (!target) return;
+  addShape(_buildRadiusDimension(target, genId("dim")));
+  removePreview();
+  render();
+  uiUpdate();
 }
 
 function applyAngleSnap(sr, er) {
