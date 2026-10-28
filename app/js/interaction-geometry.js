@@ -13,6 +13,27 @@ function _pathInteractionScaleKey(scale) {
   return scale ? `${scale.numerator}/${scale.denominator}` : "1/1";
 }
 
+// render version は mouseup の確定時にしか上がらないため、ドラッグ中に回転や
+// contours 差し替え（Alt 複製ドラッグ・グループ移動）をしても version だけでは
+// キーが変わらず、選択枠・ヒット判定が操作前の輪郭のまま残る。
+// contours 配列の同一性（編集は常に新しい配列へ差し替える）と回転・反転もキーに含める。
+const _pathContoursIdentity = new WeakMap();
+let _pathContoursSeq = 0;
+
+function _pathContoursKey(contours) {
+  if (!contours || typeof contours !== "object") return 0;
+  let key = _pathContoursIdentity.get(contours);
+  if (!key) {
+    key = ++_pathContoursSeq;
+    _pathContoursIdentity.set(contours, key);
+  }
+  return key;
+}
+
+function _pathTransformKey(shape) {
+  return `${shape.rotation || 0},${shape.flipH ? 1 : 0},${shape.flipV ? 1 : 0}`;
+}
+
 function _pathInteractionCacheKey(shape, scale, ancestorGroups) {
   if (!shape?.id) return null;
   const shapeVersion =
@@ -25,10 +46,10 @@ function _pathInteractionCacheKey(shape, scale, ancestorGroups) {
         typeof getShapeRenderVersion === "function"
           ? getShapeRenderVersion(group.id)
           : 0;
-      return `${group.id}:${version}`;
+      return `${group.id}:${version}:${_pathTransformKey(group)}`;
     })
     .join("/");
-  return `${shape.id}|${shapeVersion}|${_pathInteractionScaleKey(scale)}|${ancestorVersion}`;
+  return `${shape.id}|${shapeVersion}|${_pathContoursKey(shape.contours)}|${_pathTransformKey(shape)}|${_pathInteractionScaleKey(scale)}|${ancestorVersion}`;
 }
 
 function _rememberPathInteractionGeometry(key, geometry) {

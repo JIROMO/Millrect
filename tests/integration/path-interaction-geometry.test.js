@@ -55,3 +55,46 @@ test("100-hole paths reuse lightweight interaction geometry without changing can
   assert.equal(JSON.stringify(shape.contours), canonicalBefore);
 });
 
+
+// ドラッグ中（mouseup で markShapeDirty される前）の回転・contours 差し替えでも
+// キャッシュが古い輪郭を返さないこと。返すと選択枠が操作前の位置に取り残される。
+test("path interaction geometry follows live rotation and contour replacement before markShapeDirty", () => {
+  const app = bootApp();
+  const shape = {
+    id: "path-live-edit",
+    type: "path",
+    contours: [
+      [
+        [
+          [0, 0],
+          [100, 0],
+          [100, 50],
+          [0, 50],
+        ],
+      ],
+    ],
+  };
+  const scale = { numerator: 1, denominator: 1 };
+  const bounds = (geometry) => {
+    const xs = geometry.hitRealRings.flat().map(([x]) => x);
+    const ys = geometry.hitRealRings.flat().map(([, y]) => y);
+    return [Math.min(...xs), Math.min(...ys), Math.max(...xs), Math.max(...ys)].map(
+      (v) => Math.round(v),
+    );
+  };
+
+  const before = app.getPathInteractionGeometry(shape, scale);
+  assert.deepEqual(bounds(before), [0, 0, 100, 50]);
+
+  shape.rotation = 90;
+  const rotated = app.getPathInteractionGeometry(shape, scale);
+  assert.notStrictEqual(rotated, before, "rotation must invalidate the cache");
+  assert.deepEqual(bounds(rotated), [25, -25, 75, 75]);
+
+  shape.rotation = 0;
+  shape.contours = shape.contours.map((poly) =>
+    poly.map((ring) => ring.map(([x, y]) => [x + 30, y + 10])),
+  );
+  const moved = app.getPathInteractionGeometry(shape, scale);
+  assert.deepEqual(bounds(moved), [30, 10, 130, 60]);
+});
