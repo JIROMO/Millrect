@@ -39,6 +39,7 @@ importScripts(
   "../vendor/three.min.js",
   "../vendor/csg.js",
   "../vendor/csg-three-adapter.js",
+  "../vendor/csg-manifold-adapter.js",
   "transform.js",
   "profiles.js",
   "3d-view.js",
@@ -61,7 +62,15 @@ function _payloadFromMesh(mesh) {
   return { position, normal, color };
 }
 
-self.onmessage = (event) => {
+// manifold-3d（WASM）は ES module なので classic worker からは dynamic import で読む。
+// 失敗しても ManifoldCSG が未初期化のままになり、csg.js（BSP）で生成が続く。
+const __manifoldReady = import("../vendor/manifold.js")
+  .then((mod) => mod.default())
+  .then((wasm) => ManifoldCSG.init(wasm))
+  .catch((e) => console.warn("[3D] manifold-3d unavailable, using BSP:", e));
+
+self.onmessage = async (event) => {
+  await __manifoldReady;
   const { id, state, messages } = event.data || {};
   __workerState = state;
   __workerMessages = messages || {};

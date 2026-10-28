@@ -638,6 +638,13 @@ function _concatMeshList(meshes, material) {
   return out;
 }
 
+// manifold-3d（WASM）が初期化済みならそれを、未初期化（メインスレッド等）なら csg.js を使う
+function _csgEngine() {
+  return typeof ManifoldCSG !== "undefined" && ManifoldCSG.ready
+    ? ManifoldCSG
+    : CSGAdapter;
+}
+
 function _csgUnion(meshA, meshB, material) {
   if (!meshA) return meshB || null;
   if (!meshB) return meshA;
@@ -659,7 +666,7 @@ function _csgUnion(meshA, meshB, material) {
     console.warn("[3D] disjoint-union fast path failed:", e);
   }
   try {
-    const result = CSGAdapter.union(
+    const result = _csgEngine().union(
       meshA,
       meshB,
       material || meshA.material?.clone(),
@@ -687,7 +694,7 @@ function _csgIntersect(meshA, meshB, material) {
     return meshA;
   }
   try {
-    const result = CSGAdapter.intersect(
+    const result = _csgEngine().intersect(
       meshA,
       meshB,
       material || meshA.material?.clone(),
