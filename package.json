@@ -34,7 +34,6 @@
   "devDependencies": {
     "@playwright/test": "^1.60.0",
     "esbuild": "^0.28.1",
-    "harfbuzzjs": "^1.2.0",
-    "manifold-3d": "^3.5.4"
+    "harfbuzzjs": "^1.2.0"
   }
 }

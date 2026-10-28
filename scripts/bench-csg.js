@@ -220,7 +220,7 @@ function median(xs) {
 
 async function main() {
   const { default: Module } = await import(
-    pathToFileURL(path.join(ROOT, "node_modules/manifold-3d/manifold.js")).href
+    pathToFileURL(path.join(APP, "vendor/manifold.js")).href
   );
   const wasm = await Module();
 
