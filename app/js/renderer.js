@@ -1543,7 +1543,7 @@ function _patchSimpleShapeNode(node, shape, scale) {
     fill: shape.type === "image" ? null : fill,
     stroke: shape.type === "image" ? null : stroke,
     "stroke-dasharray": shape.type !== "line" ? userDash : null,
-    opacity: null,
+    opacity: _shapeGroupOpacity(shape),
     "data-ghost": null,
     transform: null,
   });
@@ -2001,6 +2001,14 @@ function pencilPathToD(points, scale) {
   return d;
 }
 
+// 図形単位の不透明度（Design Mode の「不透明度」）。画像は子 <image> 側で持つので対象外
+function _shapeGroupOpacity(shape) {
+  if (shape.type === "image") return null;
+  const o = Number(shape.opacity);
+  if (!Number.isFinite(o) || o >= 1) return null;
+  return String(Math.max(0, o));
+}
+
 function renderShape(shape, scale, selIds, options = {}) {
   const sw = resolveStrokeWidthMm(shape.strokeWidth);
   const stroke = shape.stroke || "#1a1a2e";
@@ -2019,6 +2027,9 @@ function renderShape(shape, scale, selIds, options = {}) {
   if (isGhost) {
     gAttrs.opacity = "0.55";
     gAttrs["data-ghost"] = "true";
+  } else {
+    const groupOpacity = _shapeGroupOpacity(shape);
+    if (groupOpacity) gAttrs.opacity = groupOpacity;
   }
   // テキストは子 path / foreignObject が個別に色を持つ。g の fill=none 継承を避ける
   if (shape.type !== "text") {

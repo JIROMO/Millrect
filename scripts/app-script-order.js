@@ -71,6 +71,7 @@ module.exports = [
   "js/autosave.js",
   "js/tabs.js",
   "js/app-mode.js",
+  "js/design-mode.js",
   "js/webmcp.js",
   "js/mcp-bridge.js",
   "js/register-sw.js",

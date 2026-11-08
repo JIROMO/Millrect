@@ -273,7 +273,10 @@ function commitBezierPath(closed) {
     closed,
     stroke: style.drawStroke || "#1a1a2e",
     fill: style.drawFill ?? "none",
-    strokeWidth: "medium",
+    strokeWidth:
+      typeof style.drawStrokeWidth === "number" && style.drawStrokeWidth > 0
+        ? style.drawStrokeWidth
+        : "medium",
   });
   _bezierDraw = null;
   const state = getState();

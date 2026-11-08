@@ -209,15 +209,32 @@
     }
   }
 
+  function isDesignMode() {
+    return document.getElementById("app")?.classList.contains("mode-design");
+  }
+
   function setAppMode(mode) {
-    const next = mode === "3d" ? "3d" : "2d";
+    const next = mode === "3d" || mode === "design" ? mode : "2d";
     const app = document.getElementById("app");
     const panel3d = document.getElementById("panel-3d");
+    const wasDesign = isDesignMode();
 
     if (next === "3d" && isPrintMode()) exitPrintMode();
     setStoredMode(next);
     updateToggleButtons(next);
-    if (app) app.classList.toggle("mode-3d", next === "3d");
+    if (app) {
+      app.classList.toggle("mode-3d", next === "3d");
+      app.classList.toggle("mode-design", next === "design");
+    }
+    // Design Mode は同じ 2D 図面・同じ描画/編集エンジンの上に乗る別 UI。
+    // 出入りの通知だけ出し、UI 側（js/design-mode.js）が自分の DOM を整える。
+    if (wasDesign !== (next === "design")) {
+      window.dispatchEvent(
+        new CustomEvent("millrect:designmodechange", {
+          detail: { active: next === "design" },
+        }),
+      );
+    }
 
     if (next === "3d") {
       panel3d?.classList.add("visible");
@@ -333,7 +350,8 @@
   window.exitPrintMode = exitPrintMode;
   window.printCurrentPage = printCurrentPage;
   window.__millrectAppMode = {
-    getMode: () => (is3DMode() ? "3d" : "2d"),
+    getMode: () => (is3DMode() ? "3d" : isDesignMode() ? "design" : "2d"),
+    isDesignMode,
     isPrintMode,
     refresh3DNow,
     notifyProjectSwitched,

@@ -392,23 +392,7 @@ function bindToolbar() {
   });
 
   document.querySelectorAll(".tool-btn").forEach((btn) => {
-    btn.addEventListener("click", () => {
-      cancelDim();
-      if (typeof cancelMeasure === "function") cancelMeasure();
-      const tool = btn.dataset.tool;
-      getState().activeTool = tool;
-      if (typeof onActiveToolChanged === "function") {
-        onActiveToolChanged(tool);
-      }
-      if (typeof window.dataLayer !== "undefined") {
-        window.dataLayer.push({ event: "tool_selected", tool_name: tool });
-      }
-      updateToolbar();
-      updatePropertiesPanel();
-      const el = document.getElementById("status-tool");
-      if (el) el.textContent = TOOL_INFO[btn.dataset.tool] || btn.dataset.tool;
-      _updateMeasureStatusVisibility(tool);
-    });
+    btn.addEventListener("click", () => setActiveTool(btn.dataset.tool));
   });
 
   document.getElementById("btn-zoom-in")?.addEventListener("click", () => {
@@ -473,6 +457,32 @@ function bindToolbar() {
       pop.hidden = true;
     }
   });
+}
+
+// ツール切替の単一入口。2D ツール列・キーボード・Design Mode のツールボックスが
+// すべてここを通るので、描画/編集エンジン側の状態（activeTool）は 1 つだけになる。
+function setActiveTool(tool, options = {}) {
+  if (!tool) return;
+  cancelDim();
+  if (typeof cancelMeasure === "function") cancelMeasure();
+  getState().activeTool = tool;
+  if (typeof onActiveToolChanged === "function") {
+    onActiveToolChanged(tool);
+  }
+  if (typeof window.dataLayer !== "undefined") {
+    window.dataLayer.push({
+      event: "tool_selected",
+      tool_name: options.label || tool,
+    });
+  }
+  updateToolbar();
+  updatePropertiesPanel();
+  const el = document.getElementById("status-tool");
+  if (el) el.textContent = options.label || TOOL_INFO[tool] || tool;
+  _updateMeasureStatusVisibility(tool);
+  window.dispatchEvent(
+    new CustomEvent("millrect:toolchange", { detail: { tool } }),
+  );
 }
 
 function updateToolbar() {
@@ -2462,21 +2472,7 @@ function bindKeyShortcuts() {
     const toolForKey =
       e.shiftKey && (e.key === "D" || e.key === "d") ? "radius-dimension" : map[e.key];
     if (toolForKey && !e.ctrlKey && !e.metaKey) {
-      cancelDim();
-      if (typeof cancelMeasure === "function") cancelMeasure();
-      const tool = toolForKey;
-      getState().activeTool = tool;
-      if (typeof onActiveToolChanged === "function") {
-        onActiveToolChanged(tool);
-      }
-      if (typeof window.dataLayer !== "undefined") {
-        window.dataLayer.push({ event: "tool_selected", tool_name: tool });
-      }
-      updateToolbar();
-      updatePropertiesPanel();
-      const el = document.getElementById("status-tool");
-      if (el) el.textContent = TOOL_INFO[tool] || tool;
-      _updateMeasureStatusVisibility(tool);
+      setActiveTool(toolForKey);
       return;
     }
     // Electron ではメニューの CmdOrCtrl+Z/+Shift+Z アクセラレータが menu:undo/menu:redo
@@ -2586,6 +2582,19 @@ function _canvasSize() {
 }
 
 function _leftOffset() {
+  // Design Mode はキャンバス左上に縦型ツールボックスが重なるので、その分だけ避けて fit する
+  const dt = document.getElementById("design-toolbox");
+  if (dt && document.getElementById("app")?.classList.contains("mode-design")) {
+    const cc =
+      document.getElementById("canvas-container") ||
+      document.getElementById("main-svg");
+    if (cc) {
+      return Math.max(
+        0,
+        dt.getBoundingClientRect().right - cc.getBoundingClientRect().left + 16,
+      );
+    }
+  }
   const tf = document.getElementById("tools-float");
   if (tf?.closest("#toolbar")) return 0;
   const cc =

@@ -392,7 +392,7 @@ function defaultState() {
     currentLayerId: "layer-1",
     selectedShapeIds: [],
     activeTool: "select",
-    appMode: "2d", // "2d" | "3d"（UI 専用・Undo/export 非対象。DOC_KEYS に含めない）
+    appMode: "2d", // "2d" | "3d" | "design"（UI 専用・Undo/export 非対象。DOC_KEYS に含めない）
     zoom: 2.0,
     panX: 40,
     panY: 40,

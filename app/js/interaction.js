@@ -109,10 +109,15 @@ function _updateSelectionAutoPanPointer(e, svgEl) {
 
 function _drawStyle() {
   const s = getState();
-  return {
+  const style = {
     stroke: s.drawStroke || "#1a1a2e",
     fill: s.drawFill ?? "none",
   };
+  // Design Mode の「線幅」既定値。未設定（2D 作図）なら従来どおり図形側の既定に任せる
+  if (typeof s.drawStrokeWidth === "number" && s.drawStrokeWidth > 0) {
+    style.strokeWidth = s.drawStrokeWidth;
+  }
+  return style;
 }
 
 // ── 鉛筆（雑メモ用）─────────────────────────────────
@@ -3048,7 +3053,7 @@ function commitShape(tool, sr, er, shiftKey, altKey = false) {
       x2: ep.x,
       y2: ep.y,
       stroke: style.stroke,
-      strokeWidth: "medium",
+      strokeWidth: style.strokeWidth || "medium",
       strokeLinecap: "butt",
     });
   } else if (tool === "rect") {
@@ -3072,14 +3077,14 @@ function commitShape(tool, sr, er, shiftKey, altKey = false) {
       height: h,
       stroke: style.stroke,
       fill: style.fill,
-      strokeWidth: "medium",
+      strokeWidth: style.strokeWidth || "medium",
     });
   } else if (tool === "circle") {
     if (shiftKey && altKey) {
       const geometry = cornerCircleGeometry(sr, er);
       if (geometry.r < MIN) return;
       newId = genId("circle");
-      addShape({ id: newId, ...geometry, stroke: style.stroke, fill: style.fill, strokeWidth: "medium" });
+      addShape({ id: newId, ...geometry, stroke: style.stroke, fill: style.fill, strokeWidth: style.strokeWidth || "medium" });
     } else if (shiftKey) {
       const r = quantizeRealForUnitMode(
         Math.hypot(er.x - sr.x, er.y - sr.y),
@@ -3094,7 +3099,7 @@ function commitShape(tool, sr, er, shiftKey, altKey = false) {
         r,
         stroke: style.stroke,
         fill: style.fill,
-        strokeWidth: "medium",
+        strokeWidth: style.strokeWidth || "medium",
       });
     } else {
       const rx = quantizeRealForUnitMode(Math.abs(er.x - sr.x) / 2);
@@ -3114,7 +3119,7 @@ function commitShape(tool, sr, er, shiftKey, altKey = false) {
         ry,
         stroke: style.stroke,
         fill: style.fill,
-        strokeWidth: "medium",
+        strokeWidth: style.strokeWidth || "medium",
       });
     }
   }

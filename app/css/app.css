@@ -4350,3 +4350,412 @@ button.toolbar-mode-btn[aria-pressed="true"]:hover {
   display: flex;
   right: 8px;
 }
+
+/* ════════════════════════════════════════════════════
+   DESIGN MODE（Illustrator 風 UI。描画・編集エンジンは 2D と共有）
+   js/design-mode.js が #workspace にツールボックス / コントロールバーを差し込む。
+   ════════════════════════════════════════════════════ */
+#design-toolbox,
+#design-control-bar {
+  display: none;
+}
+#app.mode-design #design-toolbox {
+  position: absolute;
+  top: 52px;
+  left: 8px;
+  z-index: 20;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  width: 40px;
+  padding: 6px 0 8px;
+  max-height: calc(100% - 64px);
+  overflow-y: auto;
+  scrollbar-width: none;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--panel-radius);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.28);
+  user-select: none;
+}
+#design-toolbox::-webkit-scrollbar {
+  display: none;
+}
+.design-tool-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 30px;
+  height: 30px;
+  padding: 0;
+  border: 1px solid transparent;
+  border-radius: 5px;
+  background: transparent;
+  color: var(--text-2);
+  cursor: pointer;
+}
+.design-tool-btn svg {
+  width: 16px;
+  height: 16px;
+  stroke-width: 1.6;
+}
+.design-tool-btn:hover {
+  background: var(--surface-2);
+  color: var(--text);
+}
+.design-tool-btn.active {
+  background: rgba(89, 101, 249, 0.22);
+  color: var(--accent-2);
+  box-shadow: inset 0 0 0 1px var(--accent);
+}
+.dtb-sep {
+  width: 22px;
+  height: 1px;
+  margin: 4px 0;
+  background: var(--border);
+  flex-shrink: 0;
+}
+
+/* 塗り / 線ウィジェット（前面にある方が編集対象。X で入れ替え） */
+.dtb-paint {
+  position: relative;
+  width: 34px;
+  height: 34px;
+  flex-shrink: 0;
+  margin-top: 2px;
+}
+.dtb-paint-swatch {
+  position: absolute;
+  width: 20px;
+  height: 20px;
+  padding: 0;
+  border-radius: 2px;
+  cursor: pointer;
+}
+.dtb-paint-fill {
+  left: 0;
+  top: 0;
+  z-index: 2;
+  background: #ffffff;
+  border: 1px solid var(--border-2);
+}
+.dtb-paint-stroke {
+  right: 0;
+  bottom: 0;
+  z-index: 1;
+  background: var(--surface);
+  border: 5px solid #000000;
+  box-shadow: 0 0 0 1px var(--border-2);
+}
+.dtb-paint-stroke-hole {
+  display: block;
+  width: 100%;
+  height: 100%;
+  box-shadow: inset 0 0 0 1px var(--border-2);
+}
+.dtb-paint[data-focus="stroke"] .dtb-paint-stroke {
+  z-index: 3;
+}
+.dtb-paint[data-focus="fill"] .dtb-paint-fill,
+.dtb-paint[data-focus="stroke"] .dtb-paint-stroke {
+  outline: 1px solid var(--accent-2);
+  outline-offset: 1px;
+}
+.dtb-paint-mini {
+  position: absolute;
+  width: 12px;
+  height: 12px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--text-2);
+  cursor: pointer;
+}
+.dtb-paint-mini svg {
+  width: 10px;
+  height: 10px;
+  stroke-width: 2;
+}
+.dtb-paint-swap {
+  right: -2px;
+  top: -2px;
+}
+.dtb-paint-default {
+  left: -2px;
+  bottom: -2px;
+}
+.dtb-paint-default span {
+  position: absolute;
+  width: 7px;
+  height: 7px;
+  border: 1px solid var(--text-2);
+}
+.dtb-paint-default span:first-child {
+  left: 0;
+  top: 0;
+  background: #ffffff;
+  z-index: 1;
+}
+.dtb-paint-default span:last-child {
+  right: 0;
+  bottom: 0;
+  background: #000000;
+}
+.dtb-paint-modes {
+  display: flex;
+  gap: 2px;
+  margin-top: 4px;
+}
+.dtb-paint-mode {
+  width: 15px;
+  height: 15px;
+  padding: 0;
+  border: 1px solid var(--border-2);
+  border-radius: 2px;
+  background: transparent;
+  cursor: pointer;
+}
+.dtb-paint-mode span {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+.dtb-mode-color {
+  background: var(--text-2);
+}
+
+/* 「なし」「混在」「対象外」の見た目は toolbox / control bar / swatch で共通 */
+.dtb-paint-fill.is-none,
+.dcb-swatch.is-none,
+.dsp-swatch.is-none,
+.dtb-mode-none {
+  background: linear-gradient(
+      to top right,
+      transparent calc(50% - 1px),
+      #e5484d calc(50% - 1px),
+      #e5484d calc(50% + 1px),
+      transparent calc(50% + 1px)
+    ),
+    #ffffff !important;
+}
+.dtb-paint-stroke.is-none,
+.dcb-swatch-stroke.is-none {
+  border-color: #ffffff !important;
+}
+.dtb-paint-stroke.is-none .dtb-paint-stroke-hole {
+  background: linear-gradient(
+    to top right,
+    transparent calc(50% - 1px),
+    #e5484d calc(50% - 1px),
+    #e5484d calc(50% + 1px),
+    transparent calc(50% + 1px)
+  );
+}
+.dtb-paint-swatch.is-mixed,
+.dcb-swatch.is-mixed {
+  background: repeating-linear-gradient(
+      45deg,
+      var(--surface-3) 0 3px,
+      var(--surface-2) 3px 6px
+    ) !important;
+  border-color: var(--border-2) !important;
+}
+.dtb-paint-swatch.is-na,
+.dcb-swatch.is-na {
+  opacity: 0.35;
+}
+
+/* コントロールバー（選択内容に応じて変わる上部の帯） */
+#app.mode-design #design-control-bar {
+  position: absolute;
+  top: 8px;
+  left: 8px;
+  right: 8px;
+  z-index: 21;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  height: 36px;
+  padding: 0 10px;
+  overflow-x: auto;
+  overflow-y: hidden;
+  scrollbar-width: none;
+  white-space: nowrap;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--panel-radius);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.22);
+  color: var(--text-2);
+  user-select: none;
+}
+#design-control-bar::-webkit-scrollbar {
+  display: none;
+}
+.dcb-kind {
+  min-width: 72px;
+  padding-right: 6px;
+  font-weight: 600;
+  color: var(--text);
+}
+.dcb-group {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 0 8px;
+  border-left: 1px solid var(--border);
+}
+.dcb-group[hidden],
+.dcb-subgroup[hidden] {
+  display: none;
+}
+.dcb-subgroup {
+  display: inline-flex;
+  gap: 2px;
+  margin-left: 4px;
+}
+.dcb-label {
+  color: var(--text-3);
+  font-size: 11px;
+}
+.dcb-unit {
+  color: var(--text-3);
+  font-size: 11px;
+}
+.dcb-swatch {
+  width: 22px;
+  height: 18px;
+  padding: 0;
+  border: 1px solid var(--border-2);
+  border-radius: 3px;
+  background: #ffffff;
+  cursor: pointer;
+}
+.dcb-swatch-stroke {
+  background: transparent !important;
+  border: 4px solid #000000;
+}
+.dcb-num {
+  width: 46px;
+  height: 22px;
+  padding: 0 4px;
+  border: 1px solid transparent;
+  border-radius: var(--panel-input-radius);
+  background: var(--panel-input-bg);
+  color: var(--text);
+  font: inherit;
+  font-variant-numeric: tabular-nums;
+}
+.dcb-num-wide {
+  width: 58px;
+}
+.dcb-num:focus {
+  outline: none;
+  border-color: var(--accent);
+}
+.dcb-ro {
+  min-width: 40px;
+  color: var(--text);
+  font-variant-numeric: tabular-nums;
+}
+.dcb-icon-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  padding: 0;
+  border: 0;
+  border-radius: 4px;
+  background: transparent;
+  color: var(--text-2);
+  cursor: pointer;
+}
+.dcb-icon-btn svg {
+  width: 15px;
+  height: 15px;
+  stroke-width: 1.6;
+}
+.dcb-icon-btn:hover {
+  background: var(--surface-2);
+  color: var(--text);
+}
+
+/* スウォッチ ポップオーバー */
+#design-swatch-popover {
+  position: fixed;
+  z-index: 1000;
+  width: 196px;
+  padding: 10px;
+  background: var(--surface);
+  border: 1px solid var(--border-2);
+  border-radius: var(--panel-radius);
+  box-shadow: 0 8px 28px rgba(0, 0, 0, 0.4);
+  color: var(--text);
+}
+#design-swatch-popover[hidden] {
+  display: none;
+}
+.dsp-title {
+  margin-bottom: 8px;
+  font-weight: 600;
+}
+.dsp-grid {
+  display: grid;
+  grid-template-columns: repeat(8, 1fr);
+  gap: 4px;
+}
+.dsp-swatch {
+  aspect-ratio: 1;
+  padding: 0;
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  border-radius: 3px;
+  cursor: pointer;
+}
+.dsp-swatch.selected {
+  box-shadow:
+    0 0 0 1px var(--surface),
+    0 0 0 2px var(--accent-2);
+}
+.dsp-more {
+  width: 100%;
+  margin-top: 10px;
+  padding: 5px 0;
+  border: 1px solid var(--border-2);
+  border-radius: 5px;
+  background: var(--surface-2);
+  color: var(--text-2);
+  font: inherit;
+  cursor: pointer;
+}
+.dsp-more:hover {
+  color: var(--text);
+}
+.dsp-native {
+  position: absolute;
+  left: 10px;
+  bottom: 10px;
+  width: 1px;
+  height: 1px;
+  opacity: 0;
+  pointer-events: none;
+}
+
+/* サブツールのカーソル（hand エンジン上の zoom は inline の grab を上書きする） */
+#app.mode-design #main-svg.design-tool-zoom {
+  cursor: zoom-in !important;
+}
+#app.mode-design #main-svg.design-tool-eyedropper {
+  cursor: copy !important;
+}
+
+/* Design では多ビュー CAD 専用の UI を隠す（データはそのまま、2D に戻れば元どおり） */
+#app.mode-design #tools-float,
+#app.mode-design .toolbar-sep:has(+ #sidebar-left),
+#app.mode-design #page-settings .settings-row:has(#page-add-view),
+#app.mode-design #page-settings .settings-row:has(#page-scale),
+#app.mode-design #page-settings .settings-row:has(#one-mm-mode),
+#app.mode-design #page-settings .settings-row:has(#show-view-guides),
+#app.mode-design #properties-panel .prop-checkbox-row:has(#prop-solid-intersect) {
+  display: none !important;
+}

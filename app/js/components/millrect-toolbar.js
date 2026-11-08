@@ -13,6 +13,7 @@ class MillrectToolbar extends HTMLElement {
       <div class="toolbar-group toolbar-mode-switch" role="group" data-i18n-title="toolbar.mode.title">
         <button id="btn-mode-2d" class="toolbar-mode-btn active" data-mode="2d" aria-pressed="true" data-i18n="toolbar.mode.2d">2D</button>
         <button id="btn-mode-3d" class="toolbar-mode-btn" data-mode="3d" aria-pressed="false" data-i18n="toolbar.mode.3d">3D</button>
+        <button id="btn-mode-design" class="toolbar-mode-btn" data-mode="design" aria-pressed="false" data-i18n="toolbar.mode.design" data-i18n-title="toolbar.mode.design.title">Design</button>
       </div>
 
       <div class="toolbar-sep"></div>
