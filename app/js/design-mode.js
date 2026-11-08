@@ -491,7 +491,6 @@
     const el = document.createElement("div");
     el.id = "design-toolbox";
     el.setAttribute("role", "toolbar");
-    el.setAttribute("aria-orientation", "vertical");
     el.innerHTML =
       TOOLS.map((tool) =>
         tool.sep
@@ -651,11 +650,6 @@
     let top = r.bottom + 6;
     if (left + pw > window.innerWidth - 8) left = window.innerWidth - pw - 8;
     if (top + ph > window.innerHeight - 8) top = Math.max(8, r.top - ph - 6);
-    // ツールボックス（左端）から開いた時は右側へ出す
-    if (anchor.closest("#design-toolbox")) {
-      left = r.right + 8;
-      top = Math.min(r.top, window.innerHeight - ph - 8);
-    }
     pop.style.left = `${Math.max(8, left)}px`;
     pop.style.top = `${Math.max(8, top)}px`;
   }
@@ -963,7 +957,10 @@
     const box = buildToolbox();
     const bar = buildControlBar();
     const pop = buildSwatchPopover();
-    workspace.appendChild(box);
+    // ツールは 2D と同じく上部ツールバーに横並び（2D ツール列 #tools-float の位置に入れ替わる）
+    const toolsFloat = document.getElementById("tools-float");
+    if (toolsFloat) toolsFloat.after(box);
+    else workspace.appendChild(box);
     workspace.appendChild(bar);
     document.body.appendChild(pop);
     if (window.lucide) {

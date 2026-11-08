@@ -196,7 +196,7 @@ millrect-3d-panel {
   color: var(--accent-2);
 }
 
-#toolbar button:not(.toolbar-icon-btn) {
+#toolbar button:not(.toolbar-icon-btn):where(:not(#design-toolbox button)) {
   height: 26px;
   padding: 0 9px;
   border: 1px solid transparent;
@@ -213,11 +213,11 @@ millrect-3d-panel {
     color 0.12s;
   white-space: nowrap;
 }
-#toolbar button:not(.toolbar-icon-btn):hover:not(:disabled) {
+#toolbar button:not(.toolbar-icon-btn):where(:not(#design-toolbox button)):hover:not(:disabled) {
   background: var(--surface-3);
   color: var(--text);
 }
-#toolbar button:not(.toolbar-icon-btn):disabled {
+#toolbar button:not(.toolbar-icon-btn):where(:not(#design-toolbox button)):disabled {
   opacity: 0.3;
   cursor: default;
 }
@@ -301,6 +301,7 @@ millrect-3d-panel {
 #toolbar.toolbar-compact .toolbar-mode-switch,
 #toolbar.toolbar-compact .toolbar-mode-switch + .toolbar-sep,
 #toolbar.toolbar-compact #tools-float,
+#toolbar.toolbar-compact #design-toolbox,
 #toolbar.toolbar-compact .toolbar-locale-select,
 #toolbar.toolbar-compact #project-name {
   display: none;
@@ -4360,24 +4361,25 @@ button.toolbar-mode-btn[aria-pressed="true"]:hover {
   display: none;
 }
 #app.mode-design #design-toolbox {
-  position: absolute;
-  top: 52px;
-  left: 8px;
-  z-index: 20;
   display: flex;
-  flex-direction: column;
   align-items: center;
   gap: 2px;
-  width: 40px;
-  padding: 6px 0 8px;
-  max-height: calc(100% - 64px);
-  overflow-y: auto;
+  min-width: 0;
+  overflow-x: auto;
+  overflow-y: hidden;
   scrollbar-width: none;
-  background: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: var(--panel-radius);
-  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.28);
   user-select: none;
+}
+#app.mode-design #design-toolbox.panel-hidden,
+#app.mode-design #toolbar.toolbar-compact #design-toolbox {
+  display: none;
+}
+/* 幅不足時は ☰ メニューのダイアログへ実ノードごと付け替わる（ui.js showProjectActionsMenu） */
+.project-menu-settings-slot #design-toolbox {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 2px;
 }
 #design-toolbox::-webkit-scrollbar {
   display: none;
@@ -4386,23 +4388,24 @@ button.toolbar-mode-btn[aria-pressed="true"]:hover {
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 30px;
-  height: 30px;
+  flex-shrink: 0;
+  width: 28px;
+  height: 28px;
   padding: 0;
   border: 1px solid transparent;
   border-radius: 5px;
   background: transparent;
-  color: var(--text-2);
+  color: var(--text-3);
   cursor: pointer;
 }
 .design-tool-btn svg {
   width: 16px;
   height: 16px;
-  stroke-width: 1.6;
+  stroke-width: 1.5;
 }
 .design-tool-btn:hover {
   background: var(--surface-2);
-  color: var(--text);
+  color: var(--text-2);
 }
 .design-tool-btn.active {
   background: rgba(89, 101, 249, 0.22);
@@ -4410,9 +4413,9 @@ button.toolbar-mode-btn[aria-pressed="true"]:hover {
   box-shadow: inset 0 0 0 1px var(--accent);
 }
 .dtb-sep {
-  width: 22px;
-  height: 1px;
-  margin: 4px 0;
+  width: 1px;
+  height: 18px;
+  margin: 0 4px;
   background: var(--border);
   flex-shrink: 0;
 }
@@ -4423,7 +4426,7 @@ button.toolbar-mode-btn[aria-pressed="true"]:hover {
   width: 34px;
   height: 34px;
   flex-shrink: 0;
-  margin-top: 2px;
+  margin: 0 2px 0 4px;
 }
 .dtb-paint-swatch {
   position: absolute;
@@ -4504,12 +4507,14 @@ button.toolbar-mode-btn[aria-pressed="true"]:hover {
 }
 .dtb-paint-modes {
   display: flex;
+  flex-direction: column;
+  flex-shrink: 0;
   gap: 2px;
-  margin-top: 4px;
+  margin-left: 2px;
 }
 .dtb-paint-mode {
-  width: 15px;
-  height: 15px;
+  width: 13px;
+  height: 13px;
   padding: 0;
   border: 1px solid var(--border-2);
   border-radius: 2px;
@@ -4751,7 +4756,6 @@ button.toolbar-mode-btn[aria-pressed="true"]:hover {
 
 /* Design では多ビュー CAD 専用の UI を隠す（データはそのまま、2D に戻れば元どおり） */
 #app.mode-design #tools-float,
-#app.mode-design .toolbar-sep:has(+ #sidebar-left),
 #app.mode-design #page-settings .settings-row:has(#page-add-view),
 #app.mode-design #page-settings .settings-row:has(#page-scale),
 #app.mode-design #page-settings .settings-row:has(#one-mm-mode),

@@ -2582,19 +2582,6 @@ function _canvasSize() {
 }
 
 function _leftOffset() {
-  // Design Mode はキャンバス左上に縦型ツールボックスが重なるので、その分だけ避けて fit する
-  const dt = document.getElementById("design-toolbox");
-  if (dt && document.getElementById("app")?.classList.contains("mode-design")) {
-    const cc =
-      document.getElementById("canvas-container") ||
-      document.getElementById("main-svg");
-    if (cc) {
-      return Math.max(
-        0,
-        dt.getBoundingClientRect().right - cc.getBoundingClientRect().left + 16,
-      );
-    }
-  }
   const tf = document.getElementById("tools-float");
   if (tf?.closest("#toolbar")) return 0;
   const cc =
@@ -2964,7 +2951,13 @@ function showProjectActionsMenu() {
     const settingsSlot = overlay.querySelector("#pma-settings-slot");
     const moves = [
       { el: document.getElementById("toolbar").querySelector(".toolbar-mode-switch"), slot: toolsSlot },
-      { el: document.getElementById("tools-float"), slot: toolsSlot },
+      // Design Mode 中は 2D ツール列の代わりに Design のツール列を運ぶ
+      {
+        el: document.getElementById("app")?.classList.contains("mode-design")
+          ? document.getElementById("design-toolbox")
+          : document.getElementById("tools-float"),
+        slot: toolsSlot,
+      },
       { el: document.getElementById("toolbar-locale"), slot: settingsSlot },
       { el: document.getElementById("project-name"), slot: settingsSlot },
     ].filter((m) => m.el && m.slot);
@@ -3560,6 +3553,9 @@ document.addEventListener("DOMContentLoaded", () => {
     btnLeft.classList.add("active");
     btnLeft.addEventListener("click", () => {
       const hidden = toolsFloat.classList.toggle("panel-hidden");
+      document
+        .getElementById("design-toolbox")
+        ?.classList.toggle("panel-hidden", hidden);
       btnLeft.classList.toggle("active", !hidden);
     });
   }
