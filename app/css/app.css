@@ -4421,17 +4421,26 @@ button.toolbar-mode-btn[aria-pressed="true"]:hover {
 }
 
 /* 塗り / 線ウィジェット（前面にある方が編集対象。X で入れ替え） */
+/* ツールボタン（28px）と同じ高さに収める。はみ出さないよう全て border-box・内側配置 */
 .dtb-paint {
   position: relative;
-  width: 34px;
-  height: 34px;
+  width: 26px;
+  height: 26px;
   flex-shrink: 0;
   margin: 0 2px 0 4px;
 }
+.dtb-paint button,
+.dtb-paint-modes button {
+  box-sizing: border-box;
+  margin: 0;
+  min-width: 0;
+  min-height: 0;
+  line-height: 0;
+}
 .dtb-paint-swatch {
   position: absolute;
-  width: 20px;
-  height: 20px;
+  width: 16px;
+  height: 16px;
   padding: 0;
   border-radius: 2px;
   cursor: pointer;
@@ -4448,7 +4457,7 @@ button.toolbar-mode-btn[aria-pressed="true"]:hover {
   bottom: 0;
   z-index: 1;
   background: var(--surface);
-  border: 5px solid #000000;
+  border: 4px solid #000000;
   box-shadow: 0 0 0 1px var(--border-2);
 }
 .dtb-paint-stroke-hole {
@@ -4463,12 +4472,12 @@ button.toolbar-mode-btn[aria-pressed="true"]:hover {
 .dtb-paint[data-focus="fill"] .dtb-paint-fill,
 .dtb-paint[data-focus="stroke"] .dtb-paint-stroke {
   outline: 1px solid var(--accent-2);
-  outline-offset: 1px;
+  outline-offset: 0;
 }
 .dtb-paint-mini {
   position: absolute;
-  width: 12px;
-  height: 12px;
+  width: 9px;
+  height: 9px;
   padding: 0;
   border: 0;
   background: transparent;
@@ -4476,22 +4485,23 @@ button.toolbar-mode-btn[aria-pressed="true"]:hover {
   cursor: pointer;
 }
 .dtb-paint-mini svg {
-  width: 10px;
-  height: 10px;
-  stroke-width: 2;
+  width: 9px;
+  height: 9px;
+  stroke-width: 2.2;
 }
 .dtb-paint-swap {
-  right: -2px;
-  top: -2px;
+  right: 0;
+  top: 0;
 }
 .dtb-paint-default {
-  left: -2px;
-  bottom: -2px;
+  left: 0;
+  bottom: 0;
 }
 .dtb-paint-default span {
   position: absolute;
-  width: 7px;
-  height: 7px;
+  width: 6px;
+  height: 6px;
+  box-sizing: border-box;
   border: 1px solid var(--text-2);
 }
 .dtb-paint-default span:first-child {
@@ -4513,8 +4523,8 @@ button.toolbar-mode-btn[aria-pressed="true"]:hover {
   margin-left: 2px;
 }
 .dtb-paint-mode {
-  width: 13px;
-  height: 13px;
+  width: 11px;
+  height: 11px;
   padding: 0;
   border: 1px solid var(--border-2);
   border-radius: 2px;
