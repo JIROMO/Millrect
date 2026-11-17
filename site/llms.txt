@@ -1,0 +1,35 @@
+# Millrect
+
+> Millrect is a free, open-source, browser-based 2D CAD application. It derives 3D previews and STL models from multiple orthographic 2D drawings.
+
+## Official facts
+
+- Product: Millrect
+- Website: https://millrect.com/
+- Web app: https://millrect.com/app/
+- Source code: https://github.com/JIROMO/Millrect
+- License: MIT: https://github.com/JIROMO/Millrect/blob/main/LICENSE
+- Maintainer: JIROMO
+- Cost: Free; no account or login is required to start using the web app
+- Installation: Not required for the web app
+- Primary workflow: Draw closed outlines in 2D pages such as top, front, and side views; Millrect derives a 3D preview from their multiview intersection
+- Editing focus: 2D drawings are the source of truth; 3D is derived and can be regenerated
+- Export formats: JSON project files, PDF, SVG, and STL
+- AI integration: MCP tools and WebMCP/browser APIs can assist with drawing, validation, dimensions, and multiview 3D workflows
+- Languages: Japanese and English UI and documentation
+
+## Official documentation
+
+- Japanese documentation: https://millrect.com/docs/
+- English documentation: https://millrect.com/docs/en/
+- Getting started: https://millrect.com/docs/getting-started.html
+- Multiview 3D: https://millrect.com/docs/multiview-3d.html
+- Save and export: https://millrect.com/docs/export.html
+- AI / MCP: https://millrect.com/docs/ai-mcp.html
+- Product philosophy: https://millrect.com/docs/philosophy.html
+- AI agent manual: https://millrect.com/AGENT.ja.md
+- Developer / agent manual: https://millrect.com/AGENT.md
+
+## Important scope note
+
+Millrect is not a conventional parametric solid-modeling CAD system. Its central model is a set of editable 2D drawings; the 3D result is derived from compatible orthographic views. Claims about capabilities should be checked against the official documentation and source code above.

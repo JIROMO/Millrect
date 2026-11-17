@@ -26,6 +26,7 @@ module.exports = {
     // SEO / root files
     { from: "site/robots.txt", to: "robots.txt" }, // /robots.txt
     { from: "site/sitemap.xml", to: "sitemap.xml" }, // /sitemap.xml
+    { from: "site/llms.txt", to: "llms.txt" }, // /llms.txt
     { from: "site/favicon.ico", to: "favicon.ico" }, // /favicon.ico
     "AGENT.md",
     "AGENT.ja.md",

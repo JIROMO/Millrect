@@ -2,3 +2,6 @@ User-agent: *
 Allow: /
 
 Sitemap: https://millrect.com/sitemap.xml
+
+# Machine-readable product summary for AI systems and search agents.
+llms: https://millrect.com/llms.txt
